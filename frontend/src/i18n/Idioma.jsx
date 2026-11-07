@@ -3,7 +3,7 @@ import { Contexto, crearT } from './contexto.js'
 
 // Idioma de la interfaz (español o inglés). Se recuerda en este navegador; la primera vez
 // se toma del idioma del celular, para que un turista extranjero vea inglés desde el inicio.
-const CLAVE = 'puebla-ahora:idioma'
+const CLAVE = 'rumbo:idioma'
 
 function idiomaInicial() {
   try {

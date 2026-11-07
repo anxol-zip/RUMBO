@@ -1872,7 +1872,7 @@ wheels = [
 ]
 
 [[package]]
-name = "puebla-ahora-backend"
+name = "rumbo-backend"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
