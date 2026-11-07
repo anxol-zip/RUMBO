@@ -1,30 +1,26 @@
 import { useState } from 'react'
-import { api } from '../api/cliente.js'
+import { api, codigoDe } from '../api/cliente.js'
 import { useIdioma } from '../i18n/contexto.js'
 
 // "¿Cuándo me conviene ir?" — tabla día × hora de los próximos días, como el pronóstico de Kioto
 // (docs: nota 15 de la bóveda). Es la estimación sin reportes (GET /api/puntos/{id}/semana) y se carga
 // solo al pedirla.
-function Semana({ puntoId }) {
+function Semana({ puntoId, onError }) {
   const { idioma, t } = useIdioma()
   const [semana, setSemana] = useState(null)
   const [cargando, setCargando] = useState(false)
-  const [error, setError] = useState(null)
 
   async function ver() {
     setCargando(true)
-    try { setSemana(await api.obtenerSemana(puntoId)) } catch (e) { setError(e.message) }
+    try { setSemana(await api.obtenerSemana(puntoId)) } catch (e) { onError(codigoDe(e)) }
     setCargando(false)
   }
 
   if (!semana) {
     return (
-      <>
-        <button type="button" className="boton ancho" style={{ marginTop: 12 }} onClick={ver} disabled={cargando}>
-          {cargando ? t('cargando') : t('semana.ver')}
-        </button>
-        {error && <p className="aviso info">{error}</p>}
-      </>
+      <button type="button" className="boton ancho" style={{ marginTop: 12 }} onClick={ver} disabled={cargando}>
+        {cargando ? t('cargando') : t('semana.ver')}
+      </button>
     )
   }
 

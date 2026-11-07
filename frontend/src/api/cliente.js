@@ -6,18 +6,38 @@
 // sirve este build en el mismo puerto, así que /api es del mismo origen.
 const API = import.meta.env.VITE_API_URL ?? '/api'
 
+// Los errores viajan como códigos, no como texto: el componente que falla reporta el código a su
+// padre y App lo muestra con el mensaje asignado en i18n/textos.js ('error.<codigo>'), en el idioma
+// de la persona. El detalle técnico se queda en la consola.
+export class ErrorApi extends Error {
+  constructor(codigo, detalle = null) {
+    super(codigo)
+    this.codigo = codigo
+    this.detalle = detalle
+  }
+}
+
+export const codigoDe = (error) => error?.codigo ?? 'servidor'
+
+function codigoHttp(status) {
+  if (status === 404) return 'no_encontrado'
+  if (status === 503) return 'no_disponible'
+  return status < 500 ? 'solicitud' : 'servidor'
+}
+
 async function pedir(ruta, opciones = {}) {
   let res
   try {
     res = await fetch(`${API}${ruta}`, { headers: { 'Content-Type': 'application/json' }, ...opciones })
   } catch {
-    throw new Error('No hay conexión con el servidor. Revisa que estés en la misma red que la laptop.')
+    throw new ErrorApi('sin_conexion')
   }
   const cuerpo = await res.json().catch(() => null)
   if (!res.ok) {
     // FastAPI responde { detail: "…" }; en validaciones, detail es una lista.
-    const detalle = typeof cuerpo?.detail === 'string' ? cuerpo.detail : null
-    throw new Error(detalle ?? `El servidor respondió ${res.status} en ${ruta}`)
+    const detalle = typeof cuerpo?.detail === 'string' ? cuerpo.detail : `HTTP ${res.status}`
+    console.warn(`API ${ruta}:`, detalle)
+    throw new ErrorApi(codigoHttp(res.status), detalle)
   }
   return cuerpo
 }

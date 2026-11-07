@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { codigoDe } from '../../api/cliente.js'
 import { hora } from '../../data/formato.js'
 import IconoEstado from '../IconoEstado.jsx'
 import SelectorLugar from '../SelectorLugar.jsx'
@@ -15,12 +16,11 @@ const DURACIONES = [
 
 // "Fijar color" (RN_16): para cierres, obras o filas que el modelo no ve.
 // Gana sobre el cálculo hasta la hora de fin y la app muestra el motivo.
-function FijarColor({ puntos, ajustes, onFijar, onQuitar }) {
+function FijarColor({ puntos, ajustes, onFijar, onQuitar, onError }) {
   const [puntoId, setPuntoId] = useState(puntos[0]?.id ?? '')
   const [color, setColor] = useState('rojo')
   const [motivo, setMotivo] = useState('')
   const [horas, setHoras] = useState(2)
-  const [error, setError] = useState(null)
 
   async function enviar(evento) {
     evento.preventDefault()
@@ -28,9 +28,9 @@ function FijarColor({ puntos, ajustes, onFijar, onQuitar }) {
     try {
       await onFijar({ puntoId, color, motivo: motivo.trim(), horas })
       setMotivo('')
-      setError(null)
+      onError(null)
     } catch (e) {
-      setError(e.message)
+      onError(codigoDe(e))
     }
   }
 
@@ -60,7 +60,6 @@ function FijarColor({ puntos, ajustes, onFijar, onQuitar }) {
           ))}
         </div>
         <button type="submit" className="boton primario" disabled={motivo.trim().length < 3}>Fijar color</button>
-        {error && <p className="aviso info">{error}</p>}
       </form>
 
       <p className="etiqueta">Ajustes vigentes</p>
