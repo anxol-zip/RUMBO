@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api/cliente.js'
+import { api, codigoDe } from '../api/cliente.js'
 import { hora, partesRazon, textoTraslado } from '../data/formato.js'
 import { explicacionRec, ficha } from '../i18n/backend.js'
 import { useIdioma } from '../i18n/contexto.js'
@@ -28,10 +28,10 @@ function porque(alt, idioma, t) {
 // T4 — "Mejor ve a…" (CU_04). El backend nunca propone un lugar en rojo (RN_02), siempre da la razón
 // (RN_03) y, si conviene, otra hora para el lugar pedido. En inglés, la explicación se arma aquí
 // con los mismos datos (el backend la redacta en español).
-function Recomendacion({ puntoId, sesionId, origenId, catalogo, intereses, onVolver, onElegir, onPropuesta }) {
+function Recomendacion({ puntoId, sesionId, origenId, catalogo, intereses, onVolver, onElegir, onPropuesta, onError }) {
   const { idioma, t } = useIdioma()
   const [rec, setRec] = useState(null)
-  const [error, setError] = useState(null)
+  const [fallo, setFallo] = useState(false)
   const [aceptada, setAceptada] = useState(false)
 
   useEffect(() => {
@@ -42,9 +42,9 @@ function Recomendacion({ puntoId, sesionId, origenId, catalogo, intereses, onVol
         setRec(datos)
         if (datos.alternativa) onPropuesta?.(datos.alternativa.id)
       })
-      .catch((e) => { if (vigente) setError(e.message) })
+      .catch((e) => { if (vigente) { setFallo(true); onError(codigoDe(e)) } })
     return () => { vigente = false }
-  }, [puntoId, sesionId, origenId, onPropuesta])
+  }, [puntoId, sesionId, origenId, onPropuesta, onError])
 
   async function vamos() {
     // Se abre antes de esperar al servidor: Safari bloquea ventanas abiertas después de un await.
@@ -58,7 +58,7 @@ function Recomendacion({ puntoId, sesionId, origenId, catalogo, intereses, onVol
     onVolver()
   }
 
-  if (error) return <p className="aviso info">{error}</p>
+  if (fallo) return <button type="button" className="boton-texto" onClick={onVolver}>{t('rec.volver')}</button>
   if (!rec) return <p className="suave">{t('rec.buscando')}</p>
 
   const { pedido, alternativa, otra_hora: otraHora } = rec

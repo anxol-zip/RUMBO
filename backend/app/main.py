@@ -1,4 +1,4 @@
-"""API de Puebla Ahora (docs/05c). Solo traduce HTTP ↔ ``turismo_core``.
+"""API de RUMBO (docs/05c). Solo traduce HTTP ↔ ``turismo_core``.
 
     cd backend
     uv run uvicorn app.main:app --reload --port 8000                  # desarrollo · Swagger en /docs
@@ -48,7 +48,7 @@ async def lifespan(app: FastAPI):
         app.state.programador.detener()
 
 
-app = FastAPI(title="Puebla Ahora API", version="0.1.0", lifespan=lifespan,
+app = FastAPI(title="RUMBO API", version="0.1.0", lifespan=lifespan,
               description="Semáforo en vivo, 'mejor ve a…', reportes de turistas y panel de gobierno "
                           "de la zona piloto Puebla–Cholula–Atlixco. Hackathon Puebla Turística 360°.")
 

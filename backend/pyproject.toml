@@ -1,7 +1,7 @@
 [project]
-name = "puebla-ahora-backend"
+name = "rumbo-backend"
 version = "0.1.0"
-description = "Backend de Puebla Ahora: turismo_core, FastAPI y servidor MCP"
+description = "Backend de RUMBO: turismo_core, FastAPI y servidor MCP"
 requires-python = ">=3.12"
 dependencies = [
     "chromadb>=1.5.9",

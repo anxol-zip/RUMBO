@@ -14,7 +14,7 @@ const margenesPanel = (t) => (t.x <= 520 ? { arribaIzq: [24, 24], abajoDer: [24,
 // Afluencia ahora (estimada + reportes): la misma capa de calor y el mismo semáforo que ve el turista.
 function MapaCalor({ puntos }) {
   const { letra } = usePreferencias()
-  const tamano = Math.round(24 * ESCALA_MARCADOR[letra])
+  const tamano = Math.round(44 * ESCALA_MARCADOR[letra])
   return (
     <div className="mapa-caja">
       <div className="mapa">

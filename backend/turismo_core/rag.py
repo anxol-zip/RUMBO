@@ -25,7 +25,7 @@ from turismo_core import recomendador as rec
 from turismo_core.conocimiento import DIAS, DIAS_TEXTO
 from turismo_core.situacion import HORAS_VISITA, PuntoAhora, pronostico_punto, situacion, traslados
 
-SISTEMA = """Eres el asistente turístico de "Puebla Ahora". Respondes en español, en máximo 6 líneas, amable y directo.
+SISTEMA = """Eres el asistente turístico de "RUMBO". Respondes en español, en máximo 6 líneas, amable y directo.
 REGLAS:
 1. Usa SOLO la información de CONTEXTO y ESTADO EN VIVO. Si la respuesta no está ahí, responde "No tengo ese dato." y, si ayuda, di qué sí puedes contestar.
 2. Copia las cifras (horarios, precios, minutos, porcentajes, visitantes) tal como vienen escritas. No calcules, no estimes y no agregues distancias, tiempos ni precios que no estén escritos. Si no hay UBICACIÓN DEL TURISTA, no menciones traslados.

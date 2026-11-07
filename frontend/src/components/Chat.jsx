@@ -30,10 +30,9 @@ function Chat({ sesionId, origenId, onCerrar }) {
       const r = await api.preguntarAsistente({ sesionId, pregunta, origenId })
       setMensajes((m) => [...m, { de: 'asistente', texto: numerarCitas(r.respuesta, r.fuentes), fuentes: r.fuentes, estado: r.estado_usado }])
     } catch (e) {
-      // 503: Ollama apagado o sin el modelo en la laptop. El detalle técnico va a la consola, no al turista.
-      console.warn('Asistente:', e.message)
-      const disponible = !e.message.startsWith('El asistente no está disponible')
-      setMensajes((m) => [...m, disponible ? { de: 'asistente', texto: e.message, error: true } : { de: 'asistente', clave: 'chat.noDisponible', error: true }])
+      // 503: Ollama apagado o sin el modelo. El error se queda en la conversación, con su mensaje asignado.
+      const codigo = codigoDe(e)
+      setMensajes((m) => [...m, { de: 'asistente', clave: codigo === 'no_disponible' ? 'chat.noDisponible' : `error.${codigo}`, error: true }])
     }
     setPensando(false)
   }

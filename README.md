@@ -7,21 +7,21 @@
 | **Interacción Persona Máquina** (13009A-O26). Tema del curso: *Interfaces Inteligentes para el Bienestar Social* | Dra. Gabriela A. Rodríguez Ruiz | Angel Rugerio Jiménez (201720), Axel García Arellano (201251), Diego Navarro Sánchez (202497) y Yohualli Ollin Luna Reyes (189670) | [`docs/HCI/`](docs/HCI/) |
 | **Diseño de Software** | Mtro. Rafael Pérez Aguirre | El mismo equipo y Cristian Alexei Romero Martínez (203739) | [`docs/DdS/`](docs/DdS/) |
 
-Cristian participa solo en Diseño de Software. La aplicación todavía se muestra con el nombre **Puebla Ahora**, el mismo de la propuesta de Interacción Persona Máquina.
+Cristian participa solo en Diseño de Software. La propuesta de Interacción Persona Máquina la presenta como *Puebla Ahora*, su nombre anterior; hoy todo el proyecto se llama **RUMBO**.
 
 ## De qué va
 
-**Puebla Ahora** responde *"¿a dónde voy ahora?"*: un semáforo en vivo de 23 lugares turísticos de Puebla, Cholula y Atlixco (buen momento / con precaución / mejor después). Si el lugar que buscas está lleno, te recomienda otro parecido y más tranquilo. También tiene un asistente con IA local que responde solo con los datos de la app, y un panel para la Secretaría de Turismo.
+**RUMBO** responde *"¿a dónde voy ahora?"*: un semáforo en vivo de 23 lugares turísticos de Puebla, Cholula y Atlixco (buen momento / con precaución / mejor después). Si el lugar que buscas está lleno, te recomienda otro parecido y más tranquilo. También tiene un asistente con IA local que responde solo con los datos de la app, y un panel para la Secretaría de Turismo.
 
 La app nació en un hackathon. En este proyecto **rediseñamos su interfaz con los principios de la materia** para que la pueda usar cualquier turista, sin importar su edad, cómo ve los colores o cuánto sabe de tecnología:
 
 - **Tamaño de letra ajustable**, que también respeta la configuración del dispositivo.
 - **Semáforo que no depende del color:** formas por estado, modo para daltonismo y alto contraste.
-- **Barra lateral ampliable** para ver todos los lugares a la vez, sin scroll.
+- **Barra lateral de un tercio de la pantalla** y vista "Ver todos los lugares" a media pantalla, con fotos, agrupada por estado y con filtros.
 - **Para distintas edades y capacidades:** botones grandes, uso con teclado y lector de pantalla, y lectura en voz alta.
 - **Pruebas de usabilidad** con personas ajenas al equipo, antes y después.
 
-La propuesta completa está en [`docs/HCI/Propuesta_Inicial.md`](docs/HCI/Propuesta_Inicial.md) y en su [PDF](docs/HCI/Proyecto%20Final%20-%20Propuesta%20inicial.pdf). La propuesta mencionaba PySide6 y Qt Designer: la profesora autorizó después seguir en React.
+La [propuesta inicial](docs/HCI/Proyecto%20Final%20-%20Propuesta%20inicial.pdf) y los avances ([1](docs/HCI/Avance_1.pdf) y [2](docs/HCI/Avance_2.pdf)) están en `docs/HCI/`. La propuesta mencionaba PySide6 y Qt Designer: la profesora autorizó después seguir en React.
 
 ## Origen del código
 

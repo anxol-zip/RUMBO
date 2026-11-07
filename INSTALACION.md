@@ -1,6 +1,6 @@
 # Instalación
 
-Cómo correr Puebla Ahora en una computadora, en **Windows (PowerShell)** y **Linux (bash/zsh)**. Hay dos formas:
+Cómo correr RUMBO en una computadora, en **Windows (PowerShell)** y **Linux (bash/zsh)**. Hay dos formas:
 
 | Modo | Para qué | Qué necesita |
 |---|---|---|
@@ -93,6 +93,7 @@ Abre **http://localhost:5173**.
 - **Traslados aproximados:** se calculan con la distancia en línea recta, porque OpenRouteService necesita una clave.
 - **Sin clima ni tráfico:** el semáforo los toma como "sin lluvia" y "sin tráfico".
 - **Sin asistente:** sin Ollama, el asistente responde que no está disponible.
+- **Aviso en pantalla:** la lista dice que son datos de demostración, como pide el proyecto. Aparece solo cuando la base no tiene clima.
 - **Hora real:** el semáforo es el de la hora actual. De noche casi todo sale "Cerrado"; para revisar la interfaz con lugares abiertos, trabaja de día.
 
 **Cuando la afluencia se vence.** La base cubre 14 días; la versión actual llega al 11 de noviembre de 2026. Si `http://localhost:8000/api/salud` dice `"afluencia_cubre_esta_hora": false`, regenera la base y commitéala:
@@ -202,7 +203,7 @@ Para que otras personas usen la app desde su celular, todos tienen que estar en 
 2. Busca la IP de la computadora en ese adaptador con `ipconfig` (suele ser `192.168.137.1`).
 3. Abre el puerto 8000. Necesita PowerShell **como administrador**:
    ```powershell
-   New-NetFirewallRule -DisplayName "Puebla Ahora 8000" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow -Profile Any
+   New-NetFirewallRule -DisplayName "RUMBO 8000" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow -Profile Any
    ```
 
 **Linux**

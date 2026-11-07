@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { api } from '../api/cliente.js'
+import { api, codigoDe } from '../api/cliente.js'
 import Semaforo from './Semaforo.jsx'
 import IconoEstado from './IconoEstado.jsx'
 import { mensajeReporte } from '../i18n/backend.js'
@@ -14,10 +14,9 @@ const NIVELES = [
 
 // T5 — "¿Cómo está?" (CU_05). Se abre después de "Estoy aquí" (RN_04). El backend aplica los
 // filtros (RN_04 a RN_06) y manda el mensaje para el turista y el estado nuevo del punto.
-function BotonReporte({ punto, sesionId, distanciaM = null, onCerrar, onReportado }) {
+function BotonReporte({ punto, sesionId, distanciaM = null, onCerrar, onReportado, onError }) {
   const { idioma, t } = useIdioma()
   const [resultado, setResultado] = useState(null)
-  const [error, setError] = useState(null)
   const [enviando, setEnviando] = useState(false)
   const caja = useRef(null)
   // Ventana modal (D6): el foco entra, Tab no se sale y Escape la cierra.
@@ -30,7 +29,7 @@ function BotonReporte({ punto, sesionId, distanciaM = null, onCerrar, onReportad
       setResultado(r)
       if (r.reporte.estado !== 'descartado') onReportado()
     } catch (e) {
-      setError(e.message)
+      onError(codigoDe(e))
     }
     setEnviando(false)
   }
@@ -63,7 +62,6 @@ function BotonReporte({ punto, sesionId, distanciaM = null, onCerrar, onReportad
           </p>
         )}
         {resultado && !aceptado && <p className="aviso info" style={{ marginTop: 16 }}>{mensajeReporte(resultado.reporte, idioma)}</p>}
-        {error && <p className="aviso info" style={{ marginTop: 16 }}>{error}</p>}
 
         <div className="acciones">
           <button type="button" className="boton" onClick={onCerrar}>{resultado ? t('rep.listo') : t('rep.cancelar')}</button>

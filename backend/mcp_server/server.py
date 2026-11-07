@@ -1,4 +1,4 @@
-"""Servidor MCP de Puebla Ahora (paso 9; docs/05 "Servidor MCP"): la misma lógica que la API, para clientes MCP.
+"""Servidor MCP de RUMBO (paso 9; docs/05 "Servidor MCP"): la misma lógica que la API, para clientes MCP.
 
     cd backend
     uv run python -m mcp_server.server                                    # stdio (Claude Desktop, Claude Code)
@@ -32,9 +32,9 @@ from turismo_core.bd import DATA, conectar
 from turismo_core.servicio import NoEncontrado
 
 mcp = FastMCP(
-    "puebla_ahora_mcp",
+    "rumbo_mcp",
     instructions=(
-        "Puebla Ahora: semáforo de afluencia en vivo de 23 atractivos de Puebla, Cholula, Atlixco y Huejotzingo, "
+        "RUMBO: semáforo de afluencia en vivo de 23 atractivos de Puebla, Cholula, Atlixco y Huejotzingo, "
         "con alternativas ('mejor ve a…'), reportes de turistas, eventos verificados, restaurantes y hoteles "
         "(DENUE) y datos oficiales del Observatorio Turístico y del INAH. Todo dato trae su fuente. Los colores "
         "comparan cada lugar contra su propia historia; la afluencia por hora es una estimación (los factores "
@@ -251,7 +251,7 @@ def recurso_fuentes() -> str:
 def recurso_modelos() -> str:
     """Cómo funcionan el semáforo, los reportes y el recomendador (supuestos incluidos) y la última
     evaluación del asistente."""
-    partes = ["# Modelos de Puebla Ahora", ""] + [f"## {d.metadatos['titulo']}\n\n{d.texto}\n"
+    partes = ["# Modelos de RUMBO", ""] + [f"## {d.metadatos['titulo']}\n\n{d.texto}\n"
                                                   for d in conocimiento.docs_metodologia()]
     evaluacion = DATA / "processed" / "evaluacion_rag.md"
     if evaluacion.exists():
