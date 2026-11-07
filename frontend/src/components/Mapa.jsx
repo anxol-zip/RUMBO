@@ -48,9 +48,11 @@ function Camara({ yo, enfoque, margenInferior, panelAncho, gps }) {
     encuadrar([yo], false)
   }, [yo, encuadrar])
 
+  // panelAncho: al abrir una ficha el panel crece a media pantalla, y el encuadre se rehace con su
+  // ancho nuevo para que el lugar no quede detrás.
   useEffect(() => {
     if (yo && enfoque.length > 0) encuadrar([yo, ...enfoque], true)
-  }, [enfoque, yo, encuadrar])
+  }, [enfoque, yo, encuadrar, panelAncho])
 
   // Una lectura nueva del GPS (cada lectura es un objeto nuevo): se centra ahí. Si es aproximada, se
   // encuadra su círculo de precisión completo en vez de acercarse como si fuera exacta.
@@ -72,7 +74,7 @@ function Camara({ yo, enfoque, margenInferior, panelAncho, gps }) {
 // Las coordenadas se quedan en el celular: nunca se envían (RN_07).
 function Mapa({ puntos, seleccionadoId, destacadoId, origen, gps, buscando, onUbicar, aviso, margenInferior, panelAncho = 400, onSeleccionar, textos }) {
   const { letra } = usePreferencias()
-  const tamano = Math.round(34 * ESCALA_MARCADOR[letra])
+  const tamano = Math.round(44 * ESCALA_MARCADOR[letra])
   const yo = gps ? [gps.lat, gps.lon] : (origen ? [origen.lat, origen.lon] : null)
   const seleccionado = puntos.find((p) => p.id === seleccionadoId)
   const destacado = puntos.find((p) => p.id === destacadoId)
@@ -102,7 +104,7 @@ function Mapa({ puntos, seleccionadoId, destacadoId, origen, gps, buscando, onUb
               eventHandlers={{ click: () => onSeleccionar(p.id) }}
             >
               {(elegido || propuesto) && (
-                <Tooltip permanent direction="top" offset={[0, -24]} className={`etiqueta-mapa${propuesto ? ' propuesta' : ''}`}>
+                <Tooltip permanent direction="top" offset={[0, -Math.round(tamano * 0.7)]} className={`etiqueta-mapa${propuesto ? ' propuesta' : ''}`}>
                   {p.nombre.split(' (')[0]}
                 </Tooltip>
               )}

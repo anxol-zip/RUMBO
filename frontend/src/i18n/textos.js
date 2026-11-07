@@ -8,7 +8,7 @@ const es = {
   'lectura.letra': 'Tamaño de letra', 'lectura.normal': 'Normal', 'lectura.grande': 'Grande', 'lectura.muy_grande': 'Muy grande',
   'lectura.colores': 'Colores del semáforo', 'lectura.habituales': 'Habituales', 'lectura.daltonismo': 'Para daltonismo',
   'lectura.ayudaColores': 'Cada estado tiene además su forma, así se distingue aunque no veas los colores.',
-  'lectura.listo': 'Listo', 'lectura.guardado': 'Se guarda en este dispositivo.',
+  'lectura.listo': 'Listo', 'lectura.guardado': 'Se guarda en este dispositivo.', 'lectura.guia': 'Ver la guía',
   'lectura.contraste': 'Contraste', 'lectura.contraste_normal': 'Normal', 'lectura.contraste_alto': 'Alto',
   'lectura.voz': 'Lectura en voz alta', 'lectura.voz_normal': 'Normal', 'lectura.voz_lenta': 'Más lenta',
   'voz.escuchar': 'Escuchar', 'voz.detener': 'Detener',
@@ -27,7 +27,6 @@ const es = {
   'inicio.donde': '¿Dónde estás?', 'inicio.dondeAyuda': 'Elige el lugar más cercano a ti.',
   'inicio.boton': 'Ver qué me conviene', 'inicio.calculando': 'Calculando…',
   'inicio.privacidad': 'Sin registro. No guardamos tu ubicación.',
-  'inicio.evento': 'Prototipo para el hackathon Puebla Turística 360°, de Tech Capital Puebla 2026 e Intelligentia.',
   'selector.elige': 'Elige un lugar', 'selector.buscar': 'Busca un lugar o destino', 'selector.vacio': 'No hay lugares con ese nombre.',
 
   'lista.titulo': 'Lo que más te conviene', 'lista.desde': 'Desde {lugar}', 'lista.tuUbicacion': 'tu ubicación',
@@ -76,6 +75,7 @@ const es = {
   'semana.nota': 'Estimación con datos oficiales mensuales (INAH u Observatorio) y factores de día y hora; no incluye los reportes de turistas.',
   'datos.actualizado': 'Datos en vivo:', 'datos.clima': 'clima de hace {min} min', 'datos.trafico': 'tráfico de hace {min} min',
   'datos.metodo': 'La afluencia es una estimación con datos oficiales; los reportes de turistas la corrigen.',
+  'datos.simulados': 'Datos de demostración: los traslados son aproximados, sin clima ni tráfico en vivo.',
   'foto.credito': 'Foto: {autor}, {licencia}', 'foto.alt': 'Foto de {nombre}',
 
   'rec.buscando': 'Buscando una alternativa parecida…', 'rec.volver': '← Volver', 'rec.volverA': '← Volver a {lugar}',
@@ -99,7 +99,20 @@ const es = {
   'chat.pregunta': 'Pregunta', 'chat.placeholder': 'Pregúntame sobre Puebla, Cholula o Atlixco…', 'chat.enviar': 'Enviar',
   'chat.sugerencias': ['Tengo 4 horas y va a llover, ¿qué hago?', '¿Qué hay tranquilo cerca de mí?', '¿Cuándo conviene ir a la pirámide?'],
 
-  'panel.soloEspanol': '',
+  'panel.soloEspanol': '', 'panel.contarDemo': 'Contar la actividad de demostración',
+
+  'error.sin_conexion': 'Sin conexión', 'error.servidor': 'El servidor tuvo un problema. Intenta de nuevo.',
+  'error.no_encontrado': 'No encontramos esa información.', 'error.no_disponible': 'Este servicio no está disponible por ahora.',
+  'error.solicitud': 'No pudimos procesar tu solicitud. Revisa los datos e intenta de nuevo.',
+  'error.cerrar': 'Cerrar el aviso', 'error.reintentar': 'Intentar de nuevo',
+
+  'guia.paso': 'Paso {n} de {total}', 'guia.saltar': 'Saltar', 'guia.anterior': 'Anterior', 'guia.siguiente': 'Siguiente', 'guia.empezar': 'Empezar',
+  'guia.semaforo.titulo': 'Mira cómo están los lugares',
+  'guia.semaforo.texto': 'Cada lugar te dice si conviene ir ahora. La forma y el color significan lo mismo en toda la app.',
+  'guia.lugares.titulo': 'Compara antes de ir',
+  'guia.lugares.texto': 'La lista empieza por lo que más te conviene. Con "Ver todos los lugares" los ves agrupados y puedes filtrarlos por destino.',
+  'guia.opciones.titulo': 'Ajusta cómo se ve',
+  'guia.opciones.texto': 'Con el botón Aa, arriba a la derecha, cambias el tamaño de letra, los colores, el contraste y el idioma.',
 }
 
 const en = {
@@ -110,7 +123,7 @@ const en = {
   'lectura.letra': 'Text size', 'lectura.normal': 'Normal', 'lectura.grande': 'Large', 'lectura.muy_grande': 'Extra large',
   'lectura.colores': 'Traffic-light colors', 'lectura.habituales': 'Standard', 'lectura.daltonismo': 'Color-blind friendly',
   'lectura.ayudaColores': 'Each status also has its own shape, so you can tell them apart even without colors.',
-  'lectura.listo': 'Done', 'lectura.guardado': 'Saved on this device.',
+  'lectura.listo': 'Done', 'lectura.guardado': 'Saved on this device.', 'lectura.guia': 'See the guide',
   'lectura.contraste': 'Contrast', 'lectura.contraste_normal': 'Normal', 'lectura.contraste_alto': 'High',
   'lectura.voz': 'Read aloud', 'lectura.voz_normal': 'Normal', 'lectura.voz_lenta': 'Slower',
   'voz.escuchar': 'Listen', 'voz.detener': 'Stop',
@@ -129,7 +142,6 @@ const en = {
   'inicio.donde': 'Where are you?', 'inicio.dondeAyuda': 'Pick the place closest to you.',
   'inicio.boton': 'Show my best options', 'inicio.calculando': 'Working it out…',
   'inicio.privacidad': 'No sign-up. We don’t store your location.',
-  'inicio.evento': 'Prototype for the Puebla Turística 360° hackathon, by Tech Capital Puebla 2026 and Intelligentia.',
   'selector.elige': 'Pick a place', 'selector.buscar': 'Search for a place or town', 'selector.vacio': 'No places with that name.',
 
   'lista.titulo': 'Your best options now', 'lista.desde': 'From {lugar}', 'lista.tuUbicacion': 'your location',
@@ -178,6 +190,7 @@ const en = {
   'semana.nota': 'Estimate from official monthly data (INAH or the Tourism Observatory) and day/hour factors; it does not include visitor reports.',
   'datos.actualizado': 'Live data:', 'datos.clima': 'weather {min} min ago', 'datos.trafico': 'traffic {min} min ago',
   'datos.metodo': 'Crowd levels are an estimate from official data; visitor reports correct it.',
+  'datos.simulados': 'Demo data: travel times are approximate, with no live weather or traffic.',
   'foto.credito': 'Photo: {autor}, {licencia}', 'foto.alt': 'Photo of {nombre}',
 
   'rec.buscando': 'Looking for a similar alternative…', 'rec.volver': '← Back', 'rec.volverA': '← Back to {lugar}',
@@ -201,7 +214,20 @@ const en = {
   'chat.pregunta': 'Question', 'chat.placeholder': 'Ask me about Puebla, Cholula or Atlixco…', 'chat.enviar': 'Send',
   'chat.sugerencias': ['I have 4 hours and it will rain, what should I do?', 'What is quiet near me?', 'When is a good time to visit the pyramid?'],
 
-  'panel.soloEspanol': 'This dashboard is for the Puebla Tourism Office, so it is shown in Spanish.',
+  'panel.soloEspanol': 'This dashboard is for the Puebla Tourism Office, so it is shown in Spanish.', 'panel.contarDemo': 'Include demo activity',
+
+  'error.sin_conexion': 'No connection', 'error.servidor': 'The server had a problem. Please try again.',
+  'error.no_encontrado': 'We couldn’t find that information.', 'error.no_disponible': 'This service isn’t available right now.',
+  'error.solicitud': 'We couldn’t process your request. Check the details and try again.',
+  'error.cerrar': 'Close this message', 'error.reintentar': 'Try again',
+
+  'guia.paso': 'Step {n} of {total}', 'guia.saltar': 'Skip', 'guia.anterior': 'Back', 'guia.siguiente': 'Next', 'guia.empezar': 'Get started',
+  'guia.semaforo.titulo': 'See how each place is doing',
+  'guia.semaforo.texto': 'Each place tells you whether it’s a good time to go. Shapes and colors mean the same throughout the app.',
+  'guia.lugares.titulo': 'Compare before you go',
+  'guia.lugares.texto': 'The list starts with your best options. With “See all places” you see them grouped and can filter by destination.',
+  'guia.opciones.titulo': 'Adjust how it looks',
+  'guia.opciones.texto': 'The Aa button, at the top right, changes the text size, colors, contrast and language.',
 }
 
 export const TEXTOS = { es, en }

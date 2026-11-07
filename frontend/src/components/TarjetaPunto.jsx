@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { api } from '../api/cliente.js'
+import { api, codigoDe } from '../api/cliente.js'
 import { hora, horarioDeHoy, partesRazon, pesos, textoTraslado } from '../data/formato.js'
 import BotonEscuchar from './BotonEscuchar.jsx'
 import IconoEstado from './IconoEstado.jsx'
@@ -30,25 +30,25 @@ function actualizacion(datos, t) {
 
 // T3 — Tarjeta del punto (CU_03): qué es, si conviene ir, por qué y cuándo conviene más.
 // onCargado(título): Turista mueve ahí el foco cuando la ficha se abrió desde la lista (D6).
-function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui, onCargado }) {
+function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui, onCargado, onError }) {
   const { idioma, t } = useIdioma()
   const [estado, setEstado] = useState(null)
-  const [error, setError] = useState(null)
+  const [fallo, setFallo] = useState(false)
   const titulo = useRef(null)
 
   useEffect(() => {
     let vigente = true
     api.obtenerEstadoPunto(puntoId, origenId)
       .then((datos) => { if (vigente) setEstado(datos) })
-      .catch((e) => { if (vigente) setError(e.message) })
+      .catch((e) => { if (vigente) { setFallo(true); onError(codigoDe(e)) } })
     return () => { vigente = false }
-  }, [puntoId, origenId])
+  }, [puntoId, origenId, onError])
 
   useEffect(() => {
     if (estado) onCargado?.(titulo.current)
   }, [estado, onCargado])
 
-  if (error) return <p className="aviso info">{error}</p>
+  if (fallo) return <button type="button" className="boton-texto" onClick={onVolver}>{t('ficha.volver')}</button>
   if (!estado || estado.id !== puntoId) return <p className="suave">{t('cargando')}</p>
 
   const conviene = estado.color === 'verde'
@@ -116,7 +116,7 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
           {t('hoy.resumen', { tranquila: estado.hoy.mas_tranquila.hora, llena: estado.hoy.mas_llena.hora })}
         </p>
       )}
-      <Semana puntoId={estado.id} />
+      <Semana puntoId={estado.id} onError={onError} />
 
       {estado.clima.length > 0 && (
         <>
@@ -161,7 +161,7 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
         {!conviene && <button type="button" className="boton primario" onClick={onAlternativa}>{t('ficha.mejorVe')}</button>}
         <button type="button" className={`boton${conviene ? ' primario' : ''}`} onClick={onEstoyAqui}>{t('ficha.estoyAqui')}</button>
       </div>
-      <a className="boton ancho" style={{ marginTop: 12 }} href={estado.como_llegar_url} target="_blank" rel="noreferrer">{t('ficha.comoLlegar')}</a>
+      <a className="boton ancho" href={estado.como_llegar_url} target="_blank" rel="noreferrer">{t('ficha.comoLlegar')}</a>
       </div>
 
       <div className="ficha-fuentes">

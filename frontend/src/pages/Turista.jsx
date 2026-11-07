@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { api } from '../api/cliente.js'
+import { api, codigoDe } from '../api/cliente.js'
 import { distanciaM, masCercano } from '../data/geo.js'
 import { ORDEN } from '../data/semaforo.js'
 import { useUbicacion } from '../hooks/useUbicacion.js'
@@ -7,6 +7,7 @@ import { useIdioma } from '../i18n/contexto.js'
 import BotonReporte from '../components/BotonReporte.jsx'
 import Chat from '../components/Chat.jsx'
 import FiltrosLugares from '../components/FiltrosLugares.jsx'
+import GuiaPrimerUso from '../components/GuiaPrimerUso.jsx'
 import Inicio from '../components/Inicio.jsx'
 import ListaPuntos from '../components/ListaPuntos.jsx'
 import Mapa from '../components/Mapa.jsx'
@@ -65,9 +66,11 @@ function resumen(puntos, t) {
 }
 
 // "¿A dónde voy ahora?" — T1 a T6 en una sola página (docs/12).
-function Turista({ catalogo, errorCatalogo, sesion, onSesion }) {
+function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onError }) {
   const [puntos, setPuntos] = useState([])
-  const [error, setError] = useState(null)
+  // La base de desarrollo no tiene clima: traslados aproximados y sin datos en vivo (INSTALACION.md).
+  // El semáforo lo dice en `datos`, así que el aviso aparece solo y nunca con los datos reales.
+  const [simulados, setSimulados] = useState(false)
   const [seleccionadoId, setSeleccionadoId] = useState(null)
   const [vista, setVista] = useState('lista')          // 'lista' | 'punto' | 'recomendacion'
   const [reportando, setReportando] = useState(false)
@@ -83,7 +86,7 @@ function Turista({ catalogo, errorCatalogo, sesion, onSesion }) {
   const botonAsistente = useRef(null)
   const chatPrevio = useRef(false)
   const [panelAncho, setPanelAncho] = useState(400)    // para que el mapa encuadre a la derecha del panel
-  const { letra } = usePreferencias()
+  const { letra, guiaAbierta, cerrarGuia } = usePreferencias()
   const hoja = useHoja(ESCALA_TEXTO[letra])
   const { t } = useIdioma()
   const textos = useMemo(() => textosMapa(t), [t])
@@ -123,15 +126,15 @@ function Turista({ catalogo, errorCatalogo, sesion, onSesion }) {
     async function cargar() {
       try {
         const datos = await api.obtenerSemaforo(origenId)
-        if (vigente) { setPuntos(datos.puntos); setError(null) }
+        if (vigente) { setPuntos(datos.puntos); setSimulados(datos.datos.clima_consultado_en === null); onError(null) }
       } catch (e) {
-        if (vigente) setError(e.message)
+        if (vigente) onError(codigoDe(e))
       }
     }
     cargar()
     const id = setInterval(cargar, RECARGA_MS)
     return () => { vigente = false; clearInterval(id) }
-  }, [sesion, origenId, version])
+  }, [sesion, origenId, version, onError])
 
   async function empezar(perfil) {
     const nueva = await api.crearSesion(perfil)
@@ -140,6 +143,7 @@ function Turista({ catalogo, errorCatalogo, sesion, onSesion }) {
 
   function seleccionar(id) {
     enfocarFicha.current = true
+    onError(null)
     setSeleccionadoId(id)
     setAlternativaId(null)
     setVista('punto')
@@ -191,6 +195,8 @@ function Turista({ catalogo, errorCatalogo, sesion, onSesion }) {
   const destinos = [...new Set(catalogo.map((p) => p.destino))]
   const filtroActivo = [filtro.destino, filtro.gustos && t('filtros.gustos')].filter(Boolean).join(' · ')
   const seleccionado = puntos.find((p) => p.id === seleccionadoId)
+  // "Ver todos" y la ficha de un lugar ocupan media pantalla; la lista, un tercio.
+  const mitad = ampliada || vista !== 'lista'
   const origen = catalogo.find((p) => p.id === origenId)
   // Distancia del GPS al lugar que se reporta (solo el número; la ubicación no sale del celular).
   const distanciaReporte = gps && seleccionado && gps.precision <= PRECISION_REPORTE_M
@@ -198,8 +204,8 @@ function Turista({ catalogo, errorCatalogo, sesion, onSesion }) {
 
   // Primero la pantalla de inicio, limpia; el mapa aparece hasta que el turista termina.
   if (!sesion) {
-    if (errorCatalogo) return <p className="cargando">{errorCatalogo}</p>
-    return catalogo.length > 0 ? <Inicio puntos={catalogo} onListo={empezar} /> : <p className="cargando">{t('cargando')}</p>
+    if (errorCatalogo) return <div className="cargando"><button type="button" className="boton" onClick={onReintentar}>{t('error.reintentar')}</button></div>
+    return catalogo.length > 0 ? <Inicio puntos={catalogo} onListo={empezar} onError={onError} /> : <p className="cargando">{t('cargando')}</p>
   }
 
   return (
@@ -208,7 +214,7 @@ function Turista({ catalogo, errorCatalogo, sesion, onSesion }) {
           los 23 marcadores (D6). En pantalla no cambia nada: los dos tienen posición absoluta. */}
       <section
         ref={panel}
-        className={`panel-flotante${hoja.arrastrando ? ' arrastrando' : ''}${ampliada ? ' ampliada' : ''}`}
+        className={`panel-flotante${hoja.arrastrando ? ' arrastrando' : ''}${mitad ? ' mitad' : ''}`}
         style={hoja.movil ? { height: hoja.alto } : undefined}
         aria-label={t('lista.region')}
       >
@@ -232,16 +238,17 @@ function Turista({ catalogo, errorCatalogo, sesion, onSesion }) {
               </div>
               <p className="suave">{t('lista.desde', { lugar: origen?.nombre ?? t('lista.tuUbicacion') })}</p>
               <p className="resumen" aria-live="polite">{puntos.length > 0 ? resumen(visibles, t) : t('resumen.cargando')}</p>
+              {simulados && <p className="aviso-simulados">{t('datos.simulados')}</p>}
             </div>
           )}
         </div>
 
+        {/* Los filtros completos van en una barra fija de "Ver todos": siguen a la vista al bajar por la
+            lista. En la lista angosta solo se avisa si hay uno activo, para no esconder los lugares. */}
+        {vista === 'lista' && ampliada && <FiltrosLugares destinos={destinos} filtro={filtro} onFiltro={setFiltro} hayGustos={intereses.length > 0} />}
+
         {vista === 'lista' && (
           <div className="panel-cuerpo">
-            {error && <p className="aviso info">{error}</p>}
-            {/* Los filtros completos van en la vista ampliada, donde caben en uno o dos renglones; en la
-                lista angosta solo se avisa si hay uno activo, para que la lista no quede escondida. */}
-            {ampliada && <FiltrosLugares destinos={destinos} filtro={filtro} onFiltro={setFiltro} hayGustos={intereses.length > 0} />}
             {!ampliada && filtroActivo && (
               <p className="filtro-activo">
                 {t('filtros.activo', { filtro: filtroActivo })}
@@ -260,7 +267,7 @@ function Turista({ catalogo, errorCatalogo, sesion, onSesion }) {
         )}
 
         {vista === 'punto' && seleccionadoId != null && (
-          <div className="panel-cuerpo" style={{ paddingTop: 16 }}>
+          <div className="panel-cuerpo con-acciones" style={{ paddingTop: 16 }}>
             <TarjetaPunto
               key={`${seleccionadoId}-${version}`}
               puntoId={seleccionadoId}
@@ -269,6 +276,7 @@ function Turista({ catalogo, errorCatalogo, sesion, onSesion }) {
               onAlternativa={() => setVista('recomendacion')}
               onEstoyAqui={() => setReportando(true)}
               onCargado={alCargarFicha}
+              onError={onError}
             />
           </div>
         )}
@@ -284,6 +292,7 @@ function Turista({ catalogo, errorCatalogo, sesion, onSesion }) {
               onVolver={() => { setVista('punto'); setAlternativaId(null) }}
               onElegir={seleccionar}
               onPropuesta={setAlternativaId}
+              onError={onError}
             />
           </div>
         )}
@@ -325,8 +334,11 @@ function Turista({ catalogo, errorCatalogo, sesion, onSesion }) {
           distanciaM={distanciaReporte}
           onCerrar={() => setReportando(false)}
           onReportado={() => setVersion((v) => v + 1)}
+          onError={onError}
         />
       )}
+
+      {guiaAbierta && <GuiaPrimerUso onCerrar={cerrarGuia} />}
     </>
   )
 }

@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import logoIntelligentia from '../assets/intelligentia.png'
-import logoTechCapital from '../assets/tech-capital-puebla-2026.png'
+import { codigoDe } from '../api/cliente.js'
 import { rutaFoto } from '../data/fotos.js'
 import { INTERESES, TIEMPOS } from '../data/intereses.js'
 import { useIdioma } from '../i18n/contexto.js'
@@ -19,13 +18,12 @@ const porClave = (puntos, clave) => puntos.find((p) => p.clave === clave)
 // T1 — Inicio (CU_01): intereses, tiempo disponible y dónde está el turista.
 // Pantalla propia, sin el mapa detrás: el mapa aparece hasta que el turista termina.
 // Sin GPS: en http por la red del stand el celular no lo da (docs/05c §4).
-function Inicio({ puntos, onListo }) {
+function Inicio({ puntos, onListo, onError }) {
   const { t } = useIdioma()
   const [intereses, setIntereses] = useState(['historia', 'arte'])
   const [horas, setHoras] = useState(5)
   const [origenId, setOrigenId] = useState(() => (porClave(puntos, 'zocalo_puebla') ?? porClave(puntos, 'catedral') ?? puntos[0]).id)
   const [enviando, setEnviando] = useState(false)
-  const [error, setError] = useState(null)
 
   function alternarInteres(id) {
     if (intereses.includes(id)) setIntereses(intereses.filter((i) => i !== id))
@@ -35,11 +33,11 @@ function Inicio({ puntos, onListo }) {
   async function enviar(evento) {
     evento.preventDefault()
     setEnviando(true)
-    setError(null)
+    onError(null)
     try {
       await onListo({ intereses, horas, origenId })
     } catch (e) {
-      setError(e.message)
+      onError(codigoDe(e))
       setEnviando(false)
     }
   }
@@ -100,16 +98,7 @@ function Inicio({ puntos, onListo }) {
         <button type="submit" className="boton primario ancho grande" disabled={intereses.length === 0 || enviando}>
           {enviando ? t('inicio.calculando') : t('inicio.boton')}
         </button>
-        {error && <p className="aviso info" style={{ marginTop: 12 }}>{error}</p>}
         <p className="nota-privacidad">{t('inicio.privacidad')}</p>
-
-        <footer className="pie-evento">
-          <div className="logos-evento">
-            <img src={logoTechCapital} alt="Tech Capital Puebla 2026" width="400" height="365" />
-            <img src={logoIntelligentia} alt="Intelligentia: Compromiso, Innovación, Conocimiento" width="229" height="240" />
-          </div>
-          <p>{t('inicio.evento')}</p>
-        </footer>
       </form>
     </div>
   )

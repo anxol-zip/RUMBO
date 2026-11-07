@@ -1,8 +1,9 @@
 import { partesRazon, textoTraslado } from '../data/formato.js'
 import { useIdioma } from '../i18n/contexto.js'
+import Foto from './Foto.jsx'
 import IconoEstado from './IconoEstado.jsx'
 
-// Grupos de la vista ampliada, en el orden en que conviene leerlos. Sin dato y cerrado van juntos:
+// Grupos de "Ver todos", en el orden en que conviene leerlos. Sin dato y cerrado van juntos:
 // ninguno de los dos es una opción para ir ahora.
 const GRUPOS = [
   { id: 'verde', colores: ['verde'] },
@@ -11,9 +12,9 @@ const GRUPOS = [
   { id: 'otros', colores: ['sin_dato', 'cerrado'] },
 ]
 
-// Vista ampliada de la barra lateral (D4 de la propuesta): todos los lugares a la vez, agrupados
-// por estado, para comparar sin hacer scroll ni recordar lo que ya se vio (Nielsen: reconocer antes
-// que recordar; Gestalt: proximidad y similitud).
+// "Ver todos los lugares" (D4 de la propuesta): todos los lugares agrupados por estado. La foto
+// ayuda a reconocer el lugar y su forma repite el estado del grupo (Nielsen: reconocer antes que
+// recordar; Gestalt: proximidad y similitud). El encabezado de cada grupo se queda arriba al bajar.
 function TodosLosLugares({ puntos, seleccionadoId, onSeleccionar }) {
   const { idioma, t } = useIdioma()
   return (
@@ -33,18 +34,19 @@ function TodosLosLugares({ puntos, seleccionadoId, onSeleccionar }) {
                 <li key={p.id}>
                   <button
                     type="button"
-                    className={`lugar-compacto${p.color === 'cerrado' ? ' apagado' : ''}`}
+                    className={`lugar-tarjeta${p.color === 'cerrado' ? ' apagado' : ''}`}
                     data-punto={p.id}
                     aria-current={p.id === seleccionadoId}
-                    title={p.nombre}
                     onClick={() => onSeleccionar(p.id)}
                   >
-                    {g.id === 'otros' && <IconoEstado color={p.color} />}
+                    <span className="miniatura">
+                      <Foto id={p.clave} tamano="mini" />
+                      <IconoEstado color={p.color} />
+                    </span>
                     <span className="lugar-texto">
                       <strong>{p.nombre}</strong>
-                      <span className="lugar-meta">
-                        {p.traslado ? `${textoTraslado(p.traslado, t)} · ` : ''}{p.destino}
-                      </span>
+                      {p.traslado && <span className="lugar-traslado numero">{textoTraslado(p.traslado, t)}</span>}
+                      <span className="lugar-destino">{p.destino}</span>
                       <span className="oculto-accesible">{t(`sem.${p.color}`)}. {partesRazon(p.razon, idioma)[0]}</span>
                     </span>
                   </button>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api/cliente.js'
+import { api, codigoDe } from '../api/cliente.js'
 import { hora } from '../data/formato.js'
 import { useIdioma } from '../i18n/contexto.js'
 import { IdiomaFijo } from '../i18n/Idioma.jsx'
@@ -14,21 +14,21 @@ const RECARGA_MS = 30_000
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 
 // G1 — Panel de gobierno (CU_07): saturación, a dónde se van los turistas y cuánto dinero llegó.
-// Solo agregados (RN_12). En el stand se cuenta la actividad de los evaluadores, rotulada (RN_11).
+// Solo agregados (RN_12). La actividad de demostración se cuenta aparte, rotulada (RN_11).
 // Su público es la Secretaría: se queda en español aunque el turista haya elegido inglés.
-function Panel() {
-  const { t } = useIdioma()
+function Panel({ onError }) {
+  const { idioma, t } = useIdioma()
   const nota = t('panel.soloEspanol')
   return (
     <IdiomaFijo idioma="es">
-      <ContenidoPanel nota={nota} />
+      <ContenidoPanel nota={nota} etiquetaDemo={t('panel.contarDemo')} idiomaDemo={idioma} onError={onError} />
     </IdiomaFijo>
   )
 }
 
-function ContenidoPanel({ nota }) {
+function ContenidoPanel({ nota, etiquetaDemo, idiomaDemo, onError }) {
   const [datos, setDatos] = useState(null)
-  const [error, setError] = useState(null)
+  const [fallo, setFallo] = useState(false)
   const [incluirDemo, setIncluirDemo] = useState(true)
   const [version, setVersion] = useState(0)
 
@@ -37,15 +37,15 @@ function ContenidoPanel({ nota }) {
     async function cargar() {
       try {
         const d = await api.obtenerPanel({ incluirDemo })
-        if (vigente) { setDatos(d); setError(null) }
+        if (vigente) { setDatos(d); setFallo(false); onError(null) }
       } catch (e) {
-        if (vigente) setError(e.message)
+        if (vigente) { setFallo(true); onError(codigoDe(e)) }
       }
     }
     cargar()
     const id = setInterval(cargar, RECARGA_MS)
     return () => { vigente = false; clearInterval(id) }
-  }, [incluirDemo, version])
+  }, [incluirDemo, version, onError])
 
   async function fijar(ajuste) {
     await api.fijarColor(ajuste)
@@ -53,11 +53,15 @@ function ContenidoPanel({ nota }) {
   }
 
   async function quitar(id) {
-    await api.quitarAjuste(id)
-    setVersion((v) => v + 1)
+    try {
+      await api.quitarAjuste(id)
+      setVersion((v) => v + 1)
+    } catch (e) {
+      onError(codigoDe(e))
+    }
   }
 
-  if (!datos) return <div className="gobierno"><p className="suave">{error ?? 'Cargando panel…'}</p></div>
+  if (!datos) return <div className="gobierno">{!fallo && <p className="suave">Cargando panel…</p>}</div>
 
   const { afluencia, redirecciones, derrama, estatal, umbrales, ajustes } = datos
 
@@ -71,13 +75,12 @@ function ContenidoPanel({ nota }) {
         <div className="gobierno-opciones">
           <label className="interruptor">
             <input type="checkbox" checked={incluirDemo} onChange={(e) => setIncluirDemo(e.target.checked)} />
-            Contar la demo del stand
+            <span lang={idiomaDemo}>{etiquetaDemo}</span>
           </label>
           <p className="suave">Solo totales por lugar y hora. Actualizado a las {hora(afluencia.datos.ahora)}.</p>
         </div>
       </div>
       {nota && <p className="aviso info" lang="en" style={{ marginBottom: 16 }}>{nota}</p>}
-      {error && <p className="aviso info" style={{ marginBottom: 16 }}>{error}</p>}
 
       <div className="rejilla">
         <Indicadores hoy={afluencia.hoy} derrama={derrama} />
@@ -96,7 +99,7 @@ function ContenidoPanel({ nota }) {
         <div className="caja c-5">
           <h2>Fijar el color de un lugar</h2>
           <p className="subtitulo">Para cierres, obras o filas que el modelo no ve. Gana sobre el cálculo hasta la hora de fin.</p>
-          <FijarColor puntos={afluencia.puntos} ajustes={ajustes} onFijar={fijar} onQuitar={quitar} />
+          <FijarColor puntos={afluencia.puntos} ajustes={ajustes} onFijar={fijar} onQuitar={quitar} onError={onError} />
         </div>
         <div className="caja c-7">
           <h2>Semáforo estatal de {MESES[estatal.mes - 1]}</h2>

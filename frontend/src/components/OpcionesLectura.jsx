@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useIdioma } from '../i18n/contexto.js'
 import { COLORES, CONTRASTES, TAMANOS, usePreferencias, VOCES } from '../preferencias/contexto.js'
 import IconoEstado from './IconoEstado.jsx'
@@ -11,7 +12,8 @@ const HAY_VOZ = typeof window !== 'undefined' && 'speechSynthesis' in window
 // "Listo" o tocando fuera, y el foco vuelve al botón.
 function OpcionesLectura() {
   const { idioma, setIdioma, t } = useIdioma()
-  const { letra, setLetra, colores, setColores, contraste, setContraste, voz, setVoz } = usePreferencias()
+  const { letra, setLetra, colores, setColores, contraste, setContraste, voz, setVoz, abrirGuia } = usePreferencias()
+  const navegar = useNavigate()
   const [abierto, setAbierto] = useState(false)
   const boton = useRef(null)
   const panel = useRef(null)
@@ -19,6 +21,13 @@ function OpcionesLectura() {
   function cerrar() {
     setAbierto(false)
     boton.current?.focus()
+  }
+
+  // La guía vive en la pantalla del mapa.
+  function verGuia() {
+    setAbierto(false)
+    navegar('/')
+    abrirGuia()
   }
 
   useEffect(() => {
@@ -110,6 +119,7 @@ function OpcionesLectura() {
             <button type="button" lang="en" aria-pressed={idioma === 'en'} onClick={() => setIdioma('en')}>English</button>
           </div>
 
+          <button type="button" className="boton ancho" onClick={verGuia}>{t('lectura.guia')}</button>
           <button type="button" className="boton primario ancho" onClick={cerrar}>{t('lectura.listo')}</button>
           <p className="nota-guardado">{t('lectura.guardado')}</p>
         </div>
