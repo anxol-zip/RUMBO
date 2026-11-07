@@ -30,7 +30,7 @@ PUEBLA_DEMO=1 OLLAMA_MODELO=qwen3:4b uv run uvicorn app.main:app --host 0.0.0.0 
 
 - Los celulares abren `http://<IP de la laptop>:8000` en la misma red (el QR apunta ahí). `/panel` y `/acerca` abren directo porque el build copia `index.html` a esas carpetas (`vite.config.js`).
 - FastAPI solo monta `dist/` si existe **al arrancar**: compilar antes de levantar uvicorn.
-- `PUEBLA_DEMO=1` marca las sesiones de los evaluadores como demo (RN_11). El panel las cuenta con el interruptor "Contar la demo del stand", que viene encendido.
+- `PUEBLA_DEMO=1` marca las sesiones de los evaluadores como demo (RN_11). El panel las cuenta con el interruptor "Contar la actividad de demostración", que viene encendido.
 - Sin Ollama, el asistente avisa que no está disponible; el resto de la app no lo necesita.
 
 ## Datos
@@ -67,4 +67,4 @@ src/
 
 - El mapa usa mosaicos de OpenStreetMap: **sin internet** se ve el fondo gris con los marcadores, y la app sigue funcionando. Las fotos van incluidas en el build.
 - `webDesignInspo/` (referencias visuales de terceros) está en `.gitignore`: no se sube.
-- El nombre "Puebla Ahora" es provisional; se cambia en `src/data/marca.js`.
+- El nombre de la app se cambia en `src/data/marca.js`.
