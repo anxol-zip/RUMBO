@@ -8,9 +8,10 @@ Equipo: Angel Rugerio Jiménez (201720, representante), Axel García Arellano (2
 
 | Documento | Qué es |
 | --- | --- |
-| [Sesión 22 - Proyecto final y Expo Ibero](Sesi%C3%B3n%2022%20-%20Proyecto%20final%20y%20Expo%20Ibero.pdf) | Instrucciones del profesor: requisitos comunes, temas, ficha y documentos de diseño. Al PDF le faltan las láminas 02 y 06; la numeración salta, pero no es relevante |
-| [Ficha de proyecto](Ficha%20de%20Proyecto%20-%20completa.pdf) | Ficha entregada y validada el 4 de noviembre de 2026. Transcrita en [`docs/00-proyecto.md`](../00-proyecto.md), como piden las instrucciones |
-| [Pre-registro Expo Ibero](Pre-registro%20Expo%20Ibero.md) | Datos del pre-registro de la Expo |
+| [Instrucciones del proyecto final](Instrucciones_ProyectoFinal.pdf) | Sesión 22, «Proyecto final y Expo Ibero»: requisitos comunes, temas, ficha y documentos de diseño. Al PDF le faltan las láminas 02 y 06; la numeración salta, pero no es relevante |
+| [Ficha de proyecto](00b%20-%20Proyecto_PDF.pdf) | Ficha entregada y validada el 4 de noviembre de 2026. Transcrita en [`00 - Proyecto.md`](00%20-%20Proyecto.md) |
+| [01 - Pre-registro Expo Ibero](01%20-%20Pre-registro%20Expo%20Ibero.md) | Datos del pre-registro de la Expo, enviado el 8 de noviembre de 2026 |
+| [Calendario de la Expo](../00%20-%20Calendario%20ExpoIbero.png) y [instrucciones del pre-registro](../01%20-%20Instrucciones%20Pre-registro.png) | Capturas de la plataforma de la Expo, en `docs/` |
 
 ## Lo que pide el profesor
 
@@ -25,11 +26,11 @@ Equipo: Angel Rugerio Jiménez (201720, representante), Axel García Arellano (2
 
 Los commits son la evidencia individual. Reciclar proyectos de otras generaciones es plagio.
 
-**Documentos de diseño** (después de validar la ficha), en `docs/`:
+**Documentos de diseño** (después de validar la ficha). Las instrucciones los piden en `docs/`; en este repo, compartido por dos materias, van en `docs/DdS/`:
 
 | Archivo | Contenido |
 | --- | --- |
-| `00-proyecto.md` | La ficha |
+| `00-proyecto.md` | La ficha (ya está: [`00 - Proyecto.md`](00%20-%20Proyecto.md)) |
 | `01-requerimientos.md` | Visión, actores, 10 historias o más, RF y RNF |
 | `02-modelo-datos.md` | Colecciones, campos y reglas de la base |
 | `03-arquitectura.md` | Rutas y capas: pantalla, lógica y datos |

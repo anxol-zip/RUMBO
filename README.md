@@ -2,13 +2,10 @@
 
 **RUMBO** (Redistribución Unificada con Mapas, Búsquedas y Opiniones) es el repositorio del proyecto final de dos materias de la Universidad Iberoamericana Puebla. Cada materia tiene su propio equipo, entregables y documentación:
 
-| Materia | Docente | Equipo | Documentación |
-| --- | --- | --- | --- |
+| Materia                                                                                                          | Docente                         | Equipo                                                                                                                             | Documentación            |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
 | **Interacción Persona Máquina** (13009A-O26). Tema del curso: *Interfaces Inteligentes para el Bienestar Social* | Dra. Gabriela A. Rodríguez Ruiz | Angel Rugerio Jiménez (201720), Axel García Arellano (201251), Diego Navarro Sánchez (202497) y Yohualli Ollin Luna Reyes (189670) | [`docs/HCI/`](docs/HCI/) |
-| **Diseño de Software** | Mtro. Rafael Pérez Aguirre | El mismo equipo y Cristian Alexei Romero Martínez (203739) | [`docs/DdS/`](docs/DdS/) |
-
-Cristian participa solo en Diseño de Software. La propuesta de Interacción Persona Máquina la presenta como *Puebla Ahora*, su nombre anterior; hoy todo el proyecto se llama **RUMBO**.
-
+| **Diseño de Software**                                                                                           | Mtro. Rafael Pérez Aguirre      | El mismo equipo y Cristian Alexei Romero Martínez (203739)                                                                         | [`docs/DdS/`](docs/DdS/) |
 ## De qué va
 
 **RUMBO** responde *"¿a dónde voy ahora?"*: un semáforo en vivo de 23 lugares turísticos de Puebla, Cholula y Atlixco (buen momento / con precaución / mejor después). Si el lugar que buscas está lleno, te recomienda otro parecido y más tranquilo. También tiene un asistente con IA local que responde solo con los datos de la app, y un panel para la Secretaría de Turismo.
@@ -21,9 +18,9 @@ La app nació en un hackathon. En este proyecto **rediseñamos su interfaz con l
 - **Para distintas edades y capacidades:** botones grandes, uso con teclado y lector de pantalla, y lectura en voz alta.
 - **Pruebas de usabilidad** con personas ajenas al equipo, antes y después.
 
-La [propuesta inicial](docs/HCI/Proyecto%20Final%20-%20Propuesta%20inicial.pdf) y los avances ([1](docs/HCI/Avance_1.pdf) y [2](docs/HCI/Avance_2.pdf)) están en `docs/HCI/`. La propuesta mencionaba PySide6 y Qt Designer: la profesora autorizó después seguir en React.
+La [propuesta inicial](docs/HCI/00%20-%20Propuesta.pdf) y los avances ([1](docs/HCI/01%20-%20Avance_1.pdf), [2](docs/HCI/02%20-%20Avance_2.pdf) y [3](docs/HCI/03%20-%20Avance_3.pdf)) están en `docs/HCI/`. La propuesta mencionaba PySide6 y Qt Designer: la profesora autorizó después seguir en React.
 
-En **Diseño de Software** el proyecto se presenta en la **Expo Ibero** (4 de diciembre de 2026). La materia pide login con dos roles (turista y administrador), datos con dueño, una regla que la base hace cumplir, lógica en capas con pruebas, una URL desplegada y pruebas con usuarios reales. Por eso la base de datos migra a Firebase y el frontend adopta las capas vistas en clase. La [ficha del proyecto](docs/00-proyecto.md), las instrucciones, el estado frente a cada requisito y el calendario de la Expo están en [`docs/DdS/`](docs/DdS/README.md).
+En **Diseño de Software** el proyecto se presenta en la **Expo Ibero** (4 de diciembre de 2026). La materia pide login con dos roles (turista y administrador), datos con dueño, una regla que la base hace cumplir, lógica en capas con pruebas, una URL desplegada y pruebas con usuarios reales. Por eso la base de datos migra a Firebase y el frontend adopta las capas vistas en clase. La [ficha del proyecto](docs/DdS/00%20-%20Proyecto.md), las instrucciones, el estado frente a cada requisito y el pre-registro están en [`docs/DdS/`](docs/DdS/README.md); el [calendario de la Expo](docs/00%20-%20Calendario%20ExpoIbero.png) está en `docs/`.
 
 ## Origen del código
 

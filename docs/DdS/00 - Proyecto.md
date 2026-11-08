@@ -1,6 +1,6 @@
 # Ficha del proyecto final — Diseño de Software
 
-> Transcripción de la ficha entregada y validada el 4 de noviembre de 2026 ([PDF](DdS/Ficha%20de%20Proyecto%20-%20completa.pdf)). Las instrucciones de la sesión 22 piden que la ficha viva en `docs/00-proyecto.md` como evidencia. El texto de las secciones 1 a 9 es el de la ficha entregada. Los cambios decididos después se anotan en [Cambios después de la validación](#cambios-después-de-la-validación), sin reescribir lo entregado.
+> Transcripción de la ficha entregada y validada el 4 de noviembre de 2026 ([PDF](00b%20-%20Proyecto_PDF.pdf)). Las instrucciones de la sesión 22 piden la ficha en `docs/00-proyecto.md` como evidencia; como el repo lo comparten dos materias, todo lo de Diseño de Software vive en `docs/DdS/`. El texto de las secciones 1 a 9 es el de la ficha entregada. Los cambios decididos después se anotan en [Cambios después de la validación](#cambios-después-de-la-validación), sin reescribir lo entregado.
 
 ## 1. Tema y título tentativo
 
@@ -70,7 +70,7 @@
 
 ## Cambios después de la validación
 
-Decisiones del equipo del 7 de noviembre de 2026, tomadas al contrastar la ficha con las [instrucciones de la sesión 22](DdS/Sesi%C3%B3n%2022%20-%20Proyecto%20final%20y%20Expo%20Ibero.pdf). El estado de cada requisito está en [`DdS/README.md`](DdS/README.md).
+Decisiones del equipo del 7 de noviembre de 2026, tomadas al contrastar la ficha con las [instrucciones de la sesión 22](Instrucciones_ProyectoFinal.pdf). El estado de cada requisito está en [`README.md`](README.md).
 
 | Sección | Cambio |
 | --- | --- |
