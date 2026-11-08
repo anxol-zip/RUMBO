@@ -136,14 +136,18 @@ ollama list
 
 Si usas `qwen3:4b`, define `OLLAMA_MODELO` (sin editar el `.env`):
 
+**Windows:**
+
 ```powershell
-# Windows: la primera línea es para las terminales nuevas, la segunda para la actual
+# La primera línea es para las terminales nuevas, la segunda para la actual
 [Environment]::SetEnvironmentVariable('OLLAMA_MODELO', 'qwen3:4b', 'User')
 $env:OLLAMA_MODELO = 'qwen3:4b'
 ```
 
+**Linux (Ubuntu):**
+
 ```bash
-# Linux: cambia ~/.bashrc por ~/.zshrc si usas zsh
+# Cambia ~/.bashrc por ~/.zshrc si usas zsh
 echo "export OLLAMA_MODELO=qwen3:4b" >> ~/.bashrc
 export OLLAMA_MODELO=qwen3:4b
 ```
@@ -154,12 +158,16 @@ Si la variable apunta a un modelo que Ollama no tiene, el chat responde **503**.
 
 El semáforo en vivo usa la hora local, así que la computadora tiene que estar en la hora de Puebla:
 
+**Windows:**
+
 ```powershell
-Get-TimeZone      # Windows: (UTC-06:00) Guadalajara, Ciudad de México, Monterrey
+Get-TimeZone      # (UTC-06:00) Guadalajara, Ciudad de México, Monterrey
 ```
 
+**Linux (Ubuntu):**
+
 ```bash
-timedatectl       # Linux: Time zone: America/Mexico_City
+timedatectl       # Time zone: America/Mexico_City
 ```
 
 ### 4.4 Base real e índice del asistente
@@ -182,7 +190,7 @@ uv run python -m scripts.pipeline data/raw
 ```bash
 cd frontend && npm run build && cd ..   # crea frontend/dist/, que FastAPI sirve en el puerto 8000
 cd backend
-uv run pytest -q                        # 111 pruebas (develop, 2026-11-02)
+uv run pytest -q                        # 113 pruebas (develop, 2026-11-08)
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
@@ -240,9 +248,3 @@ Prueba desde un celular: `http://<IP>:8000`.
 | `/api/salud` dice `false` en una clave | El `.env` no está en `backend/` o le falta la clave | Revisa que el archivo se llame exactamente `.env`; en Windows el explorador puede ocultar que quedó como `.env.txt` |
 | "Centrar en mi ubicación" no funciona en el celular | Por `http://IP` el navegador no da la ubicación (no es HTTPS) | Es esperado: la app avisa y usa el lugar que se eligió en "Estoy en…" |
 | De noche, "¿y si llueve?" da un texto fijo | No hay lugares techados abiertos y el backend no deja que el modelo invente | Es a propósito; de día responde el modelo |
-
-## Dónde seguir
-
-- Qué es el proyecto y su estructura: [`README.md`](README.md).
-- Propuesta y criterios de las pruebas de usabilidad: [`docs/HCI/Propuesta_Inicial.md`](docs/HCI/Propuesta_Inicial.md).
-- Endpoints y reglas de negocio heredados del hackathon: [`docs/hackathon/`](docs/hackathon/).
