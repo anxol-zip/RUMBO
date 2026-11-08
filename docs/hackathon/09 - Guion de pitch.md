@@ -14,7 +14,7 @@ updated: 2026-10-16
 > - El momento fuerte ahora es **"las dos caras"**: el gobierno fija un color en el panel, el celular del evaluador cambia y su reporte llega al panel.
 > - La tecnología se vende como **promesas**, no como siglas.
 >
-> Cifras de [[02 - Problema y propuesta]], [[07 - Modelo de negocio y escalabilidad]] y `docs/16 - Slides de implementación.md`.
+> Cifras de [[02 - Problema y propuesta]], [[07 - Modelo de negocio y escalabilidad]] y [[14 - Slides de implementación]].
 
 > [!abstract] Formato
 > - **Duración:** de 5 a 10 minutos en el stand, viernes 2026-10-16 de 12:00 a 15:00. Se repite igual cada vez.
