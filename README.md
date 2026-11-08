@@ -23,6 +23,8 @@ La app nació en un hackathon. En este proyecto **rediseñamos su interfaz con l
 
 La [propuesta inicial](docs/HCI/Proyecto%20Final%20-%20Propuesta%20inicial.pdf) y los avances ([1](docs/HCI/Avance_1.pdf) y [2](docs/HCI/Avance_2.pdf)) están en `docs/HCI/`. La propuesta mencionaba PySide6 y Qt Designer: la profesora autorizó después seguir en React.
 
+En **Diseño de Software** el proyecto se presenta en la **Expo Ibero** (4 de diciembre de 2026). La materia pide login con dos roles (turista y administrador), datos con dueño, una regla que la base hace cumplir, lógica en capas con pruebas, una URL desplegada y pruebas con usuarios reales. Por eso la base de datos migra a Firebase y el frontend adopta las capas vistas en clase. La [ficha del proyecto](docs/00-proyecto.md), las instrucciones, el estado frente a cada requisito y el calendario de la Expo están en [`docs/DdS/`](docs/DdS/README.md).
+
 ## Origen del código
 
 El código parte del repositorio del hackathon **"Puebla Turística 360°"** (Tech Capital Puebla 2026, SECIHTI Puebla), donde Axel y Angel construyeron la primera versión:
