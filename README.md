@@ -97,7 +97,8 @@ Inicio rápido en modo de desarrollo (Linux; en Windows, ver la guía):
 ```bash
 cd backend && uv sync
 DATABASE_URL=sqlite:///data/desarrollo.db PUEBLA_TAREAS=0 uv run uvicorn app.main:app --reload --port 8000
-
+```
+```bash
 cd frontend && npm ci && npm run dev                # en otra terminal → http://localhost:5173
 ```
 
