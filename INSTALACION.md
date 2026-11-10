@@ -78,7 +78,19 @@ cp backend/.env.example backend/.env
 Copy-Item backend\.env.example backend\.env
 ```
 
-Abre `backend/.env` y cambia:
+Ábrelo para editarlo:
+
+```bash
+# Linux
+nano backend/.env          # guarda con Ctrl+O y Enter; sal con Ctrl+X
+```
+
+```powershell
+# Windows
+notepad backend\.env       # guarda con Ctrl+S. Debe quedar como ".env", no ".env.txt"
+```
+
+Cambia:
 
 | Variable | Valor |
 |---|---|
