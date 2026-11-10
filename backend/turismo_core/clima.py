@@ -24,7 +24,7 @@ Los números exactos son nuestros y se calibran con ``obs_clima`` y los reportes
 from __future__ import annotations
 
 import json
-import sqlite3
+import psycopg
 import urllib.parse
 import urllib.request
 from collections.abc import Iterable, Sequence
@@ -108,19 +108,23 @@ def consultar(puntos: Sequence[tuple[int, float, float]], timeout: float = 30) -
 
 # ───────────── obs_clima ─────────────
 
-def guardar(con: sqlite3.Connection, pronosticos: Iterable[Pronostico], consultado_en: datetime) -> int:
+def guardar(con: psycopg.Connection, pronosticos: Iterable[Pronostico], consultado_en: datetime) -> int:
     filas = [(p.punto_id, consultado_en.isoformat(timespec="minutes"), p.valido_para.isoformat(timespec="minutes"),
               p.temp_c, p.prob_lluvia_pct, p.lluvia_mm, p.weather_code) for p in pronosticos]
-    con.executemany("INSERT OR REPLACE INTO obs_clima VALUES (?, ?, ?, ?, ?, ?, ?)", filas)
+    con.cursor().executemany(
+        "INSERT INTO obs_clima (punto_id, consultado_en, valido_para, temp_c, prob_lluvia_pct, lluvia_mm, weather_code) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (punto_id, consultado_en, valido_para) DO UPDATE SET "
+        "temp_c = EXCLUDED.temp_c, prob_lluvia_pct = EXCLUDED.prob_lluvia_pct, lluvia_mm = EXCLUDED.lluvia_mm, "
+        "weather_code = EXCLUDED.weather_code", filas)
     return len(filas)
 
 
-def ultimo_pronostico(con: sqlite3.Connection, desde: datetime, hasta: datetime) -> dict[tuple[int, datetime], Pronostico]:
+def ultimo_pronostico(con: psycopg.Connection, desde: datetime, hasta: datetime) -> dict[tuple[int, datetime], Pronostico]:
     """Para cada punto y hora, el pronóstico de la consulta más reciente que la cubre."""
     filas = con.execute(
         """SELECT o.* FROM obs_clima o
            JOIN (SELECT punto_id, valido_para, MAX(consultado_en) AS ultima FROM obs_clima
-                 WHERE valido_para BETWEEN ? AND ? GROUP BY punto_id, valido_para) u
+                 WHERE valido_para BETWEEN %s AND %s GROUP BY punto_id, valido_para) u
              ON u.punto_id = o.punto_id AND u.valido_para = o.valido_para AND u.ultima = o.consultado_en""",
         (desde.isoformat(timespec="minutes"), hasta.isoformat(timespec="minutes")),
     )

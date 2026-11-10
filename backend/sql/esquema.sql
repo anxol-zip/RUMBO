@@ -1,3 +1,6 @@
+-- YA NO SE EJECUTA. El esquema vigente es sql/esquema_postgres.sql (PostgreSQL en Supabase).
+-- Este archivo queda como referencia del esquema de SQLite que se usó hasta la migración.
+
 -- Esquema de puebla.db (docs/05 - Arquitectura y MCP, sección "Esquema").
 -- Escrito compatible con PostgreSQL salvo detalles menores, por si algún día se sube a la nube.
 -- Cambios respecto a docs/05:

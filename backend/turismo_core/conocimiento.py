@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import math
-import sqlite3
+import psycopg
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date
@@ -72,7 +72,7 @@ def horario_texto(texto: str | None) -> str:
     return "; ".join(partes) + (f"; cerrado {', '.join(cerrados)}" if cerrados else "")
 
 
-def doc_punto(p: sqlite3.Row | dict) -> Doc:
+def doc_punto(p: dict | dict) -> Doc:
     cats = [c.strip() for c in (p["categorias"] or "").split(",") if c.strip()]
     tipo = TIPOS.get(p["tipo"], (p["tipo"] or "lugar").replace("_", " "))
     # Lo que falta se dice ("sin dato") para que el modelo no lo rellene con el dato de otro punto
@@ -95,7 +95,7 @@ def doc_punto(p: sqlite3.Row | dict) -> Doc:
     }))
 
 
-def docs_puntos(con: sqlite3.Connection) -> list[Doc]:
+def docs_puntos(con: psycopg.Connection) -> list[Doc]:
     return [doc_punto(r) for r in con.execute(
         "SELECT p.*, d.nombre AS destino FROM punto p JOIN destino d ON d.id = p.destino_id ORDER BY p.id")]
 
@@ -106,9 +106,9 @@ def _fecha_int(texto: str) -> int:
     return int(texto[:10].replace("-", ""))
 
 
-def docs_eventos(con: sqlite3.Connection) -> list[Doc]:
+def docs_eventos(con: psycopg.Connection) -> list[Doc]:
     """Un documento por evento; las funciones repetidas de un mismo evento (Catrinia) van juntas."""
-    grupos: dict[str, list[sqlite3.Row]] = defaultdict(list)
+    grupos: dict[str, list[dict]] = defaultdict(list)
     for e in con.execute(
         "SELECT e.*, d.nombre AS destino, p.nombre AS punto FROM evento e LEFT JOIN destino d ON d.id = e.destino_id "
         "LEFT JOIN punto p ON p.id = e.punto_id WHERE e.verificado = 1 ORDER BY e.inicio"):
@@ -135,21 +135,21 @@ def docs_eventos(con: sqlite3.Connection) -> list[Doc]:
 INDICADORES = ("afluencia", "llegadas", "derrama_mxn", "ocupacion_pct", "estadia_promedio")
 
 
-def docs_observatorio(con: sqlite3.Connection) -> list[Doc]:
+def docs_observatorio(con: psycopg.Connection) -> list[Doc]:
     """Resumen de los últimos 12 meses publicados de cada destino (y del estado), contra los 12 anteriores."""
-    url = con.execute("SELECT url FROM fuente WHERE nombre LIKE 'Observatorio%'").fetchone()
-    url = url[0] if url else None
-    fin = con.execute("SELECT MAX(periodo) FROM hecho_observatorio WHERE indicador = 'afluencia' AND valor > 0").fetchone()[0]
+    url = con.execute("SELECT url FROM fuente WHERE nombre LIKE 'Observatorio%%'").fetchone()
+    url = url["url"] if url else None
+    fin = con.execute("SELECT MAX(periodo) AS m FROM hecho_observatorio WHERE indicador = 'afluencia' AND valor > 0").fetchone()["m"]
     anio, mes = map(int, fin.split("-"))
     meses = [f"{y}-{m + 1:02d}" for y, m in (divmod(anio * 12 + mes - 1 - i, 12) for i in range(24))][::-1]
     actual, previo = meses[12:], meses[:12]
 
     def serie(destino_id: int, indicador: str, periodos: list[str]) -> list[float]:
-        return [r[0] for r in con.execute(
-            f"SELECT valor FROM hecho_observatorio WHERE destino_id = ? AND indicador = ? AND periodo IN ({','.join('?' * len(periodos))}) "
+        return [r["valor"] for r in con.execute(
+            f"SELECT valor FROM hecho_observatorio WHERE destino_id = %s AND indicador = %s AND periodo IN ({','.join(['%s'] * len(periodos))}) "
             "AND valor IS NOT NULL", (destino_id, indicador, *periodos))]
 
-    estado = con.execute("SELECT id FROM destino WHERE nombre = 'Estado'").fetchone()[0]
+    estado = con.execute("SELECT id FROM destino WHERE nombre = 'Estado'").fetchone()["id"]
     tot = {i: sum(serie(estado, i, actual)) for i in ("afluencia", "llegadas", "derrama_mxn")}
     salida = []
     for d in con.execute("SELECT * FROM destino WHERE nombre NOT IN ('Cholula', 'Resto del Estado') ORDER BY id"):
@@ -182,21 +182,21 @@ def docs_observatorio(con: sqlite3.Connection) -> list[Doc]:
     return salida
 
 
-def docs_inah(con: sqlite3.Connection) -> list[Doc]:
+def docs_inah(con: psycopg.Connection) -> list[Doc]:
     """Visitas por recinto del INAH en Puebla: último año completo y lo que va del actual."""
-    url = con.execute("SELECT url FROM fuente WHERE nombre LIKE 'INAH%'").fetchone()
-    url = url[0] if url else None
-    ultimo = con.execute("SELECT MAX(periodo) FROM hecho_inah").fetchone()[0]
+    url = con.execute("SELECT url FROM fuente WHERE nombre LIKE 'INAH%%'").fetchone()
+    url = url["url"] if url else None
+    ultimo = con.execute("SELECT MAX(periodo) AS m FROM hecho_inah").fetchone()["m"]
     anio_actual = int(ultimo[:4])
     completo = anio_actual - 1 if not ultimo.endswith("-12") else anio_actual
-    total = con.execute("SELECT SUM(visitas) FROM hecho_inah WHERE periodo LIKE ?", (f"{completo}-%",)).fetchone()[0] or 0
+    total = con.execute("SELECT SUM(visitas) AS n FROM hecho_inah WHERE periodo LIKE %s", (f"{completo}-%",)).fetchone()["n"] or 0
     salida = []
     for r in con.execute(
         "SELECT r.clave_siinah, r.nombre, r.punto_id, "
-        "SUM(CASE WHEN h.periodo LIKE ? THEN h.visitas END) AS anio, "
-        "SUM(CASE WHEN h.periodo LIKE ? AND h.nacionalidad = 'extranjero' THEN h.visitas END) AS extranjeros, "
-        "SUM(CASE WHEN h.periodo LIKE ? THEN h.visitas END) AS actual "
-        "FROM recinto_inah r JOIN hecho_inah h ON h.clave_siinah = r.clave_siinah GROUP BY r.clave_siinah ORDER BY anio DESC",
+        "SUM(CASE WHEN h.periodo LIKE %s THEN h.visitas END) AS anio, "
+        "SUM(CASE WHEN h.periodo LIKE %s AND h.nacionalidad = 'extranjero' THEN h.visitas END) AS extranjeros, "
+        "SUM(CASE WHEN h.periodo LIKE %s THEN h.visitas END) AS actual "
+        "FROM recinto_inah r JOIN hecho_inah h ON h.clave_siinah = r.clave_siinah GROUP BY r.clave_siinah ORDER BY anio DESC NULLS LAST",
             (f"{completo}-%", f"{completo}-%", f"{anio_actual}-%")):
         if not r["anio"]:
             continue
@@ -255,11 +255,11 @@ ATRIBUCIONES = ("Pronóstico del clima: Open-Meteo (open-meteo.com), licencia CC
                 "Tráfico en vivo: © TomTom (Routing API, plan gratuito), cada 30 min de 8:00 a 20:00.")
 
 
-def doc_fuentes(con: sqlite3.Connection) -> Doc:
+def doc_fuentes(con: psycopg.Connection) -> Doc:
     filas = [f"{r['nombre']} ({r['url'] or 'sin URL'}{', ' + r['licencia'] if r['licencia'] else ''})"
              for r in con.execute("SELECT nombre, url, licencia FROM fuente ORDER BY id")]
     texto = "Fuentes de datos de la app: " + "; ".join(filas) + ". " + ATRIBUCIONES
-    return Doc("fuentes", texto, {"titulo": "Fuentes y licencias", "tipo_doc": "fuentes", "fuente": "Tabla fuente de puebla.db"})
+    return Doc("fuentes", texto, {"titulo": "Fuentes y licencias", "tipo_doc": "fuentes", "fuente": "Tabla fuente de la base de RUMBO"})
 
 
 # ───────────── Establecimientos del DENUE: dónde comer y dónde dormir ─────────────
@@ -285,7 +285,7 @@ def nombre_legible(nombre: str) -> str:
     return " ".join(w.lower() if i and w.lower() in _MINUSCULAS else w.capitalize() for i, w in enumerate(palabras))
 
 
-def docs_establecimientos(con: sqlite3.Connection) -> list[Doc]:
+def docs_establecimientos(con: psycopg.Connection) -> list[Doc]:
     """Comida a ≤ 1 km y hospedaje a ≤ 2 km de algún punto. El DENUE solo da nombre, actividad, tamaño y
     ubicación: no hay horario, precio, menú ni calificación, y el texto lo dice para que nadie lo invente."""
     puntos = [(r["id"], r["nombre"], r["lat"], r["lon"]) for r in con.execute("SELECT id, nombre, lat, lon FROM punto")]
@@ -317,13 +317,13 @@ def docs_establecimientos(con: sqlite3.Connection) -> list[Doc]:
 NIVEL = {1: "vacío", 2: "normal", 3: "lleno"}
 
 
-def docs_bitacora(con: sqlite3.Connection, desde: date) -> list[Doc]:
+def docs_bitacora(con: psycopg.Connection, desde: date) -> list[Doc]:
     """Una línea por punto y día con reportes válidos o dudosos de sesiones reales (RN_11, RN_12: solo agregados)."""
     filas = con.execute(
         "SELECT r.punto_id, p.nombre, d.nombre AS destino, substr(r.creado_en, 1, 10) AS dia, "
         "CAST(substr(r.creado_en, 12, 2) AS INTEGER) AS hora, r.nivel FROM reporte r "
         "JOIN sesion s ON s.id = r.sesion_id JOIN punto p ON p.id = r.punto_id JOIN destino d ON d.id = p.destino_id "
-        "WHERE s.es_demo = 0 AND r.estado <> 'descartado' AND r.creado_en >= ?", (desde.isoformat(),)).fetchall()
+        "WHERE s.es_demo = 0 AND r.estado <> 'descartado' AND r.creado_en >= %s", (desde.isoformat(),)).fetchall()
     grupos: dict[tuple, list] = defaultdict(list)
     for f in filas:
         grupos[(f["punto_id"], f["nombre"], f["destino"], f["dia"])].append((f["hora"], f["nivel"]))

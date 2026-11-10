@@ -12,7 +12,7 @@ contexto; una cita a un id que no se le dio se reporta en ``citas_invalidas``.
 from __future__ import annotations
 
 import re
-import sqlite3
+import psycopg
 import time
 import unicodedata
 from dataclasses import dataclass
@@ -91,7 +91,7 @@ def _normal(s: str) -> str:
 
 
 def menciona(pregunta: str, p: PuntoAhora, origen_id: int | None = None) -> bool:
-    """¿La pregunta es sobre este lugar? (por una palabra distintiva de su nombre, o porque el turista está ahí)."""
+    """¿La pregunta es sobre este lugar%s (por una palabra distintiva de su nombre, o porque el turista está ahí)."""
     if p.id == origen_id:
         return True
     palabras = set(re.findall(r"\w+", _normal(pregunta)))
@@ -197,7 +197,7 @@ def _traslado_txt(p: PuntoAhora, origen_id: int | None, matriz, factores: trafic
     return f"desde la ubicación del turista: {rec.minutos_texto(minutos)} min {modo}{trafico_txt}"
 
 
-def proximas_horas_txt(con: sqlite3.Connection, p: PuntoAhora, ahora: datetime) -> str:
+def proximas_horas_txt(con: psycopg.Connection, p: PuntoAhora, ahora: datetime) -> str:
     """Color estimado de las horas siguientes (hoy y mañana) y la hora más tranquila y la más llena de cada día.
     Sale de ``afluencia_estimada`` (sin reportes): lo mismo que la app muestra como pronóstico."""
     dias: dict = {}
@@ -221,7 +221,7 @@ def proximas_horas_txt(con: sqlite3.Connection, p: PuntoAhora, ahora: datetime) 
     return f"Próximas horas de [punto-{p.id}] {p.nombre} (estimado, sin reportes) — " + " · ".join(partes) + "."
 
 
-def pronostico_lluvia_txt(con: sqlite3.Connection, puntos: dict[int, PuntoAhora], ahora: datetime) -> str:
+def pronostico_lluvia_txt(con: psycopg.Connection, puntos: dict[int, PuntoAhora], ahora: datetime) -> str:
     """Lo que dice Open-Meteo para las próximas 3 h en los puntos de la zona (el último pronóstico guardado)."""
     hora = ahora.replace(minute=0, second=0, microsecond=0)
     pron = clima.ultimo_pronostico(con, hora, hora + timedelta(hours=3))
@@ -325,7 +325,7 @@ def citas(texto: str, validos: set[str]) -> tuple[list[str], list[str]]:
     return [i for i in vistos if i in validos], [i for i in vistos if i not in validos]
 
 
-def preguntar(con: sqlite3.Connection, ahora: datetime, pregunta: str, origen_id: int | None = None,
+def preguntar(con: psycopg.Connection, ahora: datetime, pregunta: str, origen_id: int | None = None,
               intereses: list[str] | None = None) -> dict:
     t0 = time.perf_counter()
     intereses = sorted(set(intereses or ()) | intereses_de(pregunta))
@@ -360,7 +360,7 @@ def preguntar(con: sqlite3.Connection, ahora: datetime, pregunta: str, origen_id
         estado.append(linea_estado(p, origen_id, matriz, alternativa, factores, duraciones.get(pid)))
         usados.append({"id": f"punto-{pid}", "nombre": p.nombre, "color": p.color, "nivel": p.nivel,
                        "confianza": p.estado.confianza if p.estado else None, "lluvia": p.lluvia})
-    # Las próximas horas solo de los lugares que la pregunta nombra (para "¿cuándo conviene ir a…?").
+    # Las próximas horas solo de los lugares que la pregunta nombra (para "¿cuándo conviene ir a…%s").
     for p in anclas:
         if p.id != origen_id:
             estado.append(proximas_horas_txt(con, p, ahora))

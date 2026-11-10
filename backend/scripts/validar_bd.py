@@ -1,4 +1,4 @@
-"""Paso 8: revisiones de calidad de puebla.db (docs/04 §5 y §8). Si una falla, sale con error.
+"""Paso 8: revisiones de calidad de la base (DATABASE_URL) (docs/04 §5 y §8). Si una falla, sale con error.
 
 Las revisiones "informativas" no detienen el pipeline: muestran cifras para decidir a mano
 (p. ej. si 'Cholula' del Observatorio es la suma de San Pedro y San Andrés).
@@ -7,6 +7,8 @@ Las revisiones "informativas" no detienen el pipeline: muestran cifras para deci
 from __future__ import annotations
 
 import sys
+
+from psycopg.rows import tuple_row
 
 from turismo_core.bd import conectar
 
@@ -24,9 +26,8 @@ REVISIONES = [
     ("Sin visitas negativas en el INAH",
      "SELECT * FROM hecho_inah WHERE visitas < 0"),
     ("Periodos con formato YYYY-MM y mes válido",
-     "SELECT periodo FROM hecho_observatorio WHERE periodo NOT GLOB '[0-9][0-9][0-9][0-9]-[01][0-9]' "
-     "OR CAST(substr(periodo, 6) AS INTEGER) NOT BETWEEN 1 AND 12 "
-     "UNION SELECT periodo FROM hecho_inah WHERE CAST(substr(periodo, 6) AS INTEGER) NOT BETWEEN 1 AND 12"),
+     "SELECT periodo FROM hecho_observatorio WHERE periodo !~ '^[0-9]{4}-(0[1-9]|1[0-2])$' "
+     "UNION SELECT periodo FROM hecho_inah WHERE periodo !~ '^[0-9]{4}-(0[1-9]|1[0-2])$'"),
     ("Cada punto tiene coordenadas dentro de la zona piloto",
      f"SELECT clave, lat, lon FROM punto WHERE lat NOT BETWEEN {LAT[0]} AND {LAT[1]} "
      f"OR lon NOT BETWEEN {LON[0]} AND {LON[1]}"),
@@ -50,9 +51,9 @@ REVISIONES = [
      "      WHERE h.indicador = 'afluencia' AND d.nombre IN ('San Pedro Cholula', 'San Andrés Cholula') "
      "      GROUP BY h.periodo HAVING COUNT(*) = 2) s ON s.periodo = c.periodo "
      "WHERE c.indicador = 'afluencia' AND c.destino_id = (SELECT id FROM destino WHERE nombre = 'Cholula') "
-     "AND abs(c.valor - s.valor) > 0.01 * max(c.valor, 1)"),
+     "AND abs(c.valor - s.valor) > 0.01 * GREATEST(c.valor, 1)"),
     ("Sin datos de meses aún no publicados (ceros de relleno)",
-     "SELECT periodo, COUNT(*) FROM hecho_observatorio GROUP BY periodo HAVING SUM(valor <> 0) = 0"),
+     "SELECT periodo, COUNT(*) FROM hecho_observatorio GROUP BY periodo HAVING COUNT(*) FILTER (WHERE valor <> 0) = 0"),
     ("Cada evento tiene fuente y termina después de empezar",
      "SELECT nombre FROM evento WHERE fuente_url IS NULL OR fuente_url = '' OR fin < inicio"),
     ("Cada punto tiene umbrales del semáforo (bajo < alto)",
@@ -103,16 +104,23 @@ INFORMATIVAS = [
     ("Horas estimadas con efecto de lluvia",
      "SELECT COUNT(*) FROM afluencia_estimada WHERE f_clima <> 1"),
     ("Traslados en coche: máximo y pares a más de 60 min",
-     "SELECT MAX(minutos_base) || ' min; ' || SUM(minutos_base > 60) FROM matriz_traslado"),
+     "SELECT MAX(minutos_base) || ' min; ' || COUNT(*) FILTER (WHERE minutos_base > 60) FROM matriz_traslado"),
     ("Último mes con datos",
      "SELECT 'Observatorio ' || MAX(periodo) FROM hecho_observatorio "
      "UNION ALL SELECT 'INAH ' || MAX(periodo) FROM hecho_inah"),
 ]
 
 
+TABLAS = ["fuente", "destino", "punto", "recinto_inah", "evento", "calendario", "hecho_observatorio", "hecho_inah",
+          "establecimiento", "matriz_traslado", "obs_clima", "obs_trafico", "afluencia_estimada", "umbral_punto",
+          "sesion", "reporte", "busqueda", "ajuste_manual"]
+ACTIVIDAD = {"sesion", "reporte", "busqueda", "ajuste_manual"}      # la actividad vieja no se migra (SC-003)
+
+
 def main() -> int:
     fallas = 0
     with conectar() as con:
+        con.row_factory = tuple_row              # las revisiones se imprimen por posición
         for descripcion, sql in REVISIONES:
             filas = con.execute(sql).fetchall()
             print(f"  {'OK   ' if not filas else 'FALLA'} {descripcion}")
@@ -123,6 +131,11 @@ def main() -> int:
         for descripcion, sql in INFORMATIVAS:
             filas = [" = ".join(map(str, tuple(f))) for f in con.execute(sql)]
             print(f"  · {descripcion}: {'; '.join(filas)}")
+        print("\nFilas por tabla (compáralas con data-model.md):")
+        for t in TABLAS:
+            n = con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+            nota = "  ← actividad: empieza en 0 en una base nueva" if t in ACTIVIDAD else ""
+            print(f"  {t:<20} {n:>7}{nota}")
     print(f"\n{len(REVISIONES) - fallas} de {len(REVISIONES)} revisiones pasaron")
     return 1 if fallas else 0
 

@@ -11,10 +11,9 @@ from tests.test_api import cliente  # noqa: F401  (crea la BD sintética)
 
 
 @pytest.fixture
-def bd(cliente, monkeypatch):  # noqa: F811
-    _, reloj = cliente
-    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{reloj['ruta']}")
-    return reloj["ruta"]
+def bd_mcp(cliente):  # noqa: F811
+    """``cliente`` ya fijó DATABASE_URL y RUMBO_ESQUEMA; el servidor MCP los toma en ``conectar()``."""
+    return cliente
 
 
 def llamar(nombre: str, args: dict) -> dict:
@@ -31,19 +30,19 @@ def test_catalogo_de_tools_resources_y_prompts():
     assert {p.name for p in asyncio.run(mcp.list_prompts())} == {"plan_turista", "reporte_fin_de_semana"}
 
 
-def test_puntos_por_id_o_nombre_y_traslado(bd):
+def test_puntos_por_id_o_nombre_y_traslado(bd_mcp):
     assert llamar("puebla_buscar_punto", {"texto": "punto 2"})["candidatos"][0]["id"] == 2
     t = llamar("puebla_tiempo_traslado", {"origen": "1", "destino": "Punto 3"})
     assert (t["origen_id"], t["destino_id"], t["coche_min"]) == (1, 3, 20)
 
 
-def test_errores_claros(bd):
+def test_errores_claros(bd_mcp):
     with pytest.raises(ToolError, match="No encontré el punto"):
         llamar("puebla_estado_punto", {"punto": "Narnia"})
     with pytest.raises(ToolError, match="puede ser varios puntos"):
         llamar("puebla_estado_punto", {"punto": "punto"})       # 'Punto 1', 'Punto 2', 'Punto 3' empatan
 
 
-def test_reportar_usa_los_filtros_de_la_app(bd):
+def test_reportar_usa_los_filtros_de_la_app(bd_mcp):
     r = llamar("puebla_reportar", {"punto": "3", "nivel": 3})      # el mirador está cerrado
     assert r["reporte"]["estado"] == "descartado"

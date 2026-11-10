@@ -6,7 +6,7 @@ pero no entran a las estadísticas salvo que se pida ``incluir_demo`` (RN_11); l
 
 from __future__ import annotations
 
-import sqlite3
+import psycopg
 from datetime import date, datetime, timedelta
 from statistics import median
 
@@ -21,18 +21,18 @@ def _dia(d: date) -> tuple[str, str]:
     return f"{d.isoformat()}T00:00:00", f"{d.isoformat()}T23:59:59"
 
 
-def afluencia(con: sqlite3.Connection, ahora: datetime, incluir_demo: bool = False) -> dict:
+def afluencia(con: psycopg.Connection, ahora: datetime, incluir_demo: bool = False) -> dict:
     """Mapa de calor: el estado de cada punto ahora y los totales del día."""
     puntos = situacion(con, ahora)
     desde, hasta = _dia(ahora.date())
     reportes = {r["estado"]: r["n"] for r in con.execute(
         "SELECT r.estado, COUNT(*) AS n FROM reporte r JOIN sesion s ON s.id = r.sesion_id "
-        "WHERE r.creado_en BETWEEN ? AND ? AND (? OR s.es_demo = 0) GROUP BY r.estado",
-        (desde, hasta, int(incluir_demo)))}
+        "WHERE r.creado_en BETWEEN %s AND %s AND (%s OR s.es_demo = 0) GROUP BY r.estado",
+        (desde, hasta, bool(incluir_demo)))}
     busq = con.execute(
-        "SELECT COUNT(b.punto_sugerido) AS sugeridas, SUM(b.aceptada = 1) AS aceptadas FROM busqueda b "
-        "JOIN sesion s ON s.id = b.sesion_id WHERE b.creada_en BETWEEN ? AND ? AND (? OR s.es_demo = 0)",
-        (desde, hasta, int(incluir_demo))).fetchone()
+        "SELECT COUNT(b.punto_sugerido) AS sugeridas, COUNT(*) FILTER (WHERE b.aceptada = 1) AS aceptadas FROM busqueda b "
+        "JOIN sesion s ON s.id = b.sesion_id WHERE b.creada_en BETWEEN %s AND %s AND (%s OR s.es_demo = 0)",
+        (desde, hasta, bool(incluir_demo))).fetchone()
     return {
         "incluye_demo": incluir_demo,
         "hoy": {
@@ -46,16 +46,16 @@ def afluencia(con: sqlite3.Connection, ahora: datetime, incluir_demo: bool = Fal
     }
 
 
-def redirecciones(con: sqlite3.Connection, desde: date, hasta: date, incluir_demo: bool = False) -> dict:
+def redirecciones(con: psycopg.Connection, desde: date, hasta: date, incluir_demo: bool = False) -> dict:
     """De dónde a dónde y por qué: cuántas veces se sugirió cada cambio y cuántas se aceptaron."""
     filas = [dict(r) for r in con.execute(
         """SELECT b.punto_pedido AS desde_id, pp.nombre AS desde, b.punto_sugerido AS hacia_id, ps.nombre AS hacia,
-                  b.motivo, COUNT(*) AS sugeridas, SUM(b.aceptada = 1) AS aceptadas, SUM(b.aceptada = 0) AS ignoradas
+                  b.motivo, COUNT(*) AS sugeridas, COUNT(*) FILTER (WHERE b.aceptada = 1) AS aceptadas, COUNT(*) FILTER (WHERE b.aceptada = 0) AS ignoradas
            FROM busqueda b JOIN sesion s ON s.id = b.sesion_id
            LEFT JOIN punto pp ON pp.id = b.punto_pedido JOIN punto ps ON ps.id = b.punto_sugerido
-           WHERE b.creada_en BETWEEN ? AND ? AND (? OR s.es_demo = 0)
-           GROUP BY b.punto_pedido, b.punto_sugerido, b.motivo ORDER BY aceptadas DESC, sugeridas DESC""",
-        (_dia(desde)[0], _dia(hasta)[1], int(incluir_demo)))]
+           WHERE b.creada_en BETWEEN %s AND %s AND (%s OR s.es_demo = 0)
+           GROUP BY b.punto_pedido, pp.nombre, b.punto_sugerido, ps.nombre, b.motivo ORDER BY aceptadas DESC, sugeridas DESC""",
+        (_dia(desde)[0], _dia(hasta)[1], bool(incluir_demo)))]
     for f in filas:
         f["aceptadas"] = f["aceptadas"] or 0
         f["ignoradas"] = f["ignoradas"] or 0
@@ -75,23 +75,23 @@ SUPUESTO_DERRAMA = ("Cada redirección aceptada cuenta como 1 visitante que gast
                     "reportó desde el lugar que había pedido: esa parada se sumó a su plan.")
 
 
-def gasto_por_visitante(con: sqlite3.Connection) -> dict[int, dict]:
+def gasto_por_visitante(con: psycopg.Connection) -> dict[int, dict]:
     """Derrama ÷ visitantes de cada destino en los últimos 12 meses publicados (dato del Observatorio)."""
-    fin = con.execute("SELECT MAX(periodo) FROM hecho_observatorio WHERE indicador = 'afluencia' AND valor > 0").fetchone()[0]
+    fin = con.execute("SELECT MAX(periodo) AS m FROM hecho_observatorio WHERE indicador = 'afluencia' AND valor > 0").fetchone()["m"]
     anio, mes = map(int, fin.split("-"))
     inicio = f"{anio - 1}-{mes + 1:02d}" if mes < 12 else f"{anio}-01"
     salida = {}
     for r in con.execute(
         "SELECT destino_id, SUM(CASE WHEN indicador = 'derrama_mxn' THEN valor END) AS derrama, "
         "SUM(CASE WHEN indicador = 'afluencia' THEN valor END) AS visitantes FROM hecho_observatorio "
-        "WHERE periodo BETWEEN ? AND ? GROUP BY destino_id", (inicio, fin)):
+        "WHERE periodo BETWEEN %s AND %s GROUP BY destino_id", (inicio, fin)):
         if r["visitantes"]:
             salida[r["destino_id"]] = {"gasto_mxn": round(r["derrama"] / r["visitantes"], 2),
                                        "periodo": f"{inicio} a {fin}"}
     return salida
 
 
-def derrama(con: sqlite3.Connection, desde: date, hasta: date, incluir_demo: bool = False) -> dict:
+def derrama(con: psycopg.Connection, desde: date, hasta: date, incluir_demo: bool = False) -> dict:
     """Derrama redistribuida y nueva estimada, siempre con su supuesto (RN_14)."""
     gasto = gasto_por_visitante(con)
     filas = con.execute(
@@ -102,8 +102,8 @@ def derrama(con: sqlite3.Connection, desde: date, hasta: date, incluir_demo: boo
            FROM busqueda b JOIN sesion s ON s.id = b.sesion_id
            JOIN punto ps ON ps.id = b.punto_sugerido JOIN destino ds ON ds.id = ps.destino_id
            LEFT JOIN punto pp ON pp.id = b.punto_pedido
-           WHERE b.aceptada = 1 AND b.creada_en BETWEEN ? AND ? AND (? OR s.es_demo = 0)""",
-        (_dia(desde)[0], _dia(hasta)[1], int(incluir_demo))).fetchall()
+           WHERE b.aceptada = 1 AND b.creada_en BETWEEN %s AND %s AND (%s OR s.es_demo = 0)""",
+        (_dia(desde)[0], _dia(hasta)[1], bool(incluir_demo))).fetchall()
 
     redistribuida = nueva = entre_destinos = 0.0
     por_destino: dict[str, dict] = {}
@@ -139,7 +139,7 @@ DESDE_HISTORIA = "2022-01"      # supuesto: solo después de la pandemia; varios
 ANIOS_ESTIMADO = 3
 
 
-def semaforo_estatal(con: sqlite3.Connection, mes: int, anio: int) -> dict:
+def semaforo_estatal(con: psycopg.Connection, mes: int, anio: int) -> dict:
     """Los destinos del Observatorio en un mes, cada uno contra su propia historia mensual (mismo método que
     los puntos: valor ÷ mediana y percentiles 60/85). Mes publicado: dato. Mes sin publicar: promedio del
     mismo mes de los últimos 3 años con dato, marcado como estimado (no es pronóstico)."""
@@ -147,8 +147,8 @@ def semaforo_estatal(con: sqlite3.Connection, mes: int, anio: int) -> dict:
     salida = []
     for d in con.execute("SELECT id, nombre FROM destino WHERE es_agregado = 0 ORDER BY nombre"):
         serie = {r["periodo"]: r["valor"] for r in con.execute(
-            "SELECT periodo, valor FROM hecho_observatorio WHERE destino_id = ? AND indicador = 'afluencia' "
-            "AND periodo >= ? AND valor > 0 AND es_pandemia = 0 ORDER BY periodo", (d["id"], DESDE_HISTORIA))}
+            "SELECT periodo, valor FROM hecho_observatorio WHERE destino_id = %s AND indicador = 'afluencia' "
+            "AND periodo >= %s AND valor > 0 AND es_pandemia = 0 ORDER BY periodo", (d["id"], DESDE_HISTORIA))}
         if not serie:
             continue
         valores = list(serie.values())
@@ -178,59 +178,57 @@ INDICADORES_OBSERVATORIO = ("afluencia", "llegadas", "derrama_mxn", "ocupacion_p
                             "turistas_noche", "cuartos_disponibles", "cuartos_ocupados", "densidad_ocupacion")
 
 
-def historico_destino(con: sqlite3.Connection, destino: str, indicador: str = "afluencia",
+def historico_destino(con: psycopg.Connection, destino: str, indicador: str = "afluencia",
                       desde: str = "2017-01", hasta: str = "2100-12") -> dict:
     """Serie mensual del Observatorio de un destino (``desde``/``hasta`` como 'YYYY-MM')."""
     if indicador not in INDICADORES_OBSERVATORIO:
         raise ValueError(f"Indicador inválido: {indicador}. Usa uno de: {', '.join(INDICADORES_OBSERVATORIO)}")
-    d = con.execute("SELECT id, nombre FROM destino WHERE nombre = ?", (destino,)).fetchone()
+    d = con.execute("SELECT id, nombre FROM destino WHERE nombre = %s", (destino,)).fetchone()
     if d is None:
-        nombres = [r[0] for r in con.execute("SELECT nombre FROM destino ORDER BY nombre")]
+        nombres = [r["nombre"] for r in con.execute("SELECT nombre FROM destino ORDER BY nombre")]
         raise NoEncontrado(f"No existe el destino '{destino}'. Destinos: {', '.join(nombres)}")
     serie = [{"periodo": r["periodo"], "valor": r["valor"], "pandemia": bool(r["es_pandemia"])} for r in con.execute(
-        "SELECT periodo, valor, es_pandemia FROM hecho_observatorio WHERE destino_id = ? AND indicador = ? "
-        "AND periodo BETWEEN ? AND ? ORDER BY periodo", (d["id"], indicador, desde, hasta))]
+        "SELECT periodo, valor, es_pandemia FROM hecho_observatorio WHERE destino_id = %s AND indicador = %s "
+        "AND periodo BETWEEN %s AND %s ORDER BY periodo", (d["id"], indicador, desde, hasta))]
     return {"destino": d["nombre"], "indicador": indicador, "serie": serie,
             "fuente": "Observatorio Turístico de Puebla (Sectur Puebla)"}
 
 
-def umbrales(con: sqlite3.Connection) -> list[dict]:
+def umbrales(con: psycopg.Connection) -> list[dict]:
     """Umbrales ``bajo``/``alto`` de cada punto y cómo se calcularon (explica por qué tiene ese color)."""
     return [dict(r) for r in con.execute(
         "SELECT p.id AS punto_id, p.nombre, u.bajo, u.alto, u.metodo, u.n_muestras, u.calculado_en "
         "FROM punto p LEFT JOIN umbral_punto u ON u.punto_id = p.id ORDER BY p.id")]
 
 
-def ajustes_vigentes(con: sqlite3.Connection, ahora: datetime) -> list[dict]:
+def ajustes_vigentes(con: psycopg.Connection, ahora: datetime) -> list[dict]:
     t = ahora.isoformat(timespec="seconds")
     return [dict(r) for r in con.execute(
         "SELECT a.id, a.punto_id, p.nombre, a.color, a.motivo, a.creado_en, a.hasta FROM ajuste_manual a "
-        "JOIN punto p ON p.id = a.punto_id WHERE a.creado_en <= ? AND a.hasta > ? ORDER BY a.creado_en DESC", (t, t))]
+        "JOIN punto p ON p.id = a.punto_id WHERE a.creado_en <= %s AND a.hasta > %s ORDER BY a.creado_en DESC", (t, t))]
 
 
-def fijar_ajuste(con: sqlite3.Connection, ahora: datetime, punto_id: int, color: str, motivo: str,
+def fijar_ajuste(con: psycopg.Connection, ahora: datetime, punto_id: int, color: str, motivo: str,
                  horas: float) -> dict:
     """RN_16: el funcionario fija el color con un motivo y una hora de fin; gana sobre el cálculo mientras dure."""
-    if con.execute("SELECT 1 FROM punto WHERE id = ?", (punto_id,)).fetchone() is None:
+    if con.execute("SELECT 1 FROM punto WHERE id = %s", (punto_id,)).fetchone() is None:
         raise NoEncontrado(f"No existe el punto {punto_id}")
     if color not in COLORES_AJUSTE:
         raise ValueError(f"Color inválido: {color}")
     ajuste = AjusteManual(color, motivo.strip(), ahora + timedelta(hours=horas))
     cur = con.execute(
-        "INSERT INTO ajuste_manual (punto_id, color, motivo, creado_en, hasta) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO ajuste_manual (punto_id, color, motivo, creado_en, hasta) VALUES (%s, %s, %s, %s, %s) RETURNING id",
         (punto_id, ajuste.color, ajuste.motivo, ahora.isoformat(timespec="seconds"),
          ajuste.hasta.isoformat(timespec="seconds")))
-    con.commit()
-    return {"ajuste_id": cur.lastrowid, "hasta": ajuste.hasta.isoformat(timespec="minutes"),
+    return {"ajuste_id": cur.fetchone()["id"], "hasta": ajuste.hasta.isoformat(timespec="minutes"),
             "punto": punto_dict(situacion(con, ahora)[punto_id])}
 
 
-def quitar_ajuste(con: sqlite3.Connection, ahora: datetime, ajuste_id: int) -> dict:
+def quitar_ajuste(con: psycopg.Connection, ahora: datetime, ajuste_id: int) -> dict:
     """Termina un ajuste antes de tiempo (se conserva en la tabla, con ``hasta`` = ahora)."""
-    fila = con.execute("SELECT punto_id FROM ajuste_manual WHERE id = ?", (ajuste_id,)).fetchone()
+    fila = con.execute("SELECT punto_id FROM ajuste_manual WHERE id = %s", (ajuste_id,)).fetchone()
     if fila is None:
         raise NoEncontrado(f"No existe el ajuste {ajuste_id}")
-    con.execute("UPDATE ajuste_manual SET hasta = ? WHERE id = ? AND hasta > ?",
+    con.execute("UPDATE ajuste_manual SET hasta = %s WHERE id = %s AND hasta > %s",
                 (ahora.isoformat(timespec="seconds"), ajuste_id, ahora.isoformat(timespec="seconds")))
-    con.commit()
     return {"ajuste_id": ajuste_id, "punto": punto_dict(situacion(con, ahora)[fila["punto_id"]])}

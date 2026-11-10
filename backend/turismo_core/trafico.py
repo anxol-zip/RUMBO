@@ -21,7 +21,7 @@ Consumo: 30 corredores por consulta, cada 30 min de 8:00 a 20:00 ≈ 720 consult
 from __future__ import annotations
 
 import json
-import sqlite3
+import psycopg
 import urllib.request
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -84,12 +84,16 @@ def consultar(puntos: dict[int, tuple[float, float]], clave: str, timeout: float
     return salida
 
 
-def guardar(con: sqlite3.Connection, corredores_: Iterable[Corredor], consultado_en: datetime) -> int:
+def guardar(con: psycopg.Connection, corredores_: Iterable[Corredor], consultado_en: datetime) -> int:
     filas = [(c.tramo, consultado_en.isoformat(timespec="seconds"), round(c.km / (c.minutos_actual / 60), 1),
               round(c.km / (c.minutos_libre / 60), 1), c.factor, c.minutos_actual, c.minutos_libre,
               c.minutos_historico, c.km) for c in corredores_]
-    con.executemany("INSERT OR REPLACE INTO obs_trafico (tramo, consultado_en, vel_actual, vel_libre, factor, "
-                    "minutos_actual, minutos_libre, minutos_historico, km) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", filas)
+    con.cursor().executemany(
+        "INSERT INTO obs_trafico (tramo, consultado_en, vel_actual, vel_libre, factor, "
+        "minutos_actual, minutos_libre, minutos_historico, km) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) "
+        "ON CONFLICT (tramo, consultado_en) DO UPDATE SET vel_actual = EXCLUDED.vel_actual, "
+        "vel_libre = EXCLUDED.vel_libre, factor = EXCLUDED.factor, minutos_actual = EXCLUDED.minutos_actual, "
+        "minutos_libre = EXCLUDED.minutos_libre, minutos_historico = EXCLUDED.minutos_historico, km = EXCLUDED.km", filas)
     return len(filas)
 
 
@@ -108,13 +112,13 @@ class Factores:
         return self.por_tramo.get(tramo(za, zb))
 
 
-def factores_vigentes(con: sqlite3.Connection, ahora: datetime) -> Factores:
+def factores_vigentes(con: psycopg.Connection, ahora: datetime) -> Factores:
     puntos = {r["id"]: (r["lat"], r["lon"]) for r in con.execute("SELECT id, lat, lon FROM punto")}
     desde = (ahora - VIGENCIA).isoformat(timespec="seconds")
     filas = con.execute(
         """SELECT o.tramo, o.factor, o.consultado_en FROM obs_trafico o
            JOIN (SELECT tramo, MAX(consultado_en) AS ultima FROM obs_trafico
-                 WHERE consultado_en BETWEEN ? AND ? GROUP BY tramo) u
+                 WHERE consultado_en BETWEEN %s AND %s GROUP BY tramo) u
              ON u.tramo = o.tramo AND u.ultima = o.consultado_en""",
         (desde, ahora.isoformat(timespec="seconds"))).fetchall()
     ultima = max((datetime.fromisoformat(r["consultado_en"]) for r in filas), default=None)

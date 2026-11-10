@@ -6,16 +6,16 @@ Scripts de apoyo para el equipo. No forman parte de la app en ejecución: el bac
 
 ## Para qué sirve
 
-Hoy tiene una sola herramienta, que crea la **base de desarrollo** (`backend/data/desarrollo.db`). Con ella, cualquier integrante puede correr y modificar la interfaz sin `backend/.env`, sin `backend/data/raw/` y sin Ollama.
+Hoy tiene una sola herramienta, que carga la **base de desarrollo**: el proyecto `rumbo-dev` de Supabase, que comparte todo el equipo. Con ella, cualquier integrante puede correr y modificar la interfaz sin `backend/data/raw/`, sin claves de ORS o TomTom y sin Ollama. Solo necesita `backend/.env` con la URL de `rumbo-dev` ([INSTALACION.md](../INSTALACION.md#31-tu-backendenv)).
 
-La demo, la presentación y las pruebas con usuarios se hacen con la base real (`puebla.db`), generada con el [pipeline del backend](../backend/README.md#scripts-pipeline-de-datos).
+La demo, la presentación y las pruebas con usuarios se hacen con `rumbo-demo`, cargada con el [pipeline del backend](../backend/README.md#scripts-pipeline-de-datos).
 
 ## Qué contiene
 
 ```text
 herramientas/
 ├── README.md          # este archivo
-└── bd_desarrollo.py   # crea o actualiza la base de desarrollo
+└── bd_desarrollo.py   # carga o recarga rumbo-dev
 ```
 
 ## Cómo está construido
@@ -58,10 +58,10 @@ uv run python ../herramientas/bd_desarrollo.py            # 14 días de afluenci
 uv run python ../herramientas/bd_desarrollo.py --dias 7   # otro número de días
 ```
 
-Después, se levanta el backend con esa base:
+Escribe en la base de `DATABASE_URL` de `backend/.env`. Después, se levanta el backend como siempre:
 
 ```bash
-DATABASE_URL=sqlite:///data/desarrollo.db PUEBLA_TAREAS=0 uv run uvicorn app.main:app --reload --port 8000
+PUEBLA_TAREAS=0 uv run uvicorn app.main:app --reload --port 8000
 ```
 
 ### Cuándo regenerarla
@@ -71,6 +71,7 @@ DATABASE_URL=sqlite:///data/desarrollo.db PUEBLA_TAREAS=0 uv run uvicorn app.mai
 
 ### A tomar en cuenta
 
-- **Protege la base real:** si `DATABASE_URL` apunta a `puebla.db`, el script se detiene.
+- **Protege la base de la demo:** si `backend/.env` dice `RUMBO_AMBIENTE=demo`, el script se detiene.
 - **Conserva lo generado por la app:** al recargar, las sesiones y los reportes existentes se quedan en la base.
-- **Git:** `desarrollo.db` está versionada hasta la versión 1.0. Si solo cambió por tus pruebas, descártala con `git restore backend/data/desarrollo.db`.
+- **Todo o nada:** la carga va en una sola transacción; si falla a la mitad, la base queda como estaba.
+- **Base compartida:** recargarla afecta a todo el equipo; no borra sesiones ni reportes.

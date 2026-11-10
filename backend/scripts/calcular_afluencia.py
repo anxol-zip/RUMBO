@@ -35,7 +35,7 @@ def guardar_umbrales(con, perfiles, ctx) -> dict[int, Umbrales]:
         u = af.umbrales_desde_historia(p, ctx)
         umbrales[pid] = u
         con.execute(
-            "INSERT INTO umbral_punto VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(punto_id) DO UPDATE SET "
+            "INSERT INTO umbral_punto VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT(punto_id) DO UPDATE SET "
             "bajo=excluded.bajo, alto=excluded.alto, metodo=excluded.metodo, "
             "n_muestras=excluded.n_muestras, calculado_en=excluded.calculado_en",
             (pid, u.bajo, u.alto, u.metodo, u.n_muestras, ahora),
@@ -47,7 +47,7 @@ def guardar_estimaciones(con, perfiles, umbrales, ctx, eventos, desde: datetime,
     destinos = {r["id"]: r["destino_id"] for r in con.execute("SELECT id, destino_id FROM punto")}
     horas = af.horas(desde, 24 * dias)
     pronostico = clima.ultimo_pronostico(con, horas[0], horas[-1])
-    con.execute("DELETE FROM afluencia_estimada WHERE para_hora >= ?", (horas[0].strftime("%Y-%m-%d %H:00"),))
+    con.execute("DELETE FROM afluencia_estimada WHERE para_hora >= %s", (horas[0].strftime("%Y-%m-%d %H:00"),))
     filas = []
     for pid, p in perfiles.items():
         for h in horas:
@@ -60,12 +60,12 @@ def guardar_estimaciones(con, perfiles, umbrales, ctx, eventos, desde: datetime,
                 semaforo, valor, confianza = est.semaforo, est.valor_final, est.confianza
             filas.append((pid, h.strftime("%Y-%m-%d %H:00"), e.base, e.f_dia_hora, e.f_evento, e.f_clima,
                           e.estimacion, 0, valor, semaforo, confianza))
-    con.executemany("INSERT INTO afluencia_estimada VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", filas)
+    con.cursor().executemany("INSERT INTO afluencia_estimada VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", filas)
     return len(filas)
 
 
 def main(dias: int = 7) -> None:
-    with conectar() as con:
+    with conectar() as con, con.transaction():    # la app nunca ve la semana a medio recalcular
         perfiles = af.cargar_perfiles(con)
         ctx = af.cargar_contexto(con)
         eventos = af.cargar_eventos(con)

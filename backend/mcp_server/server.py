@@ -17,12 +17,12 @@ from __future__ import annotations
 
 import json
 import os
-import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import date, datetime
 from typing import Annotated, Literal
 
+import psycopg
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import Field
@@ -51,7 +51,7 @@ Intereses = Annotated[list[str], Field(description="historia, arte, cultura, arq
 
 
 @contextmanager
-def _bd() -> Iterator[sqlite3.Connection]:
+def _bd() -> Iterator[psycopg.Connection]:
     con = conectar()
     try:
         yield con
@@ -63,7 +63,7 @@ def _ahora() -> datetime:
     return datetime.now().replace(microsecond=0)
 
 
-def _punto(con: sqlite3.Connection, valor: str | int | None) -> int | None:
+def _punto(con: psycopg.Connection, valor: str | int | None) -> int | None:
     """Id del punto a partir de un id o un nombre libre; error claro si no existe o es ambiguo."""
     if valor is None or str(valor).strip() == "":
         return None
