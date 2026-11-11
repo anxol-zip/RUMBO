@@ -91,7 +91,7 @@ def _normal(s: str) -> str:
 
 
 def menciona(pregunta: str, p: PuntoAhora, origen_id: int | None = None) -> bool:
-    """¿La pregunta es sobre este lugar%s (por una palabra distintiva de su nombre, o porque el turista está ahí)."""
+    """¿La pregunta es sobre este lugar? (por una palabra distintiva de su nombre, o porque el turista está ahí)."""
     if p.id == origen_id:
         return True
     palabras = set(re.findall(r"\w+", _normal(pregunta)))
@@ -360,7 +360,7 @@ def preguntar(con: psycopg.Connection, ahora: datetime, pregunta: str, origen_id
         estado.append(linea_estado(p, origen_id, matriz, alternativa, factores, duraciones.get(pid)))
         usados.append({"id": f"punto-{pid}", "nombre": p.nombre, "color": p.color, "nivel": p.nivel,
                        "confianza": p.estado.confianza if p.estado else None, "lluvia": p.lluvia})
-    # Las próximas horas solo de los lugares que la pregunta nombra (para "¿cuándo conviene ir a…%s").
+    # Las próximas horas solo de los lugares que la pregunta nombra (para "¿cuándo conviene ir a…?").
     for p in anclas:
         if p.id != origen_id:
             estado.append(proximas_horas_txt(con, p, ahora))

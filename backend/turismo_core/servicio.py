@@ -68,7 +68,7 @@ ORDEN_COLOR = {"verde": 0, "amarillo": 1, "rojo": 2}
 
 
 def vs_normal(p: PuntoAhora) -> str | None:
-    """¿Ahora está más o menos lleno que lo que daría el modelo solo%s (los reportes o la Secretaría lo movieron).
+    """¿Ahora está más o menos lleno que lo que daría el modelo solo? (los reportes o la Secretaría lo movieron).
     Como "live vs. forecast" de BestTime; None si no se puede comparar."""
     e = p.estado
     if e is None or p.color not in ORDEN_COLOR:
@@ -283,7 +283,7 @@ def eventos_vigentes(con: psycopg.Connection, ahora: datetime, destino: str | No
         (ahora.strftime("%Y-%m-%d %H:%M"), destino, destino))]
 
 
-# ───────────── ¿Cuándo me conviene ir%s (benchmarking con REA, 2026-10-16) ─────────────
+# ───────────── ¿Cuándo me conviene ir? (benchmarking con REA, 2026-10-16) ─────────────
 
 DIAS_ES = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
 VENTANA_ESPERA = timedelta(hours=2)
@@ -431,7 +431,7 @@ def responder_busqueda(con: psycopg.Connection, busqueda_id: int, aceptada: bool
     return {"busqueda_id": busqueda_id, "aceptada": aceptada}
 
 
-# ───────────── "¿Cómo está%s" (CU_05) ─────────────
+# ───────────── "¿Cómo está?" (CU_05) ─────────────
 
 MENSAJES = {
     "valido": "¡Gracias! Tu reporte ya ayuda a quien viene detrás.",

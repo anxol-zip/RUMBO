@@ -16,7 +16,7 @@ router = APIRouter(tags=["asistente"])
 
 @router.post("/chat", response_model=ChatOut)
 def chat(c: ChatIn, con: Con, ahora: Ahora):
-    """Pregunta abierta ("tengo 4 horas y llueve, ¿qué hago%s"). Qwen3 en Ollama, local; sin internet.
+    """Pregunta abierta ("tengo 4 horas y llueve, ¿qué hago?"). Qwen3 en Ollama, local; sin internet.
     Si Ollama no está, responde 503."""
     origen, intereses = c.origen_id, []
     if c.sesion_id:
