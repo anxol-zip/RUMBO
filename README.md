@@ -22,26 +22,26 @@ flowchart TD
     servidor_mcp --> nucleo
 
     subgraph almacenamiento["Datos y modelos"]
-        sqlite[("SQLite<br/>números y datos de la app")]
+        postgres[("PostgreSQL en Supabase<br/>números y datos de la app")]
         chroma[("ChromaDB<br/>textos del asistente")]
         ollama["Ollama<br/>qwen3 y bge-m3, modelos locales"]
     end
 
-    nucleo --> sqlite
+    nucleo --> postgres
     nucleo --> chroma
     nucleo --> ollama
 
     fuentes["catalogo/ y datos oficiales<br/>Observatorio Turístico, INAH, DENUE"] --> pipeline["backend/scripts/<br/>pipeline de datos"]
     externos["Servicios externos<br/>Open-Meteo, TomTom, OpenRouteService"] --> pipeline
-    pipeline --> sqlite
+    pipeline --> postgres
     pipeline --> chroma
     fuentes --> herramienta["herramientas/bd_desarrollo.py<br/>base de desarrollo"]
-    herramienta --> sqlite
+    herramienta --> postgres
 ```
 
 - **El frontend no tiene datos propios:** todo lo pide a la API.
 - **La lógica vive en una sola capa:** FastAPI y el servidor MCP solo traducen hacia `turismo_core`, así que los dos responden lo mismo.
-- **El estado actual, según el código:** la base es SQLite y no hay login; la app identifica a cada turista con una sesión anónima y el panel de la Secretaría está abierto. Lo que cambiará por Diseño de Software está en la sección [Qué aporta cada materia](#qué-aporta-cada-materia).
+- **El estado actual, según el código:** la base es PostgreSQL en Supabase (`rumbo-dev` para desarrollo, `rumbo-demo` para la demo) y no hay login; la app identifica a cada turista con una sesión anónima y el panel de la Secretaría está abierto. Lo que cambiará por Diseño de Software está en la sección [Qué aporta cada materia](#qué-aporta-cada-materia).
 
 ## Estructura
 
@@ -64,14 +64,14 @@ RUMBO/
 
 | Elemento                   | Qué es y para qué sirve                                                                                                                                            | Más detalle                                |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ |
-| `backend/`                 | API en **FastAPI**, `turismo_core` (semáforo, recomendador, reportes y asistente), servidor MCP, pipeline de datos y pruebas. Usa Python, `uv`, SQLite y ChromaDB  | [`backend/README.md`](backend/README.md)   |
+| `backend/`                 | API en **FastAPI**, `turismo_core` (semáforo, recomendador, reportes y asistente), servidor MCP, pipeline de datos y pruebas. Usa Python, `uv`, PostgreSQL (Supabase) y ChromaDB  | [`backend/README.md`](backend/README.md)   |
 | `frontend/`                | La app en **React 19 + Vite**: pantalla del turista, panel de la Secretaría y "Acerca de"                                                                          | [`frontend/README.md`](frontend/README.md) |
 | `catalogo/`                | CSV con los 23 lugares: es la fuente de la tabla `punto` y de las fichas que usa el asistente                                                                      | [`catalogo/README.md`](catalogo/README.md) |
 | `herramientas/`            | `bd_desarrollo.py`: crea la base de desarrollo sin claves ni datos crudos                                                                                          | [`herramientas/README.md`](herramientas/README.md) |
 | `docs/`                    | Documentación de cada materia y del hackathon, con el calendario de la Expo Ibero y las instrucciones de su pre-registro                                           | [`docs/DdS/README.md`](docs/DdS/README.md) |
 | `INSTALACION.md`           | Instalación, modos de ejecución, pruebas en celulares y problemas conocidos                                                                                        | [`INSTALACION.md`](INSTALACION.md)         |
 
-Git no incluye `backend/.env`, `backend/data/raw/`, `backend/data/puebla.db`, `backend/data/chroma/`, `frontend/dist/` ni `frontend/webDesignInspo/`: son secretos, datos oficiales, archivos que se regeneran o referencias con derechos de autor.
+Git no incluye `backend/.env`, `backend/data/raw/`, `backend/data/chroma/`, `frontend/dist/` ni `frontend/webDesignInspo/`: son secretos, datos oficiales, archivos que se regeneran o referencias con derechos de autor.
 
 ### Cómo leer las referencias del código
 
@@ -83,20 +83,21 @@ El código viene del hackathon y sus comentarios usan estas referencias:
 | `RN_xx`, `RNF_xx`, `CU_xx`  | Reglas de negocio, requisitos no funcionales y casos de uso                                                                         | [`docs/hackathon/10 - Análisis FIS.md`](docs/hackathon/10%20-%20An%C3%A1lisis%20FIS.md)                   |
 | `T1`…`T6`, `G1`             | Pantallas y tareas del turista (`T`) y del gobierno (`G`)                                                                           | [`docs/hackathon/12 - Especificación del frontend.md`](docs/hackathon/12%20-%20Especificaci%C3%B3n%20del%20frontend.md) |
 | `D1`…`D6`                   | Decisiones de la propuesta de HCI: letra, forma, color, barra lateral, botones grandes y teclado                                     | [`docs/HCI/00 - Propuesta.pdf`](docs/HCI/00%20-%20Propuesta.pdf)                                          |
-| `puebla_*`, `PUEBLA_*`, `puebla.db` | Nombres heredados del hackathon. Siguen vigentes en herramientas MCP, variables de entorno y en la base real                 | [`backend/README.md`](backend/README.md)                                                                  |
+| `puebla_*`, `PUEBLA_*` | Nombres heredados del hackathon. Siguen vigentes en herramientas MCP y variables de entorno                                      | [`backend/README.md`](backend/README.md)                                                                  |
 
 ## Cómo correrlo
 
 La guía completa, para Windows y Linux, está en [`INSTALACION.md`](INSTALACION.md). Hay dos modos:
 
-- **Desarrollo:** para trabajar en la interfaz en cualquier computadora. Usa la base de desarrollo que viene en git (`backend/data/desarrollo.db`), creada con [`herramientas/bd_desarrollo.py`](herramientas/bd_desarrollo.py) a partir de los datos procesados del repositorio. No necesita `.env` ni `data/raw/`.
-- **Datos reales:** para la demo, la presentación y las pruebas con usuarios. Necesita `backend/.env` y `backend/data/raw/`, que se copian a mano, y Ollama para el asistente.
+- **Desarrollo:** para trabajar en la interfaz en cualquier computadora. Usa `rumbo-dev`, la base compartida del equipo en Supabase, cargada con [`herramientas/bd_desarrollo.py`](herramientas/bd_desarrollo.py) a partir de los datos procesados del repositorio. Necesita `backend/.env` con su URL (se pide al equipo) e internet; no necesita `data/raw/`.
+- **Datos reales:** para la demo, la presentación y las pruebas con usuarios. Usa `rumbo-demo`; necesita su `backend/.env`, `backend/data/raw/` (se copia a mano) y Ollama para el asistente.
 
 Inicio rápido en modo de desarrollo (Linux; en Windows, ver la guía):
 
 ```bash
 cd backend && uv sync
-DATABASE_URL=sqlite:///data/desarrollo.db PUEBLA_TAREAS=0 uv run uvicorn app.main:app --reload --port 8000
+cp .env.example .env                                # y pon la URL de rumbo-dev (INSTALACION.md, paso 3.1)
+PUEBLA_TAREAS=0 uv run uvicorn app.main:app --reload --port 8000
 ```
 ```bash
 cd frontend && npm ci && npm run dev                # en otra terminal → http://localhost:5173

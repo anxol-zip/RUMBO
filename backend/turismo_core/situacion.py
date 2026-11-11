@@ -11,7 +11,7 @@ La usan el recomendador, la API y el servidor MCP, para que los tres digan lo mi
 
 from __future__ import annotations
 
-import sqlite3
+import psycopg
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -64,16 +64,16 @@ def _hora(momento: datetime) -> datetime:
     return momento.replace(minute=0, second=0, microsecond=0)
 
 
-def cargar_umbrales(con: sqlite3.Connection) -> dict[int, Umbrales]:
+def cargar_umbrales(con: psycopg.Connection) -> dict[int, Umbrales]:
     return {r["punto_id"]: Umbrales(r["bajo"], r["alto"], r["metodo"], r["n_muestras"] or 0)
             for r in con.execute("SELECT * FROM umbral_punto")}
 
 
-def cargar_reportes(con: sqlite3.Connection, momento: datetime) -> dict[int, list[Reporte]]:
+def cargar_reportes(con: psycopg.Connection, momento: datetime) -> dict[int, list[Reporte]]:
     desde = (momento - VIDA_MAX).isoformat(timespec="seconds")
     salida: dict[int, list[Reporte]] = {}
     for r in con.execute(
-        "SELECT punto_id, nivel, creado_en, peso, estado FROM reporte WHERE creado_en BETWEEN ? AND ?",
+        "SELECT punto_id, nivel, creado_en, peso, estado FROM reporte WHERE creado_en BETWEEN %s AND %s",
         (desde, momento.isoformat(timespec="seconds")),
     ):
         salida.setdefault(r["punto_id"], []).append(
@@ -82,18 +82,18 @@ def cargar_reportes(con: sqlite3.Connection, momento: datetime) -> dict[int, lis
     return salida
 
 
-def cargar_ajustes(con: sqlite3.Connection, momento: datetime) -> dict[int, AjusteManual]:
+def cargar_ajustes(con: psycopg.Connection, momento: datetime) -> dict[int, AjusteManual]:
     """El ajuste vigente más reciente de cada punto."""
     salida: dict[int, AjusteManual] = {}
     for r in con.execute(
-        "SELECT punto_id, color, motivo, hasta FROM ajuste_manual WHERE creado_en <= ? AND hasta > ? ORDER BY creado_en",
+        "SELECT punto_id, color, motivo, hasta FROM ajuste_manual WHERE creado_en <= %s AND hasta > %s ORDER BY creado_en",
         (momento.isoformat(timespec="seconds"), momento.isoformat(timespec="seconds")),
     ):
         salida[r["punto_id"]] = AjusteManual(r["color"], r["motivo"], datetime.fromisoformat(r["hasta"]))
     return salida
 
 
-def situacion(con: sqlite3.Connection, momento: datetime) -> dict[int, PuntoAhora]:
+def situacion(con: psycopg.Connection, momento: datetime) -> dict[int, PuntoAhora]:
     """Estado de todos los puntos en la hora de ``momento`` (los reportes cuentan hasta ``momento``)."""
     hora = _hora(momento)
     umbrales = cargar_umbrales(con)
@@ -101,7 +101,7 @@ def situacion(con: sqlite3.Connection, momento: datetime) -> dict[int, PuntoAhor
     ajustes = cargar_ajustes(con, momento)
     pronostico = clima.ultimo_pronostico(con, hora, hora)
     estimadas = {r["punto_id"]: r for r in con.execute(
-        "SELECT punto_id, estimacion, semaforo FROM afluencia_estimada WHERE para_hora = ?",
+        "SELECT punto_id, estimacion, semaforo FROM afluencia_estimada WHERE para_hora = %s",
         (hora.strftime("%Y-%m-%d %H:00"),))}
     eventos = _eventos_por_punto(con, hora)
 
@@ -126,21 +126,21 @@ def situacion(con: sqlite3.Connection, momento: datetime) -> dict[int, PuntoAhor
     return salida
 
 
-def _eventos_por_punto(con: sqlite3.Connection, hora: datetime) -> dict[int, tuple[str, ...]]:
+def _eventos_por_punto(con: psycopg.Connection, hora: datetime) -> dict[int, tuple[str, ...]]:
     t = hora.strftime("%Y-%m-%d %H:%M")
     salida: dict[int, list[str]] = {}
     for e in con.execute(
-        "SELECT e.nombre, e.punto_id, e.destino_id FROM evento e WHERE e.verificado = 1 AND e.inicio <= ? AND e.fin >= ?",
+        "SELECT e.nombre, e.punto_id, e.destino_id FROM evento e WHERE e.verificado = 1 AND e.inicio <= %s AND e.fin >= %s",
         (t, t),
     ):
         ids = [e["punto_id"]] if e["punto_id"] else [
-            r[0] for r in con.execute("SELECT id FROM punto WHERE destino_id = ?", (e["destino_id"],))]
+            r["id"] for r in con.execute("SELECT id FROM punto WHERE destino_id = %s", (e["destino_id"],))]
         for pid in ids:
             salida.setdefault(pid, []).append(e["nombre"])
     return {k: tuple(v) for k, v in salida.items()}
 
 
-def traslados(con: sqlite3.Connection, ahora: datetime | None = None) -> dict[tuple[int, int], tuple[float, float]]:
+def traslados(con: psycopg.Connection, ahora: datetime | None = None) -> dict[tuple[int, int], tuple[float, float]]:
     """(origen, destino) -> (minutos en coche, minutos a pie).
 
     Sin ``ahora``: en coche sin tráfico (ORS), como lo necesita el filtro de velocidad imposible.
@@ -156,7 +156,7 @@ def traslados(con: sqlite3.Connection, ahora: datetime | None = None) -> dict[tu
     return {(a, b): (coche * (f.de(a, b) or 1.0), pie) for (a, b), (coche, pie) in base.items()}
 
 
-def pronostico_punto(con: sqlite3.Connection, punto_id: int, momento: datetime, horas: int = 48
+def pronostico_punto(con: psycopg.Connection, punto_id: int, momento: datetime, horas: int = 48
                      ) -> list[tuple[datetime, str, float | None]]:
     """Las horas siguientes de un punto (hora, color, nivel) según la afluencia estimada, sin reportes:
     sirve para proponer "regresa a las 10:00"."""
@@ -165,5 +165,5 @@ def pronostico_punto(con: sqlite3.Connection, punto_id: int, momento: datetime, 
     return [(datetime.strptime(r["para_hora"], "%Y-%m-%d %H:%M"), r["semaforo"], r["valor_final"])
             for r in con.execute(
                 "SELECT para_hora, semaforo, valor_final FROM afluencia_estimada "
-                "WHERE punto_id = ? AND para_hora BETWEEN ? AND ? ORDER BY para_hora",
+                "WHERE punto_id = %s AND para_hora BETWEEN %s AND %s ORDER BY para_hora",
                 (punto_id, desde.strftime("%Y-%m-%d %H:00"), hasta.strftime("%Y-%m-%d %H:00")))]

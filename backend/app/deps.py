@@ -1,4 +1,4 @@
-"""Dependencias de FastAPI: conexión a SQLite por petición, la hora y el modo demo.
+"""Dependencias de FastAPI: conexión del pool por petición, la hora y el modo demo.
 
 En las pruebas se reemplazan con ``app.dependency_overrides`` (BD temporal y hora fija).
 """
@@ -6,22 +6,17 @@ En las pruebas se reemplazan con ``app.dependency_overrides`` (BD temporal y hor
 from __future__ import annotations
 
 import os
-import sqlite3
 from collections.abc import Iterator
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import Depends
+import psycopg
+from fastapi import Depends, Request
 
-from turismo_core.bd import conectar
 
-
-def conexion() -> Iterator[sqlite3.Connection]:
-    con = conectar(check_same_thread=False)
-    try:
+def conexion(request: Request) -> Iterator[psycopg.Connection]:
+    with request.app.state.pool.connection() as con:
         yield con
-    finally:
-        con.close()
 
 
 def ahora() -> datetime:
@@ -34,6 +29,6 @@ def es_demo() -> bool:
     return os.environ.get("PUEBLA_DEMO", "0") == "1"
 
 
-Con = Annotated[sqlite3.Connection, Depends(conexion)]
+Con = Annotated[psycopg.Connection, Depends(conexion)]
 Ahora = Annotated[datetime, Depends(ahora)]
 EsDemo = Annotated[bool, Depends(es_demo)]

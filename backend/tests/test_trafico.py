@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 
 from turismo_core import trafico
-from turismo_core.bd import conectar, crear_esquema
+from turismo_core.bd import conectar
 from turismo_core.situacion import traslados
 
 T = datetime(2026, 10, 16, 13, 0)
@@ -24,20 +24,19 @@ def test_anclas_por_cercania():
     assert trafico.ancla_de(puntos, anclas=(99,)) == {}
 
 
-def _bd(tmp_path):
-    con = conectar(tmp_path / "t.db")
-    crear_esquema(con)
+def _bd():
+    con = conectar()
     con.execute("INSERT INTO destino (id, nombre) VALUES (1, 'D')")
     for pid, lat, lon in ((21, 19.0434, -98.1981), (12, 19.0576, -98.3017), (1, 19.0430, -98.1985)):
-        con.execute("INSERT INTO punto (id, clave, nombre, destino_id, lat, lon) VALUES (?, ?, ?, 1, ?, ?)",
+        con.execute("INSERT INTO punto (id, clave, nombre, destino_id, lat, lon) VALUES (%s, %s, %s, 1, %s, %s)",
                     (pid, f"p{pid}", f"P{pid}", lat, lon))
-    con.executemany("INSERT INTO matriz_traslado (origen_id, destino_id, minutos_base, km, minutos_pie, km_pie) "
-                    "VALUES (?, ?, 20, 12, 160, 13)", [(1, 12), (12, 1), (1, 21), (21, 1), (21, 12), (12, 21)])
+    con.cursor().executemany("INSERT INTO matriz_traslado (origen_id, destino_id, minutos_base, km, minutos_pie, km_pie) "
+                    "VALUES (%s, %s, 20, 12, 160, 13)", [(1, 12), (12, 1), (1, 21), (21, 1), (21, 12), (12, 21)])
     return con
 
 
-def test_traslados_con_trafico_vigente(tmp_path):
-    con = _bd(tmp_path)
+def test_traslados_con_trafico_vigente(esquema_prueba):
+    con = _bd()
     trafico.guardar(con, [trafico.Corredor("21-12", 12, 30.0, 20.0, None)], T - timedelta(minutes=20))
     f = trafico.factores_vigentes(con, T)
     assert f.de(1, 12) == 1.5                 # la Catedral usa el corredor de su ancla (Zócalo → Pirámide)
@@ -47,8 +46,8 @@ def test_traslados_con_trafico_vigente(tmp_path):
     assert con_trafico[(1, 12)] == (30.0, 160) and sin[(1, 12)] == (20, 160)
 
 
-def test_un_factor_viejo_no_se_usa(tmp_path):
-    con = _bd(tmp_path)
+def test_un_factor_viejo_no_se_usa(esquema_prueba):
+    con = _bd()
     trafico.guardar(con, [trafico.Corredor("21-12", 12, 30.0, 20.0, None)], T - timedelta(hours=3))
     assert trafico.factores_vigentes(con, T).de(1, 12) is None
     assert traslados(con, T)[(1, 12)] == (20, 160)

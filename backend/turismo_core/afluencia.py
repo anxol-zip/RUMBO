@@ -32,7 +32,8 @@ from __future__ import annotations
 
 import calendar
 import json
-import sqlite3
+import psycopg
+from psycopg.rows import tuple_row
 from collections import defaultdict
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
@@ -293,21 +294,21 @@ def peso_domingo_inah(filas: Iterable[tuple[str, float, float]], horario: Horari
     return round(min(median(razones), DOMINGO_INAH_MAX), 2)
 
 
-def cargar_perfiles(con: sqlite3.Connection) -> dict[int, Perfil]:
+def cargar_perfiles(con: psycopg.Connection) -> dict[int, Perfil]:
     """Un perfil por punto: INAH si el punto tiene recinto, si no, el Observatorio de su destino."""
     perfiles: dict[int, Perfil] = {}
     for r in con.execute("SELECT id, clave, tipo, interior, destino_id, horario FROM punto ORDER BY id"):
         horario, confirmado = leer_horario(r["horario"], r["tipo"])
-        claves = [c[0] for c in con.execute(
-            "SELECT clave_siinah FROM recinto_inah WHERE punto_id = ?", (r["id"],))]
+        claves = [c["clave_siinah"] for c in con.execute(
+            "SELECT clave_siinah FROM recinto_inah WHERE punto_id = %s", (r["id"],))]
         if claves:
-            marcas = ",".join("?" * len(claves))
+            marcas = ",".join(["%s"] * len(claves))
             mensual = {
-                tuple(map(int, f[0].split("-"))): float(f[1]) for f in con.execute(
+                tuple(map(int, f[0].split("-"))): float(f[1]) for f in con.cursor(row_factory=tuple_row).execute(
                     f"SELECT periodo, SUM(visitas) FROM hecho_inah WHERE clave_siinah IN ({marcas}) "
                     "GROUP BY periodo", claves)
             }
-            dom = peso_domingo_inah(con.execute(
+            dom = peso_domingo_inah(con.cursor(row_factory=tuple_row).execute(
                 f"SELECT periodo, SUM(CASE WHEN tipo_visitante = 'Entrada dominical' THEN visitas END), "
                 f"SUM(CASE WHEN tipo_visitante <> 'Entrada dominical' THEN visitas END) "
                 f"FROM hecho_inah WHERE clave_siinah IN ({marcas}) GROUP BY periodo", claves).fetchall(), horario)
@@ -316,8 +317,8 @@ def cargar_perfiles(con: sqlite3.Connection) -> dict[int, Perfil]:
                 p.peso_domingo, p.domingo_es_dato = dom, True
         else:
             mensual = {
-                tuple(map(int, f[0].split("-"))): float(f[1]) for f in con.execute(
-                    "SELECT periodo, valor FROM hecho_observatorio WHERE destino_id = ? "
+                tuple(map(int, f[0].split("-"))): float(f[1]) for f in con.cursor(row_factory=tuple_row).execute(
+                    "SELECT periodo, valor FROM hecho_observatorio WHERE destino_id = %s "
                     "AND indicador = 'afluencia' AND es_pandemia = 0", (r["destino_id"],))
             }
             p = Perfil(r["id"], r["clave"], r["tipo"], bool(r["interior"]), "observatorio", mensual,
@@ -326,7 +327,7 @@ def cargar_perfiles(con: sqlite3.Connection) -> dict[int, Perfil]:
     return perfiles
 
 
-def cargar_contexto(con: sqlite3.Connection) -> Contexto:
+def cargar_contexto(con: psycopg.Connection) -> Contexto:
     fest, puen = set(), set()
     for f in con.execute("SELECT fecha, es_festivo, es_puente FROM calendario WHERE es_festivo = 1 OR es_puente = 1"):
         d = date.fromisoformat(f["fecha"])
@@ -337,7 +338,7 @@ def cargar_contexto(con: sqlite3.Connection) -> Contexto:
     return Contexto(frozenset(fest), frozenset(puen))
 
 
-def cargar_eventos(con: sqlite3.Connection, solo_verificados: bool = True) -> list[EventoActivo]:
+def cargar_eventos(con: psycopg.Connection, solo_verificados: bool = True) -> list[EventoActivo]:
     sql = "SELECT nombre, impacto, punto_id, destino_id, inicio, fin FROM evento"
     if solo_verificados:
         sql += " WHERE verificado = 1"

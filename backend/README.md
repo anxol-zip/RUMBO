@@ -21,7 +21,7 @@ flowchart TD
     servidor_mcp["mcp_server/<br/>servidor MCP"] --> nucleo
     scripts["scripts/<br/>pipeline de datos"] --> nucleo
     api -- "tareas.py: actualización periódica" --> scripts
-    nucleo --> sqlite[("SQLite")]
+    nucleo --> postgres[("PostgreSQL<br/>Supabase")]
     nucleo --> chroma[("ChromaDB")]
     nucleo --> ollama["Ollama"]
 ```
@@ -31,7 +31,7 @@ flowchart TD
 | Tecnología         | Uso                                                                             |
 | ------------------ | ------------------------------------------------------------------------------- |
 | FastAPI + Uvicorn  | API HTTP. Swagger en `http://localhost:8000/docs`                               |
-| SQLite             | Catálogo, datos oficiales, estimaciones y lo que genera la app                  |
+| PostgreSQL (Supabase) + `psycopg` | Catálogo, datos oficiales, estimaciones y lo que genera la app. Dos proyectos: `rumbo-dev` y `rumbo-demo` |
 | ChromaDB           | Textos que consulta el asistente, en 5 colecciones                              |
 | Ollama             | `qwen3:8b` por defecto para redactar y `bge-m3` para embeddings                 |
 | `mcp` (FastMCP)    | Servidor MCP; fijado a `<2` porque en la 2.x cambió de nombre                   |
@@ -40,9 +40,10 @@ flowchart TD
 
 ### Estado actual
 
-- La base es **SQLite** y no hay **login**: el turista usa una sesión anónima y los endpoints `/api/panel/*` están abiertos.
+- La base es **PostgreSQL en Supabase** y no hay **login**: el turista usa una sesión anónima y los endpoints `/api/panel/*` están abiertos.
+- La base solo es accesible desde el backend: RLS activado sin políticas en las 18 tablas (la clave pública de Supabase no ve nada).
 - La migración a Firebase y los roles son trabajo pendiente de Diseño de Software; su avance está en [`docs/DdS/README.md`](../docs/DdS/README.md).
-- La regla que la base hace cumplir hoy es el trigger `reporte_uno_cada_30_min`, en `sql/esquema.sql`.
+- La regla que la base hace cumplir hoy es el trigger `reporte_uno_cada_30_min`, en `sql/esquema_postgres.sql` (`sql/esquema.sql` es el de SQLite y ya no se usa).
 
 ## Qué contiene
 
@@ -113,7 +114,7 @@ Todos llevan el prefijo `/api`.
 | `vector.py`       | Conexión a ChromaDB y colecciones `puntos`, `eventos`, `conocimiento`, `bitacora` y `establecimientos`   |
 | `llm.py`          | Cliente de Ollama: redacción y embeddings                                                                |
 | `ingesta.py`      | Lectura y limpieza de las fuentes oficiales                                                              |
-| `bd.py`           | Conexión a SQLite y creación del esquema                                                                 |
+| `bd.py`           | Conexión a PostgreSQL (pool de la API y conexiones sueltas) y creación del esquema                       |
 | `config.py`       | Lee `backend/.env`; las variables del entorno tienen prioridad                                           |
 
 ### `mcp_server/server.py`: servidor MCP
@@ -144,7 +145,7 @@ La única tool que escribe en la base es `puebla_reportar`.
 | 2        | `extraer_observatorio.py` | Tabla del Observatorio → `processed/observatorio.csv`                        |
 | 3        | `limpiar_inah.py`         | Reportes del INAH → `processed/inah.csv` y `processed/recintos_inah.csv`     |
 | 4        | `filtrar_denue.py`        | Zip del DENUE → `processed/denue_zona_piloto.csv` y `municipios_denue.csv`   |
-| 7        | `cargar_bd.py`            | Procesados, catálogo, eventos y calendario → SQLite                          |
+| 7        | `cargar_bd.py`            | Procesados, catálogo, eventos y calendario → la base de `DATABASE_URL`       |
 | 6        | `calcular_traslados.py`   | OpenRouteService → `matriz_traslado`; necesita `ORS_API_KEY` o su caché      |
 | 6b       | `actualizar_trafico.py`   | TomTom → `obs_trafico`                                                       |
 | 7a       | `actualizar_clima.py`     | Open-Meteo → `obs_clima`                                                     |
@@ -192,7 +193,7 @@ Fuera del pipeline, se corren a mano:
 
 | Elemento                               | En git | Qué es                                                                                         |
 | -------------------------------------- | ------ | ---------------------------------------------------------------------------------------------- |
-| `desarrollo.db`                        | Sí     | Base de desarrollo. Se quita del repositorio en el merge a `main` de la versión 1.0            |
+| `desarrollo.db`                        | Sí     | Base SQLite de antes de Supabase. Ya no la usa nada; se quita del repositorio en el merge a `main` |
 | `eventos.csv`                          | Sí     | 11 eventos curados a mano, cada uno con su fuente                                              |
 | `equivalencias_inah.csv`               | Sí     | Relaciona recintos del INAH con lugares del catálogo                                           |
 | `manifiesto_raw.csv`                   | Sí     | Fecha, tamaño y SHA-256 de cada archivo oficial copiado                                        |
@@ -205,7 +206,6 @@ Fuera del pipeline, se corren a mano:
 | `processed/propuesta_catalogo.csv`     | Sí     | Propuesta de coordenadas de los 20 lugares originales. Es histórica: ningún script la lee ni la genera |
 | `processed/evaluacion_rag.md`          | Sí     | Resultado de `evaluar_rag.py`                                                                  |
 | `raw/`                                 | No     | Archivos oficiales y matrices de OpenRouteService ya consultadas. Se copia a mano              |
-| `puebla.db`                            | No     | Base real, generada con el pipeline                                                            |
 | `chroma/`                              | No     | Índice del asistente, generado con el pipeline                                                 |
 
 ## Cómo se usa
@@ -214,20 +214,24 @@ Todo se corre desde `backend/`. La guía completa está en [`INSTALACION.md`](..
 
 ```bash
 uv sync                                          # instala dependencias
-uv run uvicorn app.main:app --reload --port 8000 # levanta la API con puebla.db
-uv run pytest -q                                 # corre las pruebas
-uv run python -m scripts.pipeline data/raw       # regenera la base real
+uv run uvicorn app.main:app --reload --port 8000 # levanta la API con la base de DATABASE_URL
+uv run pytest -q                                 # corre las pruebas (DATABASE_URL_PRUEBAS)
+uv run python -m scripts.pipeline data/raw       # carga rumbo-demo (con su .env)
 ```
 
-Para desarrollar sin datos reales, usa `desarrollo.db` con las variables de la tabla siguiente, o regenérala con [`herramientas/bd_desarrollo.py`](../herramientas/README.md).
+Para desarrollar sin datos reales, usa `rumbo-dev`; se recarga con [`herramientas/bd_desarrollo.py`](../herramientas/README.md).
 
 ## Configuración
 
-Se define en el entorno o en `backend/.env`, que nunca se sube a git. Excepción: `DATABASE_URL`, `PUEBLA_DEMO`, `PUEBLA_TAREAS` y `CORS_ORIGINS` solo se leen del entorno.
+Se define en el entorno o en `backend/.env`, que nunca se sube a git. Excepción: `PUEBLA_DEMO`, `PUEBLA_TAREAS` y `CORS_ORIGINS` solo se leen del entorno. La plantilla es `backend/.env.example`.
 
 | Variable                       | Uso                                                                  | Valor por defecto                                 |
 | ------------------------------ | -------------------------------------------------------------------- | ------------------------------------------------- |
-| `DATABASE_URL`                 | Base SQLite que se usa                                               | `sqlite:///data/puebla.db`                        |
+| `DATABASE_URL`                 | URL del Session pooler de Supabase (puerto 5432). Sin ella el backend no arranca | Obligatoria                          |
+| `RUMBO_AMBIENTE`               | `dev` o `demo`. `bd_desarrollo.py` se niega a correr con `demo`      | Sin valor                                         |
+| `DATABASE_URL_PRUEBAS`         | Base donde pytest crea esquemas temporales                           | Sin valor: las pruebas de base se saltan          |
+| `RUMBO_ESQUEMA`                | Esquema de Postgres de cada conexión. Solo lo usan las pruebas       | Sin valor (`public`)                              |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | Solo para `tests/test_seguridad.py`                      | Sin valor: la prueba se salta                     |
 | `PUEBLA_TAREAS`                | `0` apaga las actualizaciones periódicas                             | Encendidas                                        |
 | `PUEBLA_DEMO`                  | `1` marca las sesiones nuevas como demo                              | `0`                                               |
 | `CORS_ORIGINS`                 | Orígenes permitidos, separados por coma                              | `localhost` y `127.0.0.1` en el puerto 5173       |

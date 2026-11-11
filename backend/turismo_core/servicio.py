@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import re
 import secrets
-import sqlite3
+import psycopg
 from collections.abc import Iterable
 from datetime import datetime, timedelta
 
@@ -68,7 +68,7 @@ ORDEN_COLOR = {"verde": 0, "amarillo": 1, "rojo": 2}
 
 
 def vs_normal(p: PuntoAhora) -> str | None:
-    """¿Ahora está más o menos lleno que lo que daría el modelo solo? (los reportes o la Secretaría lo movieron).
+    """¿Ahora está más o menos lleno que lo que daría el modelo solo%s (los reportes o la Secretaría lo movieron).
     Como "live vs. forecast" de BestTime; None si no se puede comparar."""
     e = p.estado
     if e is None or p.color not in ORDEN_COLOR:
@@ -113,14 +113,14 @@ def traslado_dict(minutos: float | None, modo: str | None, factor: float | None,
     return d
 
 
-def frescura(con: sqlite3.Connection, ahora: datetime) -> dict:
+def frescura(con: psycopg.Connection, ahora: datetime) -> dict:
     """Qué tan viejos son los datos en vivo (RNF_02: "dato de hace X min")."""
-    trafico_en = con.execute("SELECT MAX(consultado_en) FROM obs_trafico").fetchone()[0]
+    trafico_en = con.execute("SELECT MAX(consultado_en) AS m FROM obs_trafico").fetchone()["m"]
     trafico_dt = datetime.fromisoformat(trafico_en) if trafico_en else None
-    clima_en = con.execute("SELECT MAX(consultado_en) FROM obs_clima").fetchone()[0]
-    hasta = con.execute("SELECT MAX(para_hora) FROM afluencia_estimada").fetchone()[0]
+    clima_en = con.execute("SELECT MAX(consultado_en) AS m FROM obs_clima").fetchone()["m"]
+    hasta = con.execute("SELECT MAX(para_hora) AS m FROM afluencia_estimada").fetchone()["m"]
     hora = ahora.replace(minute=0, second=0, microsecond=0).strftime("%Y-%m-%d %H:00")
-    cubre = con.execute("SELECT COUNT(*) FROM afluencia_estimada WHERE para_hora = ?", (hora,)).fetchone()[0] > 0
+    cubre = con.execute("SELECT COUNT(*) AS n FROM afluencia_estimada WHERE para_hora = %s", (hora,)).fetchone()["n"] > 0
     clima_dt = datetime.fromisoformat(clima_en) if clima_en else None
     return {
         "ahora": _iso(ahora),
@@ -133,13 +133,13 @@ def frescura(con: sqlite3.Connection, ahora: datetime) -> dict:
     }
 
 
-def _existe_punto(con: sqlite3.Connection, punto_id: int) -> None:
-    if con.execute("SELECT 1 FROM punto WHERE id = ?", (punto_id,)).fetchone() is None:
+def _existe_punto(con: psycopg.Connection, punto_id: int) -> None:
+    if con.execute("SELECT 1 FROM punto WHERE id = %s", (punto_id,)).fetchone() is None:
         raise NoEncontrado(f"No existe el punto {punto_id}")
 
 
-def _sesion(con: sqlite3.Connection, sesion_id: str) -> sqlite3.Row:
-    s = con.execute("SELECT * FROM sesion WHERE id = ?", (sesion_id,)).fetchone()
+def _sesion(con: psycopg.Connection, sesion_id: str) -> dict:
+    s = con.execute("SELECT * FROM sesion WHERE id = %s", (sesion_id,)).fetchone()
     if s is None:
         raise NoEncontrado("Sesión no encontrada: pide una nueva con POST /api/sesiones")
     return s
@@ -147,9 +147,9 @@ def _sesion(con: sqlite3.Connection, sesion_id: str) -> sqlite3.Row:
 
 # ───────────── Catálogo y semáforo (CU_02, CU_03) ─────────────
 
-def catalogo(con: sqlite3.Connection, destino: str | None = None, tipo: str | None = None) -> list[dict]:
+def catalogo(con: psycopg.Connection, destino: str | None = None, tipo: str | None = None) -> list[dict]:
     sql = ("SELECT p.*, d.nombre AS destino FROM punto p JOIN destino d ON d.id = p.destino_id "
-           "WHERE (? IS NULL OR d.nombre = ?) AND (? IS NULL OR p.tipo = ?) ORDER BY p.id")
+           "WHERE (%s::text IS NULL OR d.nombre = %s) AND (%s::text IS NULL OR p.tipo = %s) ORDER BY p.id")
     salida = []
     for r in con.execute(sql, (destino, destino, tipo, tipo)):
         salida.append({
@@ -173,7 +173,7 @@ def _horario(texto: str | None) -> dict | str | None:
         return texto
 
 
-def semaforo(con: sqlite3.Connection, ahora: datetime, origen_id: int | None = None) -> dict:
+def semaforo(con: psycopg.Connection, ahora: datetime, origen_id: int | None = None) -> dict:
     """Todos los puntos, ordenados por conveniencia (los cerrados al final)."""
     if origen_id is not None:
         _existe_punto(con, origen_id)
@@ -191,7 +191,7 @@ def semaforo(con: sqlite3.Connection, ahora: datetime, origen_id: int | None = N
     return {"datos": frescura(con, ahora), "puntos": filas}
 
 
-def estado_punto(con: sqlite3.Connection, punto_id: int, ahora: datetime, origen_id: int | None = None) -> dict:
+def estado_punto(con: psycopg.Connection, punto_id: int, ahora: datetime, origen_id: int | None = None) -> dict:
     """Todo lo de la tarjeta del punto (T3)."""
     _existe_punto(con, punto_id)
     p = situacion(con, ahora)[punto_id]
@@ -215,8 +215,8 @@ def estado_punto(con: sqlite3.Connection, punto_id: int, ahora: datetime, origen
     else:
         salida["traslado"] = None
     salida["proximos_eventos"] = [dict(r) for r in con.execute(
-        "SELECT e.nombre, e.inicio, e.fin, e.impacto, e.fuente_url FROM evento e JOIN punto p ON p.id = ? "
-        "WHERE e.verificado = 1 AND e.fin >= ? AND (e.punto_id = p.id OR (e.punto_id IS NULL AND e.destino_id = p.destino_id)) "
+        "SELECT e.nombre, e.inicio, e.fin, e.impacto, e.fuente_url FROM evento e JOIN punto p ON p.id = %s "
+        "WHERE e.verificado = 1 AND e.fin >= %s AND (e.punto_id = p.id OR (e.punto_id IS NULL AND e.destino_id = p.destino_id)) "
         "ORDER BY e.inicio LIMIT 3", (punto_id, ahora.strftime("%Y-%m-%d %H:%M")))]
     salida["como_llegar_url"] = url_como_llegar(p.lat, p.lon)
     hoy = next((d for d in semana_punto(con, punto_id, ahora)["dias"] if d["fecha"] == ahora.date().isoformat()), None)
@@ -226,7 +226,7 @@ def estado_punto(con: sqlite3.Connection, punto_id: int, ahora: datetime, origen
     return salida
 
 
-def buscar_punto(con: sqlite3.Connection, texto: str | int) -> list[dict]:
+def buscar_punto(con: psycopg.Connection, texto: str | int) -> list[dict]:
     """Del nombre libre ("la pirámide", "el zócalo", "12") a los puntos del catálogo, mejores primero.
 
     Por id, por nombre o clave exactos, o por palabras distintivas del nombre (las mismas reglas que usa
@@ -253,13 +253,13 @@ def buscar_punto(con: sqlite3.Connection, texto: str | int) -> list[dict]:
     return sorted(puntuados, key=lambda f: -f["puntaje"])
 
 
-def traslado_entre(con: sqlite3.Connection, origen_id: int, destino_id: int, ahora: datetime) -> dict:
+def traslado_entre(con: psycopg.Connection, origen_id: int, destino_id: int, ahora: datetime) -> dict:
     """Matriz de OpenRouteService (en coche sin tráfico y a pie) y, si hay dato vigente, el tráfico de TomTom."""
     for pid in (origen_id, destino_id):
         _existe_punto(con, pid)
     if origen_id == destino_id:
         return {"origen_id": origen_id, "destino_id": destino_id, "coche_min": 0, "coche_km": 0, "pie_min": 0, "pie_km": 0}
-    r = con.execute("SELECT * FROM matriz_traslado WHERE origen_id = ? AND destino_id = ?", (origen_id, destino_id)).fetchone()
+    r = con.execute("SELECT * FROM matriz_traslado WHERE origen_id = %s AND destino_id = %s", (origen_id, destino_id)).fetchone()
     if r is None:
         raise NoEncontrado("No hay traslado calculado entre esos puntos (corre scripts.calcular_traslados)")
     f = trafico.factores_vigentes(con, ahora)
@@ -274,16 +274,16 @@ def traslado_entre(con: sqlite3.Connection, origen_id: int, destino_id: int, aho
                      "reciente de TomTom); rutas de OpenRouteService.")}
 
 
-def eventos_vigentes(con: sqlite3.Connection, ahora: datetime, destino: str | None = None) -> list[dict]:
+def eventos_vigentes(con: psycopg.Connection, ahora: datetime, destino: str | None = None) -> list[dict]:
     """Eventos verificados que no han terminado, con su fuente oficial."""
     return [dict(r) for r in con.execute(
         "SELECT e.nombre, d.nombre AS destino, p.nombre AS punto, e.inicio, e.fin, e.impacto, e.fuente_url "
         "FROM evento e LEFT JOIN destino d ON d.id = e.destino_id LEFT JOIN punto p ON p.id = e.punto_id "
-        "WHERE e.verificado = 1 AND e.fin >= ? AND (? IS NULL OR d.nombre = ?) ORDER BY e.inicio",
+        "WHERE e.verificado = 1 AND e.fin >= %s AND (%s::text IS NULL OR d.nombre = %s) ORDER BY e.inicio",
         (ahora.strftime("%Y-%m-%d %H:%M"), destino, destino))]
 
 
-# ───────────── ¿Cuándo me conviene ir? (benchmarking con REA, 2026-10-16) ─────────────
+# ───────────── ¿Cuándo me conviene ir%s (benchmarking con REA, 2026-10-16) ─────────────
 
 DIAS_ES = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
 VENTANA_ESPERA = timedelta(hours=2)
@@ -302,14 +302,14 @@ def _extremos(horas: list[dict]) -> dict | None:
             "horas_verdes": [h["hora"] for h in abiertas if h["color"] == "verde"]}
 
 
-def semana_punto(con: sqlite3.Connection, punto_id: int, ahora: datetime) -> dict:
+def semana_punto(con: psycopg.Connection, punto_id: int, ahora: datetime) -> dict:
     """Tabla día × hora de los próximos días (como Kioto) desde ``afluencia_estimada``: es la estimación sin
     reportes, la misma que da "normalmente". Las horas que ya pasaron de hoy se marcan."""
     _existe_punto(con, punto_id)
     hoy = ahora.replace(hour=0, minute=0, second=0, microsecond=0)
     dias: dict[str, list[dict]] = {}
     for r in con.execute(
-        "SELECT para_hora, semaforo, valor_final FROM afluencia_estimada WHERE punto_id = ? AND para_hora >= ? "
+        "SELECT para_hora, semaforo, valor_final FROM afluencia_estimada WHERE punto_id = %s AND para_hora >= %s "
         "ORDER BY para_hora", (punto_id, hoy.strftime("%Y-%m-%d %H:00"))):
         h = datetime.strptime(r["para_hora"], "%Y-%m-%d %H:%M")
         if h.hour not in HORAS_TABLA:
@@ -329,12 +329,12 @@ def semana_punto(con: sqlite3.Connection, punto_id: int, ahora: datetime) -> dic
             "datos": frescura(con, ahora)}
 
 
-def espera_reportada(con: sqlite3.Connection, punto_id: int, ahora: datetime) -> dict | None:
+def espera_reportada(con: psycopg.Connection, punto_id: int, ahora: datetime) -> dict | None:
     """Mediana de la espera que reportaron los turistas en las últimas 2 h (como Affluences). Solo reportes
     válidos o dudosos que traen espera; None si no hay."""
     filas = [r for r in con.execute(
-        "SELECT espera_min, creado_en FROM reporte WHERE punto_id = ? AND estado <> 'descartado' "
-        "AND espera_min IS NOT NULL AND creado_en BETWEEN ? AND ? ORDER BY creado_en",
+        "SELECT espera_min, creado_en FROM reporte WHERE punto_id = %s AND estado <> 'descartado' "
+        "AND espera_min IS NOT NULL AND creado_en BETWEEN %s AND %s ORDER BY creado_en",
         (punto_id, (ahora - VENTANA_ESPERA).isoformat(timespec="seconds"), ahora.isoformat(timespec="seconds")))]
     if not filas:
         return None
@@ -348,7 +348,7 @@ def espera_reportada(con: sqlite3.Connection, punto_id: int, ahora: datetime) ->
 
 # ───────────── Sesiones (CU_01) ─────────────
 
-def crear_sesion(con: sqlite3.Connection, ahora: datetime, intereses: Iterable[str] = (),
+def crear_sesion(con: psycopg.Connection, ahora: datetime, intereses: Iterable[str] = (),
                  horas: float | None = None, origen_id: int | None = None, es_demo: bool = False) -> dict:
     """El identificador lo genera el servidor: en http:// por IP el celular no tiene ``crypto.randomUUID`` (docs/05c §4).
     Sin datos personales (RN_07): solo intereses, tiempo y el punto de partida elegido de la lista."""
@@ -356,9 +356,8 @@ def crear_sesion(con: sqlite3.Connection, ahora: datetime, intereses: Iterable[s
         _existe_punto(con, origen_id)
     sesion_id = secrets.token_urlsafe(12)
     perfil = {"intereses": sorted({i.strip() for i in intereses if i.strip()}), "horas": horas, "origen_id": origen_id}
-    con.execute("INSERT INTO sesion (id, creada_en, perfil, es_demo) VALUES (?, ?, ?, ?)",
+    con.execute("INSERT INTO sesion (id, creada_en, perfil, es_demo) VALUES (%s, %s, %s, %s)",
                 (sesion_id, ahora.isoformat(timespec="seconds"), json.dumps(perfil, ensure_ascii=False), int(es_demo)))
-    con.commit()
     return {"sesion_id": sesion_id, "es_demo": es_demo, "perfil": perfil}
 
 
@@ -375,7 +374,7 @@ def _candidato_dict(c: rec.Candidato, factor: float | None = None) -> dict:
     }
 
 
-def calcular_recomendacion(con: sqlite3.Connection, ahora: datetime, punto_id: int | None = None,
+def calcular_recomendacion(con: psycopg.Connection, ahora: datetime, punto_id: int | None = None,
                            origen_id: int | None = None, intereses: Iterable[str] = (),
                            horas: float | None = None) -> rec.Recomendacion:
     """Solo calcula (no guarda nada): la usan la API (que sí guarda la búsqueda) y el servidor MCP."""
@@ -405,7 +404,7 @@ def recomendacion_dict(r: rec.Recomendacion, factores: trafico.Factores | None =
     }
 
 
-def recomendar(con: sqlite3.Connection, ahora: datetime, sesion_id: str, punto_id: int | None = None,
+def recomendar(con: psycopg.Connection, ahora: datetime, sesion_id: str, punto_id: int | None = None,
                origen_id: int | None = None, intereses: Iterable[str] | None = None,
                horas: float | None = None) -> dict:
     """Lo que no venga en la petición se toma del perfil de la sesión. Cada consulta se guarda en ``busqueda``."""
@@ -418,23 +417,21 @@ def recomendar(con: sqlite3.Connection, ahora: datetime, sesion_id: str, punto_i
 
     motivo = r.motivo or ("intereses" if punto_id is None else "sin_cambio")
     cur = con.execute(
-        "INSERT INTO busqueda (sesion_id, creada_en, punto_pedido, punto_sugerido, motivo) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO busqueda (sesion_id, creada_en, punto_pedido, punto_sugerido, motivo) VALUES (%s, %s, %s, %s, %s) RETURNING id",
         (sesion_id, ahora.isoformat(timespec="seconds"), punto_id,
          r.alternativa.punto.id if r.alternativa else None, motivo))
-    con.commit()
-    return {"busqueda_id": cur.lastrowid} | recomendacion_dict(r, trafico.factores_vigentes(con, ahora), origen_id)
+    return {"busqueda_id": cur.fetchone()["id"]} | recomendacion_dict(r, trafico.factores_vigentes(con, ahora), origen_id)
 
 
-def responder_busqueda(con: sqlite3.Connection, busqueda_id: int, aceptada: bool = True) -> dict:
+def responder_busqueda(con: psycopg.Connection, busqueda_id: int, aceptada: bool = True) -> dict:
     """"Vamos" (aceptada) o "Prefiero mi plan" (ignorada)."""
-    cur = con.execute("UPDATE busqueda SET aceptada = ? WHERE id = ?", (int(aceptada), busqueda_id))
+    cur = con.execute("UPDATE busqueda SET aceptada = %s WHERE id = %s", (int(aceptada), busqueda_id))
     if cur.rowcount == 0:
         raise NoEncontrado(f"No existe la búsqueda {busqueda_id}")
-    con.commit()
     return {"busqueda_id": busqueda_id, "aceptada": aceptada}
 
 
-# ───────────── "¿Cómo está?" (CU_05) ─────────────
+# ───────────── "¿Cómo está%s" (CU_05) ─────────────
 
 MENSAJES = {
     "valido": "¡Gracias! Tu reporte ya ayuda a quien viene detrás.",
@@ -442,7 +439,7 @@ MENSAJES = {
 }
 
 
-def registrar_reporte(con: sqlite3.Connection, ahora: datetime, sesion_id: str, punto_id: int, nivel: int,
+def registrar_reporte(con: psycopg.Connection, ahora: datetime, sesion_id: str, punto_id: int, nivel: int,
                       espera_min: int | None = None, distancia_m: float | None = None) -> dict:
     """Aplica los filtros antispam (``reportes.filtrar``), guarda el reporte y devuelve el estado nuevo del punto."""
     s = _sesion(con, sesion_id)
@@ -451,12 +448,12 @@ def registrar_reporte(con: sqlite3.Connection, ahora: datetime, sesion_id: str, 
     p = situacion(con, ahora)[punto_id]
     desde = (ahora - VIDA_MAX).isoformat(timespec="seconds")
 
-    if con.execute("SELECT 1 FROM reporte WHERE sesion_id = ? AND motivo LIKE 'velocidad imposible%'",
+    if con.execute("SELECT 1 FROM reporte WHERE sesion_id = %s AND motivo LIKE 'velocidad imposible%%'",
                    (sesion_id,)).fetchone():
         estado, peso, motivo, descartar = "descartado", 0.0, "sesión descartada por velocidad imposible", False
     else:
         previos = [ReportePrevio(r["punto_id"], datetime.fromisoformat(r["creado_en"])) for r in con.execute(
-            "SELECT punto_id, creado_en FROM reporte WHERE sesion_id = ? AND estado <> 'descartado' AND creado_en >= ?",
+            "SELECT punto_id, creado_en FROM reporte WHERE sesion_id = %s AND estado <> 'descartado' AND creado_en >= %s",
             (sesion_id, desde))]
         matriz = traslados(con)
         f = filtrar(punto_id, ahora, p.abierto, distancia_m, previos,
@@ -464,20 +461,19 @@ def registrar_reporte(con: sqlite3.Connection, ahora: datetime, sesion_id: str, 
         estado, peso, motivo, descartar = f.estado, f.peso, f.motivo, f.descartar_sesion
 
     try:
-        cur = con.execute(
-            "INSERT INTO reporte (sesion_id, punto_id, creado_en, nivel, espera_min, distancia_m, peso, estado, motivo) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (sesion_id, punto_id, ahora.isoformat(timespec="seconds"), nivel, espera_min,
-             None if distancia_m is None else round(distancia_m), peso, estado, motivo))
-    except sqlite3.IntegrityError as e:
+        with con.transaction():                    # el reporte y el descarte de su sesión, juntos o ninguno
+            reporte_id = con.execute(
+                "INSERT INTO reporte (sesion_id, punto_id, creado_en, nivel, espera_min, distancia_m, peso, estado, motivo) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                (sesion_id, punto_id, ahora.isoformat(timespec="seconds"), nivel, espera_min,
+                 None if distancia_m is None else round(distancia_m), peso, estado, motivo)).fetchone()["id"]
+            if descartar:
+                con.execute("UPDATE reporte SET estado = 'descartado', peso = 0 WHERE sesion_id = %s", (sesion_id,))
+    except psycopg.errors.RaiseException as e:
         if "RN_05" not in str(e):
             raise
         # Otra petición guardó el mismo reporte después de leer ``previos``: el filtro ya lo verá como repetido.
-        con.rollback()
         return registrar_reporte(con, ahora, sesion_id, punto_id, nivel, espera_min, distancia_m)
-    if descartar:
-        con.execute("UPDATE reporte SET estado = 'descartado', peso = 0 WHERE sesion_id = ?", (sesion_id,))
-    con.commit()
 
     if estado == "descartado":
         if motivo and motivo.startswith("repetido"):
@@ -489,6 +485,6 @@ def registrar_reporte(con: sqlite3.Connection, ahora: datetime, sesion_id: str, 
     else:
         mensaje = MENSAJES[estado]
     return {
-        "reporte": {"id": cur.lastrowid, "estado": estado, "peso": peso, "motivo": motivo, "mensaje": mensaje},
+        "reporte": {"id": reporte_id, "estado": estado, "peso": peso, "motivo": motivo, "mensaje": mensaje},
         "punto": punto_dict(situacion(con, ahora)[punto_id]),
     }

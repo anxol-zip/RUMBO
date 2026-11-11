@@ -34,7 +34,7 @@ def _chroma() -> dict:
 @router.get("/salud")
 def salud(con: Con, ahora: Ahora, demo: EsDemo, request: Request):
     """SQLite, frescura del clima y la afluencia, claves presentes (sin mostrarlas), Ollama y la última actualización."""
-    cuenta = lambda sql: con.execute(sql).fetchone()[0]  # noqa: E731
+    cuenta = lambda sql: next(iter(con.execute(sql).fetchone().values()))  # noqa: E731
     programador = getattr(request.app.state, "programador", None)
     return {
         "modo_demo": demo,

@@ -1,15 +1,16 @@
 """Endpoints de la API contra una BD sintética (no depende de puebla.db, que no está en git)."""
 
-import sqlite3
+import threading
 from datetime import datetime, timedelta
 
+import psycopg
 import pytest
 from fastapi.testclient import TestClient
 
 from app import deps
 from app.main import app
 from turismo_core import servicio
-from turismo_core.bd import conectar, crear_esquema
+from turismo_core.bd import conectar
 from turismo_core.reportes import Filtro
 
 T = datetime(2026, 10, 16, 13, 0)
@@ -17,35 +18,29 @@ HORA = T.strftime("%Y-%m-%d %H:00")
 
 
 @pytest.fixture
-def cliente(tmp_path, monkeypatch):
+def cliente(esquema_prueba, monkeypatch):
     monkeypatch.setenv("PUEBLA_TAREAS", "0")
-    ruta = tmp_path / "prueba.db"
-    con = conectar(ruta)
-    crear_esquema(con)
+    con = conectar()
     con.execute("INSERT INTO destino (id, nombre) VALUES (1, 'Cd. Puebla')")
     # 1 museo tranquilo · 2 museo lleno · 3 mirador cerrado
     for pid, clave, interior in ((1, "museo_a", 1), (2, "museo_b", 1), (3, "mirador", 0)):
         con.execute("INSERT INTO punto (id, clave, nombre, destino_id, tipo, categorias, interior, lat, lon, verificado) "
-                    "VALUES (?, ?, ?, 1, 'museo', 'historia,arte', ?, 19.04, -98.2, 1)",
+                    "VALUES (%s, %s, %s, 1, 'museo', 'historia,arte', %s, 19.04, -98.2, 1)",
                     (pid, clave, f"Punto {pid}", interior))
-        con.execute("INSERT INTO umbral_punto VALUES (?, 1.0, 1.4, 'percentil', 100, ?)", (pid, T.isoformat()))
-    con.executemany("INSERT INTO afluencia_estimada (punto_id, para_hora, estimacion, valor_final, semaforo, confianza) "
-                    "VALUES (?, ?, ?, ?, ?, 'estimado')",
+        con.execute("INSERT INTO umbral_punto VALUES (%s, 1.0, 1.4, 'percentil', 100, %s)", (pid, T.isoformat()))
+    con.cursor().executemany("INSERT INTO afluencia_estimada (punto_id, para_hora, estimacion, valor_final, semaforo, confianza) "
+                    "VALUES (%s, %s, %s, %s, %s, 'estimado')",
                     [(1, HORA, 0.8, 0.8, "verde"), (2, HORA, 2.0, 2.0, "rojo"), (3, HORA, None, None, "cerrado")])
-    con.executemany("INSERT INTO matriz_traslado (origen_id, destino_id, minutos_base, km, minutos_pie, km_pie) "
-                    "VALUES (?, ?, ?, ?, ?, ?)",
+    con.cursor().executemany("INSERT INTO matriz_traslado (origen_id, destino_id, minutos_base, km, minutos_pie, km_pie) "
+                    "VALUES (%s, %s, %s, %s, %s, %s)",
                     [(a, b, 20.0, 9.0, 120.0, 8.0) for a in (1, 2, 3) for b in (1, 2, 3) if a != b])
-    con.commit()
     con.close()
 
     def conexion():
-        c = conectar(ruta, check_same_thread=False)
-        try:
+        with conectar() as c:
             yield c
-        finally:
-            c.close()
 
-    reloj = {"t": T, "demo": False, "ruta": ruta}
+    reloj = {"t": T, "demo": False}
     app.dependency_overrides[deps.conexion] = conexion
     app.dependency_overrides[deps.ahora] = lambda: reloj["t"]
     app.dependency_overrides[deps.es_demo] = lambda: reloj["demo"]
@@ -97,17 +92,17 @@ def test_tres_reportes_llenos_confirman_y_cambian_el_color(cliente):
 def _guardar_reporte(con, sid, punto_id, creado_en, estado=None):
     columnas = "sesion_id, punto_id, creado_en, nivel" + (", estado" if estado else "")
     valores = (sid, punto_id, creado_en, 2) + ((estado,) if estado else ())
-    con.execute(f"INSERT INTO reporte ({columnas}) VALUES ({', '.join('?' * len(valores))})", valores)
+    con.execute(f"INSERT INTO reporte ({columnas}) VALUES ({', '.join(['%s'] * len(valores))})", valores)
 
 
 def test_la_base_rechaza_el_reporte_repetido_sin_pasar_por_la_app(cliente):
     c, reloj = cliente
     sid, otra = sesion(c), sesion(c)
-    con = conectar(reloj["ruta"])
+    con = conectar()
     _guardar_reporte(con, sid, 1, "2026-11-04T13:00:00")
-    with pytest.raises(sqlite3.IntegrityError, match="RN_05"):
+    with pytest.raises(psycopg.errors.RaiseException, match="RN_05"):
         _guardar_reporte(con, sid, 1, "2026-11-04T13:29:59")
-    with pytest.raises(sqlite3.IntegrityError, match="RN_05"):
+    with pytest.raises(psycopg.errors.RaiseException, match="RN_05"):
         _guardar_reporte(con, sid, 1, "2026-11-04T13:10:00", "dudoso")
     # Sí pasan: el descartado (se guarda como evidencia), otro punto, otra sesión y a los 30 min exactos.
     _guardar_reporte(con, sid, 1, "2026-11-04T13:10:00", "descartado")
@@ -115,6 +110,42 @@ def test_la_base_rechaza_el_reporte_repetido_sin_pasar_por_la_app(cliente):
     _guardar_reporte(con, otra, 1, "2026-11-04T13:10:00")
     _guardar_reporte(con, sid, 1, "2026-11-04T13:30:00")
     con.close()
+
+
+def test_rn05_con_dos_reportes_al_mismo_tiempo_solo_guarda_uno(cliente):
+    c, _ = cliente
+    sid = sesion(c)
+    inicio, errores = threading.Barrier(2), []
+
+    def guardar():
+        with conectar() as con:
+            inicio.wait()
+            try:
+                _guardar_reporte(con, sid, 1, "2026-11-04T13:00:00")
+            except psycopg.errors.RaiseException as e:
+                errores.append(str(e))
+
+    hilos = [threading.Thread(target=guardar) for _ in range(2)]
+    for h in hilos:
+        h.start()
+    for h in hilos:
+        h.join()
+    assert len(errores) == 1 and "RN_05" in errores[0]
+    with conectar() as con:
+        assert con.execute("SELECT COUNT(*) AS n FROM reporte WHERE sesion_id = %s", (sid,)).fetchone()["n"] == 1
+
+
+def test_sin_base_responde_503(cliente):
+    c, _ = cliente
+
+    def caida():
+        raise psycopg.OperationalError("sin red")
+        yield
+
+    app.dependency_overrides[deps.conexion] = caida
+    r = c.get("/api/semaforo")
+    assert r.status_code == 503
+    assert r.json() == {"detail": "La base de datos no está disponible. Intenta de nuevo en unos minutos."}
 
 
 def test_si_la_base_rechaza_un_reporte_simultaneo_la_api_avisa_que_es_repetido(cliente, monkeypatch):
@@ -181,13 +212,12 @@ def test_ajuste_manual_gana_y_se_quita(cliente):
     assert c.delete(f"/api/panel/ajustes/{a['ajuste_id']}").json()["punto"]["color"] == "verde"
 
 
-def _observatorio(ruta, valores: dict[str, float], derrama_por_visitante: float = 1000.0):
-    con = conectar(ruta)
+def _observatorio(valores: dict[str, float], derrama_por_visitante: float = 1000.0):
+    con = conectar()
     for p, v in valores.items():
-        con.execute("INSERT INTO hecho_observatorio (destino_id, periodo, indicador, valor) VALUES (1, ?, 'afluencia', ?)", (p, v))
-        con.execute("INSERT INTO hecho_observatorio (destino_id, periodo, indicador, valor) VALUES (1, ?, 'derrama_mxn', ?)",
+        con.execute("INSERT INTO hecho_observatorio (destino_id, periodo, indicador, valor) VALUES (1, %s, 'afluencia', %s)", (p, v))
+        con.execute("INSERT INTO hecho_observatorio (destino_id, periodo, indicador, valor) VALUES (1, %s, 'derrama_mxn', %s)",
                     (p, v * derrama_por_visitante))
-    con.commit()
     con.close()
 
 
@@ -202,7 +232,7 @@ def _meses(desde: str, hasta: str) -> list[str]:
 
 def test_derrama_redistribuida_y_nueva_sin_contar_dos_veces(cliente):
     c, reloj = cliente
-    _observatorio(reloj["ruta"], {p: 100.0 for p in _meses("2025-07", "2026-06")})     # $1,000 por visitante
+    _observatorio({p: 100.0 for p in _meses("2025-07", "2026-06")})     # $1,000 por visitante
     for volvio in (False, True):
         sid = sesion(c, origen_id=2)
         b = c.post("/api/recomendar", json={"sesion_id": sid, "punto_id": 2}).json()["busqueda_id"]
@@ -221,7 +251,7 @@ def test_semaforo_estatal_dato_y_estimado(cliente):
     c, reloj = cliente
     valores = {p: 100.0 for p in _meses("2022-01", "2026-06")}
     valores["2025-10"] = 200.0
-    _observatorio(reloj["ruta"], valores)
+    _observatorio(valores)
     publicado = c.get("/api/panel/semaforo-estatal?mes=10&anio=2025").json()["destinos"][0]
     assert (publicado["tipo"], publicado["color"], publicado["nivel"]) == ("dato", "rojo", 2.0)
     estimado = c.get("/api/panel/semaforo-estatal?mes=10&anio=2026").json()["destinos"][0]

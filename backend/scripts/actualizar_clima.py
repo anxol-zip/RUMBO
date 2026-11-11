@@ -22,7 +22,7 @@ def main() -> bool:
         try:
             pronosticos = clima.consultar(puntos)
         except (urllib.error.URLError, TimeoutError, ValueError) as e:
-            ultima = con.execute("SELECT MAX(consultado_en) FROM obs_clima").fetchone()[0]
+            ultima = con.execute("SELECT MAX(consultado_en) AS m FROM obs_clima").fetchone()["m"]
             print(f"  AVISO Open-Meteo no respondió ({e}); se usa la última consulta guardada: {ultima or 'ninguna'}")
             return False
         n = clima.guardar(con, pronosticos, ahora)

@@ -1,10 +1,8 @@
-import sqlite3
 from datetime import datetime
 
 import pytest
 
 from turismo_core import clima
-from turismo_core.bd import crear_esquema
 from turismo_core.clima import Pronostico
 
 
@@ -51,10 +49,8 @@ def test_leer_respuesta_en_el_orden_de_los_puntos():
         clima.leer_respuesta(datos, [7])
 
 
-def test_ultimo_pronostico_usa_la_consulta_mas_reciente():
-    con = sqlite3.connect(":memory:")
-    con.row_factory = sqlite3.Row
-    crear_esquema(con)
+def test_ultimo_pronostico_usa_la_consulta_mas_reciente(esquema_prueba):
+    con = esquema_prueba()
     con.execute("INSERT INTO destino (id, nombre) VALUES (1, 'X')")
     con.execute("INSERT INTO punto (id, clave, nombre, destino_id, lat, lon) VALUES (1, 'x', 'X', 1, 19, -98)")
     hora = datetime(2026, 10, 18, 13)

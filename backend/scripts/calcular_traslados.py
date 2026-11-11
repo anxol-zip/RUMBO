@@ -53,7 +53,7 @@ class SinConexion(Exception):
 
 
 def main(forzar: bool = False) -> None:
-    with conectar() as con:
+    with conectar() as con, con.transaction():
         puntos = [(r["id"], r["lat"], r["lon"]) for r in con.execute("SELECT id, lat, lon FROM punto ORDER BY id")]
         ids = [p for p, _, _ in puntos]
         try:
@@ -61,7 +61,7 @@ def main(forzar: bool = False) -> None:
             pie = {(t.origen_id, t.destino_id): t for t in traslados.leer_matriz(matriz(puntos, "pie", forzar), ids)}
         except SinConexion as e:
             # Una consulta guardada de otro catálogo no cuadra con los puntos actuales: mejor no tocar la tabla.
-            n = con.execute("SELECT COUNT(*) FROM matriz_traslado").fetchone()[0]
+            n = con.execute("SELECT COUNT(*) AS n FROM matriz_traslado").fetchone()["n"]
             print(f"  AVISO {e}; matriz_traslado se queda como estaba ({n} pares)")
             return
 
@@ -69,17 +69,17 @@ def main(forzar: bool = False) -> None:
         huella_crudos = hashlib.sha256(b"".join(r.read_bytes() for r in crudos)).hexdigest()
         con.execute(
             "INSERT INTO fuente (nombre, url, licencia, frecuencia, fecha_descarga, archivo, hash_archivo) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(nombre) DO UPDATE SET "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT(nombre) DO UPDATE SET "
             "fecha_descarga = excluded.fecha_descarga, hash_archivo = excluded.hash_archivo",
             (FUENTE, "https://openrouteservice.org/", "Datos © colaboradores de OpenStreetMap (ODbL); servicio de HeiGIT",
              "única", json.loads(crudos[0].read_text(encoding="utf-8"))["fecha"],
              ", ".join(r.name for r in crudos), huella_crudos),
         )
-        fuente_id = con.execute("SELECT id FROM fuente WHERE nombre = ?", (FUENTE,)).fetchone()[0]
+        fuente_id = con.execute("SELECT id FROM fuente WHERE nombre = %s", (FUENTE,)).fetchone()["id"]
         con.execute("DELETE FROM matriz_traslado")
-        con.executemany(
+        con.cursor().executemany(
             "INSERT INTO matriz_traslado (origen_id, destino_id, minutos_base, km, minutos_pie, km_pie, fuente_id) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
             [(o, d, c.minutos, c.km, pie[(o, d)].minutos, pie[(o, d)].km, fuente_id) for (o, d), c in coche.items()],
         )
         sin_ruta = sum(t.minutos is None for t in [*coche.values(), *pie.values()])

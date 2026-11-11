@@ -45,7 +45,7 @@ def main() -> None:
             "WHERE p.interior = 0 AND (o.prob_lluvia_pct >= 60 OR o.lluvia_mm >= 1) AND a.semaforo <> 'cerrado' "
             "AND o.consultado_en = (SELECT MAX(consultado_en) FROM obs_clima) ORDER BY o.valido_para LIMIT 1").fetchone()
         if fila:
-            caso(con, f"Lluvia fuerte en {fila[0]}", datetime.fromisoformat(fila[1]), fila[0])
+            caso(con, f"Lluvia fuerte en {fila['clave']}", datetime.fromisoformat(fila["valido_para"]), fila["clave"])
 
 
 if __name__ == "__main__":

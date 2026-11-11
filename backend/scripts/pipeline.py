@@ -1,4 +1,4 @@
-"""Corre el pipeline completo en orden (docs/04 §7): de Downloads a puebla.db validada.
+"""Corre el pipeline completo en orden (docs/04 §7): de Downloads a la base de DATABASE_URL (rumbo-demo) validada.
 
     uv run python -m scripts.pipeline [carpeta_origen]
 """

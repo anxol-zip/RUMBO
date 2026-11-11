@@ -1,4 +1,4 @@
-"""Paso 7: data/processed + catálogo + eventos + calendario -> puebla.db.
+"""Paso 7: data/processed + catálogo + eventos + calendario -> la base de DATABASE_URL (Supabase).
 
 Se puede correr las veces que sea: catálogos y hechos oficiales se reemplazan, pero las
 tablas que llena la app (sesiones, reportes, búsquedas, ajustes) no se tocan. Los puntos
@@ -12,7 +12,8 @@ from datetime import date
 from pathlib import Path
 
 from scripts import CATALOGO, EQUIVALENCIAS_INAH, EVENTOS, MANIFIESTO, PROCESSED
-from turismo_core.bd import conectar, crear_esquema, ruta_bd
+from turismo_core.bd import conectar, crear_esquema
+from turismo_core.config import clave
 from turismo_core.ingesta import AGREGADOS, calendario
 
 FUENTES = {
@@ -58,14 +59,14 @@ def cargar_fuentes(con) -> dict[str, int]:
         m = manifiesto.get(meta.get("archivo", ""), {})
         con.execute(
             """INSERT INTO fuente (nombre, url, licencia, frecuencia, fecha_descarga, archivo, hash_archivo)
-               VALUES (?, ?, ?, ?, ?, ?, ?)
+               VALUES (%s, %s, %s, %s, %s, %s, %s)
                ON CONFLICT(nombre) DO UPDATE SET url=excluded.url, licencia=excluded.licencia,
                  frecuencia=excluded.frecuencia, fecha_descarga=excluded.fecha_descarga,
                  archivo=excluded.archivo, hash_archivo=excluded.hash_archivo""",
             (nombre, meta.get("url"), meta.get("licencia"), meta["frecuencia"],
              m.get("fecha_copia"), meta.get("archivo"), m.get("sha256")),
         )
-        ids[nombre] = con.execute("SELECT id FROM fuente WHERE nombre = ?", (nombre,)).fetchone()[0]
+        ids[nombre] = con.execute("SELECT id FROM fuente WHERE nombre = %s", (nombre,)).fetchone()["id"]
     return ids
 
 
@@ -75,7 +76,7 @@ def cargar_destinos(con, observatorio: list[dict], catalogo: list[dict]) -> dict
     for nombre in sorted({f["destino"] for f in observatorio}):
         municipio = MUNICIPIO_DE_DESTINO.get(nombre, nombre)
         con.execute(
-            """INSERT INTO destino (nombre, cve_mun, es_piloto, es_agregado) VALUES (?, ?, ?, ?)
+            """INSERT INTO destino (nombre, cve_mun, es_piloto, es_agregado) VALUES (%s, %s, %s, %s)
                ON CONFLICT(nombre) DO UPDATE SET cve_mun=excluded.cve_mun,
                  es_piloto=excluded.es_piloto, es_agregado=excluded.es_agregado""",
             (nombre, claves.get(municipio) if municipio else None,
@@ -95,7 +96,7 @@ def cargar_puntos(con, catalogo: list[dict], destinos: dict[str, int], fuente_id
             """INSERT INTO punto (id, clave, nombre, destino_id, municipio, tipo, categorias, interior,
                  lat, lon, horario, costo_mxn, duracion_sugerida, ficha, es_inah, clee_denue, osm_id,
                  fuente_texto, fuente_id, verificado)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                ON CONFLICT(clave) DO UPDATE SET nombre=excluded.nombre, destino_id=excluded.destino_id,
                  municipio=excluded.municipio, tipo=excluded.tipo, categorias=excluded.categorias,
                  interior=excluded.interior, lat=excluded.lat, lon=excluded.lon,
@@ -116,8 +117,8 @@ def cargar_puntos(con, catalogo: list[dict], destinos: dict[str, int], fuente_id
 
 def cargar_hechos(con, observatorio, destinos, puntos, fuentes) -> None:
     con.execute("DELETE FROM hecho_observatorio")
-    con.executemany(
-        "INSERT INTO hecho_observatorio VALUES (?, ?, ?, ?, ?, ?)",
+    con.cursor().executemany(
+        "INSERT INTO hecho_observatorio VALUES (%s, %s, %s, %s, %s, %s)",
         ((destinos[f["destino"]], f["periodo"], f["indicador"], float(f["valor"]),
           int(f["es_pandemia"]), fuentes["Observatorio Turístico de Puebla"]) for f in observatorio),
     )
@@ -125,22 +126,22 @@ def cargar_hechos(con, observatorio, destinos, puntos, fuentes) -> None:
     equivalencias = {e["clave_siinah"]: puntos[e["punto_clave"]] for e in _csv(EQUIVALENCIAS_INAH)}
     con.execute("DELETE FROM hecho_inah")
     con.execute("DELETE FROM recinto_inah")
-    con.executemany(
-        "INSERT INTO recinto_inah VALUES (?, ?, ?, ?)",
+    con.cursor().executemany(
+        "INSERT INTO recinto_inah VALUES (%s, %s, %s, %s)",
         ((r["clave_siinah"], r["nombre"], r["siglas"], equivalencias.get(r["clave_siinah"]))
          for r in _csv(PROCESSED / "recintos_inah.csv")),
     )
     fuente_inah = fuentes["INAH, reporte detallado Puebla"]
-    con.executemany(
-        "INSERT INTO hecho_inah VALUES (?, ?, ?, ?, ?, ?)",
+    con.cursor().executemany(
+        "INSERT INTO hecho_inah VALUES (%s, %s, %s, %s, %s, %s)",
         ((f["clave_siinah"], f["periodo"], f["tipo_visitante"], f["nacionalidad"], int(f["visitas"]),
           fuente_inah) for f in _csv(PROCESSED / "inah.csv")),
     )
 
     fuente_denue = fuentes["DENUE (INEGI) 05/2026"]
     con.execute("DELETE FROM establecimiento")
-    con.executemany(
-        "INSERT INTO establecimiento VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    con.cursor().executemany(
+        "INSERT INTO establecimiento VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
         ((e["clee"], e["nombre"], e["codigo_act"], e["nombre_act"], e["giro"], e["per_ocu"],
           e["cve_mun"], e["municipio"], float(e["lat"]), float(e["lon"]), fuente_denue)
          for e in _csv(PROCESSED / "denue_zona_piloto.csv")),
@@ -149,13 +150,13 @@ def cargar_hechos(con, observatorio, destinos, puntos, fuentes) -> None:
 
 def cargar_eventos(con, destinos: dict[str, int], puntos: dict[str, int]) -> None:
     """Calendario curado (data/eventos.csv). Sin fuente no entra (docs/04 §3)."""
-    con.execute("DELETE FROM evento")
+    con.execute("TRUNCATE evento RESTART IDENTITY")    # ids desde 1 en cada carga, como en SQLite
     for e in _csv(EVENTOS):
         if not e["fuente_url"].strip():
             raise SystemExit(f"Evento sin fuente: {e['nombre']}")
         con.execute(
             "INSERT INTO evento (nombre, punto_id, destino_id, inicio, fin, impacto, fuente_url, verificado, nota) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
             (e["nombre"], puntos[e["punto_clave"]] if e["punto_clave"] else None,
              destinos[e["destino"]] if e["destino"] else None, e["inicio"], e["fin"], e["impacto"],
              e["fuente_url"], int(e["verificado"] or 0), _vacio(e["nota"])),
@@ -164,18 +165,16 @@ def cargar_eventos(con, destinos: dict[str, int], puntos: dict[str, int]) -> Non
 
 def cargar_calendario(con) -> None:
     con.execute("DELETE FROM calendario")
-    con.executemany(
-        "INSERT INTO calendario VALUES (:fecha, :dia_semana, :es_festivo, :es_puente, :es_vacaciones)",
+    con.cursor().executemany(
+        "INSERT INTO calendario VALUES (%(fecha)s, %(dia_semana)s, %(es_festivo)s, %(es_puente)s, %(es_vacaciones)s)",
         calendario(CALENDARIO_DESDE, CALENDARIO_HASTA),
     )
 
 
 def main() -> None:
-    ruta = ruta_bd()
-    ruta.parent.mkdir(parents=True, exist_ok=True)
     observatorio = _csv(PROCESSED / "observatorio.csv")
     catalogo = _csv(CATALOGO)
-    with conectar(ruta) as con:
+    with conectar() as con, con.transaction():     # todo o nada: nunca queda una carga a medias
         crear_esquema(con)
         fuentes = cargar_fuentes(con)
         destinos = cargar_destinos(con, observatorio, catalogo)
@@ -183,11 +182,13 @@ def main() -> None:
         cargar_hechos(con, observatorio, destinos, puntos, fuentes)
         cargar_eventos(con, destinos, puntos)
         cargar_calendario(con)
+        # punto se carga con sus id originales: el contador sigue después del más alto.
+        con.execute("SELECT setval(pg_get_serial_sequence('punto', 'id'), COALESCE((SELECT MAX(id) FROM punto), 1))")
         for tabla in ("fuente", "destino", "punto", "recinto_inah", "hecho_observatorio",
                       "hecho_inah", "establecimiento", "evento", "calendario"):
-            n = con.execute(f"SELECT COUNT(*) FROM {tabla}").fetchone()[0]
+            n = con.execute(f"SELECT COUNT(*) AS n FROM {tabla}").fetchone()["n"]
             print(f"  {tabla:<20} {n:>7}")
-    print(f"BD lista: {ruta}")
+    print(f"Base lista ({clave('RUMBO_AMBIENTE') or 'sin RUMBO_AMBIENTE'})")
 
 
 if __name__ == "__main__":
