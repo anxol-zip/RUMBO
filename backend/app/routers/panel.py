@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
-from app.deps import Ahora, Con
+from app.deps import Ahora, Con, solo_admin
 from app.schemas import AjusteIn
 from turismo_core import panel
 
-router = APIRouter(prefix="/panel", tags=["panel"])
+# Todo el panel pide sesión de administrador (feature 002): 401 sin sesión válida, 403 a turistas.
+router = APIRouter(prefix="/panel", tags=["panel"], dependencies=[Depends(solo_admin)])
 
 
 @router.get("/afluencia")

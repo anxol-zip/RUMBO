@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import BotonCuenta from './BotonCuenta.jsx'
 import EnVivo from './EnVivo.jsx'
 import OpcionesLectura from './OpcionesLectura.jsx'
 import { NOMBRE } from '../data/marca.js'
@@ -22,6 +23,7 @@ function Cabecera() {
       <div className="cabecera-derecha">
         <EnVivo />
         <OpcionesLectura />
+        <BotonCuenta />
         <div className="idioma" role="group" aria-label={t('idioma.grupo')}>
           <button type="button" lang="es" aria-pressed={idioma === 'es'} onClick={() => setIdioma('es')} aria-label="Español">ES</button>
           <button type="button" lang="en" aria-pressed={idioma === 'en'} onClick={() => setIdioma('en')} aria-label="English">EN</button>

@@ -1,7 +1,7 @@
 import { useIdioma } from '../i18n/contexto.js'
 
 // Filtros a la vista (D4): botones, no menús escondidos. El filtro se aplica a la lista y al mapa.
-function FiltrosLugares({ destinos, filtro, onFiltro, hayGustos }) {
+function FiltrosLugares({ destinos, filtro, onFiltro, hayGustos, hayCuenta = false }) {
   const { t } = useIdioma()
   return (
     <div className="filtros" role="group" aria-label={t('filtros.grupo')}>
@@ -16,6 +16,11 @@ function FiltrosLugares({ destinos, filtro, onFiltro, hayGustos }) {
       {hayGustos && (
         <button type="button" className="chip gustos" aria-pressed={filtro.gustos} onClick={() => onFiltro({ ...filtro, gustos: !filtro.gustos })}>
           {t('filtros.gustos')}
+        </button>
+      )}
+      {hayCuenta && (
+        <button type="button" className="chip gustos" aria-pressed={filtro.favoritos} onClick={() => onFiltro({ ...filtro, favoritos: !filtro.favoritos })}>
+          {t('filtros.favoritos')}
         </button>
       )}
     </div>

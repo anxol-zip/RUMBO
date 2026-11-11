@@ -5,6 +5,7 @@ import '@fontsource-variable/inter'
 import 'leaflet/dist/leaflet.css'
 import './index.css'
 import App from './App.jsx'
+import { ProveedorCuenta } from './cuenta/Cuenta.jsx'
 import { ProveedorIdioma } from './i18n/Idioma.jsx'
 import { ProveedorPreferencias } from './preferencias/Preferencias.jsx'
 
@@ -13,7 +14,9 @@ createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <ProveedorIdioma>
         <ProveedorPreferencias>
-          <App />
+          <ProveedorCuenta>
+            <App />
+          </ProveedorCuenta>
         </ProveedorPreferencias>
       </ProveedorIdioma>
     </BrowserRouter>

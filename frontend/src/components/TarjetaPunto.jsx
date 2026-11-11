@@ -1,3 +1,5 @@
+import BotonFavorito from './BotonFavorito.jsx'
+import Resenas from './Resenas.jsx'
 import { useEffect, useRef, useState } from 'react'
 import { api, codigoDe } from '../api/cliente.js'
 import { hora, horarioDeHoy, partesRazon, pesos, textoTraslado } from '../data/formato.js'
@@ -73,6 +75,7 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
       <div className="estado-fila">
         <Semaforo color={estado.color} grande />
         <BotonEscuchar partes={lectura} />
+        <BotonFavorito puntoId={estado.id} nombre={estado.nombre} />
       </div>
       {estado.ajuste_manual && <p style={{ marginTop: 10 }}><span className="ajuste-etiqueta">{t('ficha.ajustado', { motivo: estado.ajuste_manual })}</span></p>}
       {(estado.vs_normal === 'mas_lleno' || estado.vs_normal === 'menos_lleno') && (
@@ -163,6 +166,8 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
       </div>
       <a className="boton ancho" href={estado.como_llegar_url} target="_blank" rel="noreferrer">{t('ficha.comoLlegar')}</a>
       </div>
+
+      <Resenas puntoId={estado.id} />
 
       <div className="ficha-fuentes">
       {estado.fuente && <p className="fuente-dato">{t('ficha.fuente', { fuente: estado.fuente })}</p>}

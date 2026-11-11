@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { codigoDe } from '../api/cliente.js'
 import { rutaFoto } from '../data/fotos.js'
+import { useCuenta } from '../cuenta/contexto.js'
 import { INTERESES, TIEMPOS } from '../data/intereses.js'
 import { useIdioma } from '../i18n/contexto.js'
 import SelectorLugar from './SelectorLugar.jsx'
@@ -20,7 +21,11 @@ const porClave = (puntos, clave) => puntos.find((p) => p.clave === clave)
 // Sin GPS: en http por la red del stand el celular no lo da (docs/05c §4).
 function Inicio({ puntos, onListo, onError }) {
   const { t } = useIdioma()
-  const [intereses, setIntereses] = useState(['historia', 'arte'])
+  const { perfil, guardarGustos } = useCuenta()
+  // Con cuenta, empiezan marcados los gustos guardados (FR-017); sin cuenta, los de siempre.
+  const [elegidos, setIntereses] = useState(null)
+  const guardados = (perfil?.gustos ?? []).filter((g) => INTERESES.includes(g))
+  const intereses = elegidos ?? (guardados.length > 0 ? guardados : ['historia', 'arte'])
   const [horas, setHoras] = useState(5)
   const [origenId, setOrigenId] = useState(() => (porClave(puntos, 'zocalo_puebla') ?? porClave(puntos, 'catedral') ?? puntos[0]).id)
   const [enviando, setEnviando] = useState(false)
@@ -35,6 +40,7 @@ function Inicio({ puntos, onListo, onError }) {
     setEnviando(true)
     onError(null)
     try {
+      if (perfil) guardarGustos(intereses)          // la cuenta los recuerda (FR-016)
       await onListo({ intereses, horas, origenId })
     } catch (e) {
       onError(codigoDe(e))

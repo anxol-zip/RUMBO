@@ -41,7 +41,7 @@ flowchart TD
 
 - **El frontend no tiene datos propios:** todo lo pide a la API.
 - **La lógica vive en una sola capa:** FastAPI y el servidor MCP solo traducen hacia `turismo_core`, así que los dos responden lo mismo.
-- **El estado actual, según el código:** la base es PostgreSQL en Supabase (`rumbo-dev` para desarrollo, `rumbo-demo` para la demo) y no hay login; la app identifica a cada turista con una sesión anónima y el panel de la Secretaría está abierto. Lo que cambiará por Diseño de Software está en la sección [Qué aporta cada materia](#qué-aporta-cada-materia).
+- **El estado actual, según el código:** la base es PostgreSQL en Supabase (`rumbo-dev` para desarrollo, `rumbo-demo` para la demo) y hay cuentas opcionales con Microsoft (Supabase Auth) para guardar gustos y Favoritos y dejar reseñas; sin cuenta, la app identifica a cada turista con una sesión anónima. El panel de la Secretaría solo lo abre un administrador. Lo que cambiará por Diseño de Software está en la sección [Qué aporta cada materia](#qué-aporta-cada-materia).
 
 ## Estructura
 

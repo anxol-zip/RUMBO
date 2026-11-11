@@ -40,7 +40,7 @@ flowchart TD
 
 ### Estado actual
 
-- La base es **PostgreSQL en Supabase** y no hay **login**: el turista usa una sesión anónima y los endpoints `/api/panel/*` están abiertos.
+- La base es **PostgreSQL en Supabase** y el **login** es opcional (Microsoft, con Supabase Auth): el turista puede seguir con su sesión anónima. Los endpoints `/api/panel/*` piden el token de Supabase de un **administrador** (`solo_admin` en `app/deps.py`): `401` sin sesión válida, `403` a turistas. Gustos, Favoritos y reseñas no pasan por esta API: el frontend los guarda directo en Supabase y las reglas viven en `sql/esquema_postgres.sql` (RLS y triggers).
 - La base solo es accesible desde el backend: RLS activado sin políticas en las 18 tablas (la clave pública de Supabase no ve nada).
 - La migración a Firebase y los roles son trabajo pendiente de Diseño de Software; su avance está en [`docs/DdS/README.md`](../docs/DdS/README.md).
 - La regla que la base hace cumplir hoy es el trigger `reporte_uno_cada_30_min`, en `sql/esquema_postgres.sql` (`sql/esquema.sql` es el de SQLite y ya no se usa).

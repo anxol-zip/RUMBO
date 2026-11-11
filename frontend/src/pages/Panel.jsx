@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, codigoDe } from '../api/cliente.js'
+import { useCuenta } from '../cuenta/contexto.js'
 import { hora } from '../data/formato.js'
 import { useIdioma } from '../i18n/contexto.js'
 import { IdiomaFijo } from '../i18n/Idioma.jsx'
@@ -7,6 +8,7 @@ import FijarColor from '../components/panel/FijarColor.jsx'
 import Indicadores from '../components/panel/Indicadores.jsx'
 import MapaCalor from '../components/panel/MapaCalor.jsx'
 import Redirecciones from '../components/panel/Redirecciones.jsx'
+import ResenasDenunciadas from '../components/panel/ResenasDenunciadas.jsx'
 import SemaforoEstatal from '../components/panel/SemaforoEstatal.jsx'
 import Umbrales from '../components/panel/Umbrales.jsx'
 
@@ -18,10 +20,35 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 // Su público es la Secretaría: se queda en español aunque el turista haya elegido inglés.
 function Panel({ onError }) {
   const { idioma, t } = useIdioma()
+  const { disponible, cargando, sesion, perfil, pedirEntrar } = useCuenta()
   const nota = t('panel.soloEspanol')
+  // Solo administradores (feature 002). No se pide ningún dato del panel hasta saber el rol; el
+  // backend lo vuelve a comprobar en cada petición (401 o 403).
+  let cerrado = null
+  if (cargando) cerrado = <p className="suave">Cargando…</p>
+  else if (!sesion) {
+    cerrado = (
+      <>
+        <h1>Panel de la Secretaría</h1>
+        <p className="secundario">Inicia sesión para entrar al panel.</p>
+        {disponible
+          ? <button type="button" className="boton primario" style={{ marginTop: 16 }} onClick={pedirEntrar}>Iniciar sesión</button>
+          : <p className="aviso info" style={{ marginTop: 16 }}>Las cuentas no están configuradas en este equipo (falta frontend/.env.local; ver INSTALACION.md).</p>}
+      </>
+    )
+  } else if (perfil?.rol !== 'administrador') {
+    cerrado = (
+      <>
+        <h1>Solo administradores</h1>
+        <p className="secundario">Tu cuenta no tiene permiso para ver el panel de la Secretaría.</p>
+      </>
+    )
+  }
   return (
     <IdiomaFijo idioma="es">
-      <ContenidoPanel nota={nota} etiquetaDemo={t('panel.contarDemo')} idiomaDemo={idioma} onError={onError} />
+      {cerrado
+        ? <div className="gobierno">{cerrado}</div>
+        : <ContenidoPanel nota={nota} etiquetaDemo={t('panel.contarDemo')} idiomaDemo={idioma} onError={onError} />}
     </IdiomaFijo>
   )
 }
@@ -120,6 +147,12 @@ function ContenidoPanel({ nota, etiquetaDemo, idiomaDemo, onError }) {
           <p style={{ marginTop: 10 }}><strong>Nueva estimada:</strong> el turista aceptó la alternativa y después también visitó el lugar que había pedido; esa parada se sumó a su plan.</p>
           <p className="suave" style={{ marginTop: 12 }}>{derrama.supuesto}</p>
           <p className="fuente-dato">Fuente: {derrama.fuente}</p>
+        </div>
+
+        <div className="caja" style={{ gridColumn: '1 / -1' }}>
+          <h2>Reseñas denunciadas</h2>
+          <p className="subtitulo">Lo que los turistas reportaron como inapropiado. Ocultar la quita de la ficha; su autor la sigue viendo.</p>
+          <ResenasDenunciadas puntos={afluencia.puntos} />
         </div>
       </div>
     </div>

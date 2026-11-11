@@ -3,6 +3,7 @@ import { api, codigoDe } from '../api/cliente.js'
 import { distanciaM, masCercano } from '../data/geo.js'
 import { ORDEN } from '../data/semaforo.js'
 import { useUbicacion } from '../hooks/useUbicacion.js'
+import { useCuenta } from '../cuenta/contexto.js'
 import { useIdioma } from '../i18n/contexto.js'
 import BotonReporte from '../components/BotonReporte.jsx'
 import Chat from '../components/Chat.jsx'
@@ -51,10 +52,11 @@ function ordenar(puntos, intereses) {
 }
 
 // Filtros de la barra (D4): por destino y "solo lo que me gusta" (los intereses del inicio).
-const SIN_FILTRO = { destino: null, gustos: false }
-function filtrar(puntos, filtro, intereses) {
+const SIN_FILTRO = { destino: null, gustos: false, favoritos: false }
+function filtrar(puntos, filtro, intereses, favoritos) {
   return puntos.filter((p) => (filtro.destino === null || p.destino === filtro.destino)
-    && (!filtro.gustos || p.categorias.some((c) => intereses.includes(c))))
+    && (!filtro.gustos || p.categorias.some((c) => intereses.includes(c)))
+    && (!filtro.favoritos || (favoritos?.has(p.id) ?? false)))
 }
 
 function resumen(puntos, t) {
@@ -190,10 +192,11 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
   }, [chatAbierto])
 
   const intereses = sesion?.perfil.intereses ?? []
-  const visibles = filtrar(puntos, filtro, intereses)
+  const { favoritos } = useCuenta()          // null sin sesión: el filtro "Mis Favoritos" no aparece
+  const visibles = filtrar(puntos, filtro, intereses, favoritos)
   const ordenados = ordenar(visibles, intereses)
   const destinos = [...new Set(catalogo.map((p) => p.destino))]
-  const filtroActivo = [filtro.destino, filtro.gustos && t('filtros.gustos')].filter(Boolean).join(' · ')
+  const filtroActivo = [filtro.destino, filtro.gustos && t('filtros.gustos'), filtro.favoritos && t('filtros.favoritos')].filter(Boolean).join(' · ')
   const seleccionado = puntos.find((p) => p.id === seleccionadoId)
   // "Ver todos" y la ficha de un lugar ocupan media pantalla; la lista, un tercio.
   const mitad = ampliada || vista !== 'lista'
@@ -245,7 +248,7 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
 
         {/* Los filtros completos van en una barra fija de "Ver todos": siguen a la vista al bajar por la
             lista. En la lista angosta solo se avisa si hay uno activo, para no esconder los lugares. */}
-        {vista === 'lista' && ampliada && <FiltrosLugares destinos={destinos} filtro={filtro} onFiltro={setFiltro} hayGustos={intereses.length > 0} />}
+        {vista === 'lista' && ampliada && <FiltrosLugares destinos={destinos} filtro={filtro} onFiltro={setFiltro} hayGustos={intereses.length > 0} hayCuenta={favoritos !== null} />}
 
         {vista === 'lista' && (
           <div className="panel-cuerpo">
@@ -257,7 +260,7 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
             )}
             {puntos.length > 0 && visibles.length === 0 && (
               <p className="aviso info sin-resultados">
-                {t('filtros.vacio')} <button type="button" className="boton-texto" onClick={() => setFiltro(SIN_FILTRO)}>{t('filtros.quitar')}</button>
+                {t(filtro.favoritos && favoritos?.size === 0 ? 'filtros.sinFavoritos' : 'filtros.vacio')} <button type="button" className="boton-texto" onClick={() => setFiltro(SIN_FILTRO)}>{t('filtros.quitar')}</button>
               </p>
             )}
             {ampliada

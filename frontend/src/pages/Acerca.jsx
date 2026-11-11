@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import logoIntelligentia from '../assets/intelligentia.png'
 import logoTechCapital from '../assets/tech-capital-puebla-2026.png'
 import { FOTOS } from '../data/fotos.js'
@@ -48,11 +50,15 @@ const CONTENIDO = {
     ],
     queNo: 'Qué no hace',
     queNoTexto: <>No resuelve infraestructura, seguridad ni señalización de los destinos. La afluencia es una <strong>estimación</strong> que mejora con cada reporte; no es un conteo exacto.</>,
-    privacidad: 'Aviso de privacidad (versión corta)',
+    privacidad: 'Aviso de privacidad',
     privacidadLista: [
-      <><strong>Sin registro:</strong> no pedimos nombre, correo ni teléfono.</>,
-      'Tu sesión es un código aleatorio.',
-      <><strong>No guardamos tu ubicación</strong>; solo la distancia al lugar cuando reportas. Si usas el GPS para centrar el mapa, tus coordenadas no salen de tu celular.</>,
+      <><strong>La cuenta es opcional.</strong> Sin cuenta no pedimos nombre, correo ni teléfono, y la app funciona igual: tu sesión es un código aleatorio.</>,
+      <><strong>Si inicias sesión con Microsoft</strong>, guardamos tu nombre y tu correo (nos los da Microsoft; no pedimos nada más), y lo que tú guardes: tus gustos, tus Favoritos, tus reseñas, tus votos de “útil” y tus denuncias.</>,
+      <><strong>Para qué:</strong> para recordar tus gustos y Favoritos en cualquier dispositivo y para publicar tus reseñas. En público solo aparece tu nombre con la inicial de tu apellido (por ejemplo, “Axel G.”); tu correo nunca se muestra.</>,
+      <><strong>Dónde:</strong> en Supabase, un servicio en la nube con servidores fuera de México. No vendemos ni compartimos tus datos.</>,
+      <><strong>Cuánto tiempo:</strong> mientras exista tu cuenta. Puedes borrarla cuando quieras desde el botón con tu nombre → “Borrar mi cuenta”: se elimina en ese momento todo lo anterior.</>,
+      <><strong>Tus derechos (acceso, rectificación, cancelación y oposición):</strong> escribe a <a href="mailto:abejo.2005@gmail.com">abejo.2005@gmail.com</a> (responsable: Axel García Arellano, equipo RUMBO).</>,
+      <><strong>No guardamos tu ubicación</strong>; solo la distancia al lugar cuando reportas. Si usas el GPS para centrar el mapa, tus coordenadas no salen de tu celular. Los reportes “¿Cómo está?” son anónimos aunque tengas cuenta.</>,
       <>A la Secretaría solo le llegan <strong>totales por lugar y hora</strong>, nunca tus reportes individuales.</>,
       'Las preguntas al asistente se procesan en nuestro equipo, sin enviarse a terceros.',
     ],
@@ -112,11 +118,15 @@ const CONTENIDO = {
     ],
     queNo: 'What it doesn’t do',
     queNoTexto: <>It doesn’t fix infrastructure, safety or signage at the destinations. Crowd levels are an <strong>estimate</strong> that improves with every report; they are not an exact count.</>,
-    privacidad: 'Privacy notice (short version)',
+    privacidad: 'Privacy notice',
     privacidadLista: [
-      <><strong>No sign-up:</strong> we don’t ask for your name, email or phone.</>,
-      'Your session is a random code.',
-      <><strong>We don’t store your location</strong>; only your distance to the place when you report. If you use GPS to center the map, your coordinates never leave your phone.</>,
+      <><strong>An account is optional.</strong> Without one we don’t ask for your name, email or phone, and the app works the same: your session is a random code.</>,
+      <><strong>If you sign in with Microsoft</strong>, we store your name and email (provided by Microsoft; we ask for nothing else) and what you choose to save: your interests, your Favorites, your reviews, your “helpful” votes and your reports of reviews.</>,
+      <><strong>What for:</strong> to remember your interests and Favorites on any device and to publish your reviews. Publicly, only your first name and last initial appear (for example, “Axel G.”); your email is never shown.</>,
+      <><strong>Where:</strong> in Supabase, a cloud service with servers outside Mexico. We don’t sell or share your data.</>,
+      <><strong>For how long:</strong> for as long as your account exists. You can delete it at any time from the button with your name → “Delete my account”: everything above is removed right away.</>,
+      <><strong>Your rights (access, rectification, cancellation and objection):</strong> write to <a href="mailto:abejo.2005@gmail.com">abejo.2005@gmail.com</a> (data controller: Axel García Arellano, RUMBO team).</>,
+      <><strong>We don’t store your location</strong>; only your distance to the place when you report. If you use GPS to center the map, your coordinates never leave your phone. “How is it?” reports are anonymous even if you have an account.</>,
       <>The Tourism Office only receives <strong>totals per place and hour</strong>, never your individual reports.</>,
       'Questions to the assistant are processed on our own computer and are not sent to third parties.',
     ],
@@ -140,6 +150,11 @@ const CONTENIDO = {
 function Acerca() {
   const { idioma } = useIdioma()
   const c = CONTENIDO[idioma]
+  // Enlaces como /acerca#privacidad (desde "Iniciar sesión") bajan hasta esa sección.
+  const { hash } = useLocation()
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.focus()
+  }, [hash])
   return (
     <div className="pagina-texto">
       <div className="contenido">
@@ -154,7 +169,7 @@ function Acerca() {
         </section>
 
         <section className="caja">
-          <h2>{c.privacidad}</h2>
+          <h2 id="privacidad" tabIndex={-1}>{c.privacidad}</h2>
           <ul className="secundario">
             {c.privacidadLista.map((item, i) => <li key={i}>{item}</li>)}
           </ul>

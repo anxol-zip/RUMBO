@@ -807,3 +807,60 @@ th { font-size: var(--t-meta); font-weight: 600; color: var(--tinta-2); }
 .semana-resumen { margin: 8px 0 0; padding-left: 18px; font-size: var(--t-meta); color: var(--tinta); }
 .semana-resumen li { margin: 2px 0; text-transform: none; }
 @media (prefers-reduced-motion: reduce) { .control-mapa.ubicar.buscando span { animation: none; } }
+
+/* ───────────── Cuentas (feature 002): sesión, Favoritos y reseñas ───────────── */
+.cuenta { position: relative; display: flex; }
+.boton-cuenta { min-height: 2.75rem; padding: 0 var(--e-4); max-width: 11rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boton-cuenta[aria-expanded='true'] { border-color: var(--rosa); box-shadow: 0 0 0 3px var(--rosa-claro); }
+.menu-cuenta {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 1500; width: min(17rem, calc(100vw - 2rem));
+  display: grid; gap: var(--e-2); padding: var(--e-4);
+  background: var(--blanco); border: 1px solid var(--linea); border-radius: var(--r-m); box-shadow: var(--sombra);
+}
+.menu-cuenta-nombre { font-weight: 600; overflow-wrap: anywhere; }
+.boton.peligro, .boton-texto.peligro { color: var(--rojo); }
+.boton.peligro { border-color: var(--rojo); }
+.modal h2 { font-size: var(--t-titulo); margin-bottom: var(--e-2); }
+
+/* Avisos de la cuenta: abajo, al centro; vacío no ocupa lugar. */
+.aviso-cuenta {
+  position: fixed; left: 50%; bottom: var(--e-5); transform: translateX(-50%); z-index: 2100;
+  max-width: calc(100vw - 2rem); padding: var(--e-3) var(--e-5);
+  background: var(--tinta); color: var(--blanco); border-radius: var(--r-pill); font-weight: 600; box-shadow: var(--sombra);
+}
+.aviso-cuenta:empty { display: none; }
+
+.boton.favorito { min-height: 2.75rem; padding: 0 var(--e-4); }
+.favorito[aria-pressed='true'] { border-color: var(--rosa); color: var(--rosa-hondo); background: var(--rosa-claro); }
+.con-favorito { position: relative; }
+.con-favorito .boton-icono.favorito { position: absolute; top: var(--e-2); right: var(--e-2); }
+.con-favorito .tarjeta-lugar { padding-right: 3.5rem; }
+
+.resenas { margin-top: var(--e-5); display: grid; gap: var(--e-3); }
+.resenas h3 { font-size: var(--t-sub); }
+.resumen-resenas .promedio { font-size: var(--t-sub); }
+.barras { list-style: none; margin: var(--e-2) 0; padding: 0; display: grid; gap: 4px; }
+.barras li { display: grid; grid-template-columns: 2.5rem 1fr 2rem; align-items: center; gap: var(--e-2); font-size: var(--t-meta); }
+.barras .barra { height: .5rem; border-radius: var(--r-pill); background: var(--gris-claro); border: 1px solid var(--linea); overflow: hidden; }
+.barras .barra span { display: block; height: 100%; background: var(--talavera); }
+.estrellas { font-weight: 600; white-space: nowrap; }
+.lista-resenas { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e-3); }
+.resena { display: grid; gap: var(--e-1); padding: var(--e-3) var(--e-4); border: 1px solid var(--linea); border-radius: var(--r-m); background: var(--blanco); }
+.resena.mia { border-color: var(--talavera); }
+.resena-texto { white-space: pre-wrap; overflow-wrap: anywhere; }
+.fila-botones { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-3); margin-top: var(--e-1); }
+.fila-botones .boton { min-height: 2.75rem; padding: 0 var(--e-4); }
+.fila-botones .boton[aria-pressed='true'] { border-color: var(--rosa); color: var(--rosa-hondo); background: var(--rosa-claro); }
+
+.form-resena { display: grid; gap: var(--e-3); padding: var(--e-4); border: 1px solid var(--linea); border-radius: var(--r-m); background: var(--blanco); }
+.opciones { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--e-2); }
+.opciones legend { font-weight: 600; margin-bottom: var(--e-2); padding: 0; }
+.opciones label {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 2.75rem; padding: 0 var(--e-3);
+  border: 1px solid var(--linea); border-radius: var(--r-pill); background: var(--blanco); font-weight: 600; cursor: pointer;
+}
+.opciones label:has(input:checked) { border-color: var(--rosa); background: var(--rosa-claro); color: var(--rosa-hondo); }
+.opciones label:has(input:focus-visible) { outline: 3px solid var(--talavera); outline-offset: 2px; }
+.campo-texto { display: grid; gap: var(--e-1); font-weight: 600; }
+.campo-texto textarea { font: inherit; font-weight: 400; padding: var(--e-3); border: 1px solid var(--linea); border-radius: var(--r-s); resize: vertical; min-height: 5rem; }
+.error-campo { color: var(--rojo); font-weight: 600; }
