@@ -5,6 +5,7 @@ import { api, codigoDe } from '../api/cliente.js'
 import { hora, horarioDeHoy, partesRazon, pesos, textoTraslado } from '../data/formato.js'
 import BotonEscuchar from './BotonEscuchar.jsx'
 import IconoEstado from './IconoEstado.jsx'
+import { textosConclusion } from '../data/conclusion.js'
 import { ficha } from '../i18n/backend.js'
 import { useIdioma } from '../i18n/contexto.js'
 import Foto from './Foto.jsx'
@@ -57,9 +58,10 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
   const traslado = textoTraslado(estado.traslado, t)
   const descripcion = estado.ficha && ficha(estado.clave, estado.ficha, idioma)
   const confianza = confianzaTexto(estado, t)
+  const concl = textosConclusion(estado, t)
   // Lo que lee "Escuchar": lo mismo que se ve primero, en el orden en que se ve.
   const lectura = [
-    estado.nombre, t(`sem.${estado.color}`), ...partesRazon(estado.razon, idioma), descripcion,
+    estado.nombre, t(`sem.${estado.color}`), concl.titular, concl.siguiente, ...partesRazon(estado.razon, idioma), descripcion,
     `${t('ficha.horario')}: ${horarioDeHoy(estado.horario, t)}`, traslado && `${t('ficha.traslado')}: ${traslado}`,
   ]
 
@@ -69,13 +71,17 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
     <article className="detalle-punto">
       <div className="ficha-principal">
       <button type="button" className="boton-texto" onClick={onVolver}>{t('ficha.volver')}</button>
-      <Foto id={estado.clave} nombre={estado.nombre} credito />
       <p className="suave" style={{ marginTop: 12 }}>{estado.destino}{estado.es_inah ? t('ficha.inah') : ''}</p>
       <h2 id="ficha-titulo" ref={titulo} tabIndex={-1}>{estado.nombre}</h2>
       <div className="estado-fila">
         <Semaforo color={estado.color} grande />
         <BotonEscuchar partes={lectura} />
         <BotonFavorito puntoId={estado.id} nombre={estado.nombre} />
+      </div>
+      {/* HCI A2: la respuesta a "¿voy o no?" antes de cualquier dato; la foto va después para que se vea sin bajar */}
+      <div className={`conclusion ${estado.color}`}>
+        <p className="conclusion-titular">{concl.titular}</p>
+        {concl.siguiente && <p className="conclusion-siguiente">{concl.siguiente}</p>}
       </div>
       {estado.ajuste_manual && <p style={{ marginTop: 10 }}><span className="ajuste-etiqueta">{t('ficha.ajustado', { motivo: estado.ajuste_manual })}</span></p>}
       {(estado.vs_normal === 'mas_lleno' || estado.vs_normal === 'menos_lleno') && (
@@ -90,6 +96,7 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
           min: estado.espera_reportada.minutos, n: estado.espera_reportada.n_reportes, hace: estado.espera_reportada.ultima_hace_min,
         })}</p>
       )}
+      <Foto id={estado.clave} nombre={estado.nombre} credito />
       {descripcion && <p className="descripcion">{descripcion}</p>}
       </div>
 

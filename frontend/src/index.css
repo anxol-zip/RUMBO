@@ -412,6 +412,13 @@ a { color: inherit; }
 .razones li::before {
   content: ''; position: absolute; left: .25rem; top: .5em; width: .5rem; height: .5rem; border-radius: 50%; background: var(--rosa);
 }
+/* Conclusión de la ficha (HCI A2): una frase grande que responde "¿voy o no?"; la barra repite el color del estado */
+.conclusion { margin-top: var(--e-4); padding: var(--e-1) 0 var(--e-1) var(--e-4); border-left: 4px solid var(--tinta-3); }
+.conclusion.verde { border-left-color: var(--verde-marca); }
+.conclusion.amarillo { border-left-color: var(--ama-marca); }
+.conclusion.rojo { border-left-color: var(--rojo-marca); }
+.conclusion-titular { font-size: var(--t-titulo); font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; text-wrap: balance; }
+.conclusion-siguiente { margin-top: var(--e-1); font-size: var(--t-cuerpo); color: var(--tinta-2); text-wrap: pretty; }
 .pronostico { display: grid; grid-template-columns: repeat(auto-fit, minmax(3.25rem, 1fr)); gap: 4px; }
 .franja-hora { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; border-radius: var(--r-s); background: var(--gris-claro); font-size: var(--t-meta); color: var(--tinta-2); }
 .fuente-dato { margin-top: var(--e-4); font-size: var(--t-meta); color: var(--tinta-3); }
