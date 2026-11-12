@@ -4,6 +4,8 @@
 //
 // En desarrollo, Vite reenvía /api a localhost:8000 (vite.config.js). En el stand, FastAPI
 // sirve este build en el mismo puerto, así que /api es del mismo origen.
+import { tokenActual } from './supabase.js'
+
 const API = import.meta.env.VITE_API_URL ?? '/api'
 
 // Los errores viajan como códigos, no como texto: el componente que falla reporta el código a su
@@ -20,15 +22,18 @@ export class ErrorApi extends Error {
 export const codigoDe = (error) => error?.codigo ?? 'servidor'
 
 function codigoHttp(status) {
+  if (status === 401) return 'no_autenticado'
+  if (status === 403) return 'sin_permiso'
   if (status === 404) return 'no_encontrado'
   if (status === 503) return 'no_disponible'
   return status < 500 ? 'solicitud' : 'servidor'
 }
 
-async function pedir(ruta, opciones = {}) {
+async function pedir(ruta, { token = null, ...opciones } = {}) {
   let res
   try {
-    res = await fetch(`${API}${ruta}`, { headers: { 'Content-Type': 'application/json' }, ...opciones })
+    const headers = { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) }
+    res = await fetch(`${API}${ruta}`, { headers, ...opciones })
   } catch {
     throw new ErrorApi('sin_conexion')
   }
@@ -42,6 +47,9 @@ async function pedir(ruta, opciones = {}) {
   return cuerpo
 }
 
+// El panel pide sesión de administrador: cada llamada lleva el token de Supabase (el backend responde
+// 401 sin sesión válida y 403 a quien no es administrador).
+const pedirPanel = async (ruta, opciones = {}) => pedir(ruta, { ...opciones, token: await tokenActual() })
 const enviar = (ruta, cuerpo, metodo = 'POST') => pedir(ruta, { method: metodo, body: JSON.stringify(cuerpo) })
 const consulta = (params) => {
   const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v != null)).toString()
@@ -69,11 +77,11 @@ export const api = {
   obtenerPanel: async ({ incluirDemo }) => {
     const q = consulta({ incluir_demo: incluirDemo })
     const [afluencia, redirecciones, derrama, estatal, umbrales, ajustes] = await Promise.all([
-      pedir(`/panel/afluencia${q}`), pedir(`/panel/redirecciones${q}`), pedir(`/panel/derrama${q}`),
-      pedir('/panel/semaforo-estatal'), pedir('/panel/umbrales'), pedir('/panel/ajustes'),
+      pedirPanel(`/panel/afluencia${q}`), pedirPanel(`/panel/redirecciones${q}`), pedirPanel(`/panel/derrama${q}`),
+      pedirPanel('/panel/semaforo-estatal'), pedirPanel('/panel/umbrales'), pedirPanel('/panel/ajustes'),
     ])
     return { afluencia, redirecciones, derrama, estatal, umbrales, ajustes }
   },
-  fijarColor: ({ puntoId, color, motivo, horas }) => enviar('/panel/ajustes', { punto_id: puntoId, color, motivo, horas }),
-  quitarAjuste: (ajusteId) => pedir(`/panel/ajustes/${ajusteId}`, { method: 'DELETE' }),
+  fijarColor: ({ puntoId, color, motivo, horas }) => pedirPanel('/panel/ajustes', { method: 'POST', body: JSON.stringify({ punto_id: puntoId, color, motivo, horas }) }),
+  quitarAjuste: (ajusteId) => pedirPanel(`/panel/ajustes/${ajusteId}`, { method: 'DELETE' }),
 }

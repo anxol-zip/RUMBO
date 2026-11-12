@@ -1,5 +1,6 @@
 import { partesRazon, textoTraslado } from '../data/formato.js'
 import { useIdioma } from '../i18n/contexto.js'
+import BotonFavorito from './BotonFavorito.jsx'
 import Foto from './Foto.jsx'
 import Semaforo from './Semaforo.jsx'
 
@@ -11,7 +12,7 @@ function ListaPuntos({ puntos, seleccionadoId, onSeleccionar }) {
   return (
     <ul className="lista-lugares">
       {puntos.map((p) => (
-        <li key={p.id}>
+        <li key={p.id} className="con-favorito">
           <button
             type="button"
             className={`tarjeta-lugar con-foto${p.color === 'cerrado' ? ' apagada' : ''}`}
@@ -36,6 +37,8 @@ function ListaPuntos({ puntos, seleccionadoId, onSeleccionar }) {
               )}
             </div>
           </button>
+          {/* Botón aparte, no dentro de la tarjeta: un botón no puede ir dentro de otro. */}
+          <BotonFavorito puntoId={p.id} nombre={p.nombre} compacto />
         </li>
       ))}
     </ul>

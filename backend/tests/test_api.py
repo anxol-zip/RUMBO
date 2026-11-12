@@ -44,6 +44,7 @@ def cliente(esquema_prueba, monkeypatch):
     app.dependency_overrides[deps.conexion] = conexion
     app.dependency_overrides[deps.ahora] = lambda: reloj["t"]
     app.dependency_overrides[deps.es_demo] = lambda: reloj["demo"]
+    app.dependency_overrides[deps.solo_admin] = lambda: "admin-de-prueba"   # el acceso se prueba abajo y en test_panel_admin
     yield TestClient(app), reloj
     app.dependency_overrides.clear()
 
@@ -274,3 +275,14 @@ def test_semana_hoy_espera_y_vs_normal(cliente):
     e = c.get("/api/puntos/1/estado").json()
     assert e["espera_reportada"] == {"minutos": 20, "n_reportes": 3, "ultima_hace_min": 0}
     assert (e["color"], e["normalmente"], e["vs_normal"]) == ("rojo", "verde", "mas_lleno")
+
+
+def test_panel_sin_sesion_responde_401(cliente):
+    """Contrato del panel desde la feature 002: sin token de Supabase no se lee ni se cambia nada."""
+    c, _ = cliente
+    del app.dependency_overrides[deps.solo_admin]
+    assert c.get("/api/panel/umbrales").status_code == 401
+    r = c.post("/api/panel/ajustes", json={"punto_id": 1, "color": "rojo", "motivo": "Obra", "horas": 2})
+    assert r.status_code == 401 and r.json()["detail"] == "Inicia sesión para entrar al panel."
+    with conectar() as con:
+        assert con.execute("SELECT count(*) AS n FROM ajuste_manual").fetchone()["n"] == 0

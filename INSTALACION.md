@@ -163,6 +163,28 @@ Cada prueba crea un esquema temporal (`prueba_<hex>`) en la base de `DATABASE_UR
 
 `tests/test_seguridad.py` comprueba que nadie pueda leer ni escribir las tablas con la clave pública de Supabase. Solo corre si `backend/.env` tiene `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` (Supabase → **Project settings** → **API Keys**).
 
+### 3.5 Cuentas (inicio de sesión con Microsoft)
+
+Las cuentas son **opcionales**: sin este paso la app funciona igual, solo que no aparece
+"Iniciar sesión" y el panel de la Secretaría queda cerrado.
+
+1. En `backend/.env`, deja puesta `SUPABASE_URL` (viene en `.env.example`). El backend la usa para
+   comprobar la sesión de quien entra al panel.
+2. Copia `frontend/.env.example` como `frontend/.env.local` y llena las dos variables con los datos de
+   **Supabase → Project settings → API Keys** (la clave *publishable* es pública). Ese archivo no se
+   sube a git. Reinicia `npm run dev`.
+3. Las tablas de cuentas (`perfil`, `favorito`, `resena`…) se crean solas al levantar el backend.
+4. **Para entrar al panel** necesitas ser administrador. Inicia sesión una vez en la app y luego, en
+   **Supabase → SQL Editor**, corre esto con tu id (está en **Authentication → Users**):
+
+   ```sql
+   update perfil set rol = 'administrador' where id = '<tu-uuid>';
+   ```
+
+Sin sesión, el panel responde `401`; con una cuenta de turista, `403`. El proveedor de Microsoft
+(Entra ID) ya está configurado en `rumbo-dev`; no hay que tocarlo. Para la demo, `npm run build`
+se corre con las variables de `rumbo-demo`, porque quedan dentro del build.
+
 ## 4. Modo con datos reales
 
 Para la computadora que **sí tiene** `backend/.env` y `backend/data/raw/`: la de la demo, la presentación y las pruebas con usuarios.
