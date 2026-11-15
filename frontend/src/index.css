@@ -30,9 +30,9 @@
 
   /* Espaciado: una sola escala */
   --e-1: 4px; --e-2: 8px; --e-3: 12px; --e-4: 16px; --e-5: 24px; --e-6: 32px; --e-7: 48px;
-  /* Tipografía: 14 / 15 / 17 / 22 / 28 / 44 px con letra normal; 14 px es el mínimo para texto */
+  /* Tipografía: 15 / 17 / 19 / 22 / 28 / 44 px con letra normal; 15 px es el mínimo para texto (HCI A1) */
   /* En rem: crecen con el tamaño de letra del navegador y con el de "Ver mejor" (D1). */
-  --t-meta: .875rem; --t-cuerpo: .9375rem; --t-sub: 1.0625rem; --t-titulo: 1.375rem; --t-pagina: 1.75rem;
+  --t-meta: .9375rem; --t-cuerpo: 1.0625rem; --t-sub: 1.1875rem; --t-titulo: 1.375rem; --t-pagina: 1.75rem;
 
   --sombra-s: 0 1px 2px rgba(0, 0, 0, .06);
   --sombra: 0 1px 2px rgba(0, 0, 0, .05), 0 10px 30px rgba(0, 0, 0, .10);
@@ -127,7 +127,7 @@ a { color: inherit; }
 .segmentado { display: inline-flex; background: #E9E9E3; border-radius: var(--r-pill); padding: 4px; gap: 2px; }
 .segmentado button {
   border: 0; background: transparent; border-radius: var(--r-pill);
-  padding: 7px 14px; min-height: 44px; font-size: 0.875rem; font-weight: 550; color: var(--tinta-2);
+  padding: 7px 14px; min-height: 44px; font-size: var(--t-meta); font-weight: 550; color: var(--tinta-2);
 }
 .segmentado button[aria-pressed='true'] { background: var(--blanco); color: var(--tinta); box-shadow: var(--sombra-s); }
 .segmentado.ancho { display: flex; width: 100%; }
@@ -273,6 +273,19 @@ a { color: inherit; }
 .boton-ampliar[aria-expanded='true'] { border-color: var(--rosa); color: var(--rosa-hondo); }
 /* "Ver todos" y la ficha ocupan media pantalla: se aprecia todo y el mapa sigue a la vista */
 .panel-flotante.mitad { width: max(25rem, calc(50% - 16px)); }
+/* Borde derecho para cambiar el ancho del panel arrastrando (solo en pantallas anchas) */
+.borde-panel {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 14px; z-index: 5; cursor: col-resize; touch-action: none;
+  display: grid; place-items: center;
+}
+.borde-panel span { width: 4px; height: 3rem; border-radius: var(--r-pill); background: var(--tinta-3); opacity: 0; transition: opacity .15s ease, background .15s ease; }
+.borde-panel:hover span, .borde-panel:focus-visible span { opacity: .6; }
+.borde-panel:active span, body.cambiando-ancho .borde-panel span { opacity: 1; background: var(--rosa); }
+.borde-panel:focus-visible { outline: none; }
+.borde-panel:focus-visible span { outline: 2px solid var(--rosa); outline-offset: 2px; }
+/* Mientras se arrastra: el cursor se queda y no se selecciona texto */
+body.cambiando-ancho { cursor: col-resize; user-select: none; }
+body.cambiando-ancho .panel-flotante { transition: none; }
 /* Barra de filtros: una banda fija entre el encabezado y la lista, para que siempre se vea */
 .filtros { flex: none; display: flex; flex-wrap: wrap; gap: var(--e-2); padding: var(--e-3) var(--e-5); background: var(--talavera-claro); border-block: 1px solid var(--talavera); }
 .filtros .chip { min-height: 44px; font-size: var(--t-cuerpo); font-weight: 600; color: var(--talavera); border-color: var(--talavera); }
@@ -321,20 +334,24 @@ a { color: inherit; }
 @container panel (min-width: 40rem) {
   .detalle-punto {
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); column-gap: var(--e-6);
-    grid-template-areas: 'principal datos' 'acciones acciones' 'fuentes fuentes'; align-items: start;
+    grid-template-areas: 'principal datos' 'acciones datos' 'fuentes fuentes' 'resenas resenas';
+    grid-template-rows: auto 1fr auto auto; align-items: start;
   }
   .ficha-principal { grid-area: principal; }
-  .ficha-datos { grid-area: datos; }
-  .ficha-acciones { grid-area: acciones; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+  .ficha-datos { grid-area: datos; margin-top: 0; }
+  .ficha-acciones { grid-area: acciones; }
   .ficha-fuentes { grid-area: fuentes; }
-  .ficha-datos > .razones:first-child { margin-top: 0; }
+  .ficha-resenas { grid-area: resenas; }
+  /* Con dos columnas las acciones van debajo de la descripción, no en una barra fija a todo lo ancho */
+  .detalle-punto .ficha-acciones { position: static; margin-inline: 0; padding: 0; background: none; border: 0; }
   .ficha-principal .foto.grande img { max-height: 10rem; }
   .comparacion { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); align-items: start; }
 }
-/* Acciones de la ficha: siempre a la vista en el escritorio, aunque se baje por los datos */
-.ficha-acciones { display: grid; gap: var(--e-3); margin-top: var(--e-5); }
-.ficha-acciones .acciones { margin-top: 0; }
-.ficha-acciones .boton { padding: 0 var(--e-3); text-align: center; }
+/* Acciones de la ficha: la principal primero y en rosa; las demás con borde. Con una sola columna,
+   en el escritorio se quedan fijas abajo aunque se baje por los datos. */
+.ficha-acciones { display: flex; flex-wrap: wrap; gap: var(--e-2); margin-top: var(--e-5); }
+.ficha-acciones .boton { flex: 1 1 auto; padding: 0 var(--e-2); font-size: var(--t-meta); text-align: center; white-space: nowrap; }
+.ficha-acciones .boton.primario { box-shadow: 0 6px 16px rgba(228, 0, 124, .25); }
 @media (min-width: 821px) {
   .panel-cuerpo.con-acciones { padding-bottom: 0; }
   .ficha-principal .foto.grande img { max-height: 14rem; }
@@ -344,7 +361,87 @@ a { color: inherit; }
     background: var(--blanco); border-top: 2px solid var(--rosa);
   }
 }
-.estado-fila { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-2) var(--e-3); }
+.estado-fila { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-2) var(--e-3); margin-top: var(--e-3); }
+
+/* ---------- Ficha del lugar: rediseño (íconos de línea, datos en tarjetas) ---------- */
+.icono { width: 1.25em; height: 1.25em; flex: none; }
+.boton-texto.volver { font-weight: 550; color: var(--tinta); }
+.ficha-destino { display: flex; align-items: center; gap: var(--e-1); margin-top: var(--e-2); font-size: var(--t-meta); color: var(--tinta-2); }
+.ficha-destino .icono { width: 1.1em; height: 1.1em; }
+.ficha-titulo { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--e-3); }
+.ficha-titulo h2 { flex: 1; min-width: 0; }
+.ficha-titulo-botones { display: flex; gap: var(--e-2); margin-top: var(--e-1); }
+.boton-icono { color: var(--tinta); box-shadow: var(--sombra-s); }
+.boton-icono:hover { background: var(--gris-claro); }
+.compartir { position: relative; display: inline-flex; }
+/* Aviso "Enlace copiado" debajo del botón; aparece y se va solo */
+.compartir-aviso {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 5; white-space: nowrap;
+  padding: 6px 10px; border-radius: var(--r-s); background: var(--tinta); color: #FFFFFF; font-size: var(--t-meta);
+  opacity: 0; transform: translateY(-4px); transition: opacity .15s ease, transform .15s ease; pointer-events: none;
+}
+.compartir-aviso.visible { opacity: 1; transform: none; }
+.compartir-aviso:empty { padding: 0; }
+.boton-icono.favorito[aria-pressed='true'] { color: var(--rosa); border-color: var(--rosa); }
+
+/* Foto con el crédito encima (abajo a la izquierda) y el botón para verla en grande */
+.foto.con-credito { position: relative; }
+.foto.con-credito figcaption { position: absolute; left: var(--e-3); bottom: var(--e-3); right: var(--e-3); margin: 0; }
+.foto.con-credito figcaption a {
+  display: inline-flex; gap: 6px; min-height: 2rem; padding: 4px 10px; border-radius: var(--r-pill);
+  background: rgba(0, 0, 0, .58); color: #FFFFFF; font-size: .8125rem; line-height: 1.3;
+}
+.foto-ampliar {
+  position: absolute; top: calc(var(--e-3) + var(--e-3)); right: var(--e-3); width: 2.5rem; height: 2.5rem;
+  display: grid; place-items: center; border: 0; border-radius: var(--r-s); background: rgba(0, 0, 0, .5); color: #FFFFFF;
+}
+.foto-ampliar:hover { background: rgba(0, 0, 0, .7); }
+.foto-ventana { padding: 0; border: 0; border-radius: var(--r-m); background: #000000; max-width: 92vw; max-height: 90vh; overflow: hidden; }
+.foto-ventana::backdrop { background: rgba(0, 0, 0, .75); }
+/* La foto ampliada llena casi toda la pantalla (92 % del ancho o 90 % del alto, lo que llegue primero).
+   El selector es más fuerte que el de la foto de la ficha, que la limita a 10–14rem de alto. */
+.foto .foto-ventana img.foto-ampliada {
+  display: block; width: min(92vw, calc(90vh * 1.5)); height: auto; max-height: 90vh; aspect-ratio: 3 / 2;
+  object-fit: contain; border-radius: 0; animation: none;
+}
+.foto-cerrar {
+  position: absolute; top: var(--e-3); right: var(--e-3); width: 2.75rem; height: 2.75rem; display: grid; place-items: center;
+  border: 0; border-radius: 50%; background: rgba(0, 0, 0, .6); color: #FFFFFF;
+}
+
+/* Datos en tarjetas blancas con título e ícono rosa */
+.ficha-datos { display: grid; gap: var(--e-3); align-content: start; margin-top: var(--e-5); }
+.ficha-tarjeta .pronostico { grid-template-columns: repeat(auto-fit, minmax(2.75rem, 1fr)); }
+.ficha-tarjeta .datos-visita { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+.ficha-tarjeta { background: var(--blanco); border: 1px solid var(--linea); border-radius: var(--r-m); padding: var(--e-4); box-shadow: var(--sombra-s); }
+.ficha-tarjeta-titulo { display: flex; align-items: flex-start; gap: var(--e-3); margin-bottom: var(--e-3); }
+.ficha-tarjeta-titulo > .icono { width: 1.5rem; height: 1.5rem; color: var(--rosa); }
+.ficha-tarjeta-titulo h3 { font-size: var(--t-sub); font-weight: 650; letter-spacing: -0.01em; line-height: 1.3; }
+.ficha-tarjeta-sub { margin-top: 2px; font-size: var(--t-meta); color: var(--tinta-2); }
+.ficha-tarjeta > .razones { margin: 0 0 var(--e-3); }
+
+/* "Gente ahora": barra de Menos a Más en rosa, con una marca donde está ahora */
+.gente-ahora { background: var(--gris-claro); border-radius: var(--r-s); padding: var(--e-3) var(--e-4); }
+.gente-ahora-titulo { display: flex; align-items: center; gap: var(--e-2); font-weight: 600; }
+.gente-barra { position: relative; height: 10px; margin: var(--e-4) 0 var(--e-2); }
+.gente-rampa { height: 100%; border-radius: var(--r-pill); }
+.gente-marca {
+  position: absolute; top: 50%; width: 20px; height: 20px; border-radius: 50%; transform: translate(-50%, -50%);
+  background: var(--rosa-hondo); border: 3px solid var(--blanco); box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+}
+.gente-extremos { display: flex; justify-content: space-between; font-size: var(--t-meta); color: var(--tinta-2); }
+
+/* "¿Cuándo me conviene ir?": botón rosa claro con ícono y flecha */
+.boton.semana-ver { margin-top: var(--e-3); font-size: var(--t-meta); justify-content: flex-start; background: var(--rosa-claro); border-color: transparent; color: var(--rosa-hondo); }
+.boton.semana-ver:hover { background: #FFD1E8; }
+.boton.semana-ver span { flex: 1; text-align: left; }
+
+/* Fuentes en una caja gris con ícono de información */
+.ficha-fuentes { display: flex; gap: var(--e-3); margin-top: var(--e-4); padding: var(--e-3) var(--e-4); background: var(--gris-claro); border-radius: var(--r-m); }
+.ficha-fuentes > .icono { color: var(--tinta-3); margin-top: 2px; }
+.ficha-fuentes .fuente-dato { margin: 0; }
+.ficha-fuentes .fuente-dato + .fuente-dato { margin-top: var(--e-2); }
+.espera { display: flex; align-items: center; gap: var(--e-2); }
 .boton.escuchar { min-height: 44px; padding: 0 var(--e-4); }
 .aviso + .boton.escuchar, .secundario + .boton.escuchar { margin-top: var(--e-3); }
 .boton.escuchar[aria-pressed='true'] { border-color: var(--rosa); color: var(--rosa-hondo); background: var(--rosa-claro); }
@@ -370,14 +467,14 @@ a { color: inherit; }
 .tarjeta-lugar.apagada .foto img { filter: grayscale(1); opacity: .7; }
 .tarjeta-lugar[aria-current='true'] { background: var(--blanco); border-color: var(--rosa); }
 .tarjeta-fila { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.tarjeta-lugar h3 { font-size: 1rem; font-weight: 650; letter-spacing: -0.01em; line-height: 1.3; }
+.tarjeta-lugar h3 { font-size: var(--t-sub); font-weight: 650; letter-spacing: -0.01em; line-height: 1.3; }
 .tarjeta-lugar .detalle { font-size: var(--t-meta); color: var(--tinta-2); margin-top: var(--e-1); }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-1) var(--e-3); margin-top: var(--e-2); font-size: var(--t-meta); color: var(--tinta-2); }
 .meta-fuerte { font-weight: 650; color: var(--tinta); }
 .insignia { font-size: var(--t-meta); font-weight: 600; border: 1px solid var(--linea); background: var(--blanco); border-radius: var(--r-pill); padding: 2px 8px; }
 
 /* Descripción del lugar: lo primero que se lee después del nombre y el semáforo */
-.descripcion { margin-top: var(--e-4); font-size: 1.0625rem; line-height: 1.55; color: var(--tinta); max-width: 60ch; text-wrap: pretty; }
+.descripcion { margin-top: var(--e-4); font-size: var(--t-cuerpo); line-height: 1.55; color: var(--tinta); max-width: 60ch; text-wrap: pretty; }
 .coincide { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: var(--e-3); font-size: var(--t-meta); color: var(--tinta-2); }
 .coincide .insignia { background: var(--rosa-claro); border-color: transparent; color: var(--rosa-hondo); }
 
@@ -406,18 +503,30 @@ a { color: inherit; }
 .creditos a { display: inline-flex; align-items: center; min-height: 44px; color: var(--tinta-2); }
 
 .detalle-punto h2 { font-size: var(--t-pagina); line-height: 1.12; letter-spacing: -0.03em; margin: var(--e-1) 0 var(--e-3); }
-.razones { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 8px; }
-.razones li { background: var(--gris-claro); border-radius: var(--r-s); padding: var(--e-3); font-size: 0.875rem; }
+/* Razones (HCI A1): texto con ícono, sin caja gris. Sin cajas iguales, lo que importa destaca (Gestalt: figura-fondo) */
+.razones { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: var(--e-2); }
+.razones li { position: relative; padding-left: 1.5rem; font-size: var(--t-cuerpo); line-height: 1.4; }
+.razones li::before {
+  content: ''; position: absolute; left: .25rem; top: .5em; width: .5rem; height: .5rem; border-radius: 50%; background: var(--rosa);
+}
+/* Conclusión de la ficha (HCI A2): una frase grande que responde "¿voy o no?"; la barra repite el color del estado */
+.conclusion { margin-top: var(--e-4); padding: var(--e-1) 0 var(--e-1) var(--e-4); border-left: 4px solid var(--tinta-3); }
+.conclusion.verde { border-left-color: var(--verde-marca); }
+.conclusion.amarillo { border-left-color: var(--ama-marca); }
+.conclusion.rojo { border-left-color: var(--rojo-marca); }
+.conclusion-titular { font-size: var(--t-titulo); font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; text-wrap: balance; }
+.conclusion-siguiente { margin-top: var(--e-1); font-size: var(--t-cuerpo); color: var(--tinta-2); text-wrap: pretty; }
 .pronostico { display: grid; grid-template-columns: repeat(auto-fit, minmax(3.25rem, 1fr)); gap: 4px; }
 .franja-hora { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; border-radius: var(--r-s); background: var(--gris-claro); font-size: var(--t-meta); color: var(--tinta-2); }
 .fuente-dato { margin-top: var(--e-4); font-size: var(--t-meta); color: var(--tinta-3); }
 .titulo-rec { font-size: 1.5rem; margin: 10px 0 8px; }
 .horas { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
 .hora { background: var(--gris-claro); border-radius: var(--r-s); padding: 8px 4px; text-align: center; font-size: var(--t-meta); }
-.hora strong { display: block; font-size: 0.875rem; margin-top: 2px; }
+.hora strong { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: var(--t-meta); margin-top: 2px; }
 .hora.lluvia { background: #E3ECFB; }
 .datos-visita { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.dato { background: var(--gris-claro); border-radius: var(--r-s); padding: 10px 12px; }
+.dato { display: flex; align-items: flex-start; gap: var(--e-3); background: var(--gris-claro); border-radius: var(--r-s); padding: var(--e-3); }
+.dato > .icono { width: 1.5rem; height: 1.5rem; color: var(--rosa); margin-top: 2px; }
 .dato .suave { display: block; }
 .acciones { display: grid; gap: var(--e-3); margin-top: var(--e-5); }
 .acciones.dos { grid-template-columns: 1fr 1fr; }
@@ -427,7 +536,7 @@ a { color: inherit; }
 .opcion { border-radius: var(--r-m); padding: var(--e-4); background: var(--gris-claro); }
 .opcion.recomendada { background: var(--blanco); border: 2px solid var(--rosa); }
 .opcion h3 { font-size: 1.125rem; margin: 4px 0 8px; }
-.tip { margin-top: 12px; border-radius: var(--r-s); padding: 12px 14px; background: var(--talavera-claro); font-size: 0.875rem; }
+.tip { margin-top: 12px; border-radius: var(--r-s); padding: 12px 14px; background: var(--talavera-claro); font-size: var(--t-meta); }
 
 /* ---------- Inicio (T1): pantalla propia, sin mapa ---------- */
 .inicio { height: 100%; overflow-y: auto; overflow-x: hidden; background: var(--blanco); }
@@ -671,7 +780,7 @@ th { font-size: var(--t-meta); font-weight: 600; color: var(--tinta-2); }
 :root[data-contraste='alto'] :is(.cabecera, .panel-flotante, .leyenda-mapa, .chat, .opciones-lectura) {
   backdrop-filter: none; -webkit-backdrop-filter: none; border: 2px solid #000000;
 }
-:root[data-contraste='alto'] :is(.tarjeta-lugar, .lugar-tarjeta, .opcion, .dato, .razones li, .franja-hora, .hora, .espera, .segmentado, .idioma, .control-grupo, .mensaje.asistente) {
+:root[data-contraste='alto'] :is(.tarjeta-lugar, .lugar-tarjeta, .opcion, .dato, .franja-hora, .hora, .espera, .segmentado, .idioma, .control-grupo, .mensaje.asistente) {
   border: 1px solid var(--linea);
 }
 :root[data-contraste='alto'] :is(.tarjeta-lugar, .lugar-tarjeta)[aria-current='true'] { border: 3px solid #000000; }
@@ -779,7 +888,9 @@ th { font-size: var(--t-meta); font-weight: 600; color: var(--tinta-2); }
 
 @media (prefers-reduced-motion: reduce) {
   .panel-flotante, .boton-asistente { transition: none !important; }
-  .postal, .foto.grande img, .punto-vivo, .selector-opciones, .marcador-yo { animation: none !important; }
+  .postal, .foto.grande img, .punto-vivo, .selector-opciones, .marcador-yo,
+  .vista-semana, .detalle-punto.saliendo, .detalle-punto.regresando, .semana-cargando { animation: none !important; }
+  .semana-celda { transition: none; }
 }
 
 /* ── Ubicación real (useUbicacion): buscando, sin moverse si falla ── */
@@ -793,19 +904,83 @@ th { font-size: var(--t-meta); font-weight: 600; color: var(--tinta-2); }
 .vs-normal.mas_lleno { background: var(--rojo-bg); color: var(--rojo); }
 .vs-normal.menos_lleno { background: var(--verde-bg); color: var(--verde); }
 .espera { margin-top: 10px; font-size: var(--t-meta); color: var(--tinta); background: var(--gris-claro); border-radius: var(--r-s); padding: 8px 12px; }
-.semana { margin-top: 4px; }
-.semana-tabla { display: grid; gap: 3px; overflow-x: auto; padding-bottom: 4px; }
-.semana-fila { display: grid; grid-template-columns: 4rem repeat(auto-fill, minmax(14px, 1fr)); grid-auto-flow: column; grid-auto-columns: minmax(14px, 1fr); gap: 3px; align-items: center; }
-.semana-fila.encabezado span { font-size: .75rem; color: var(--gris); text-align: center; }
-.semana-dia { font-size: var(--t-meta); color: var(--tinta); white-space: nowrap; text-transform: capitalize; }
-.semana-celda { height: 18px; border-radius: 4px; background: var(--cerrado-bg); }
+/* ---------- "¿Cuándo me conviene ir?": vista de la semana (reemplaza la ficha) ---------- */
+/* La ficha sale hacia la izquierda y la semana entra desde la derecha; al cerrar, la ficha regresa */
+@keyframes sale-izquierda { to { opacity: 0; transform: translateX(-24px); } }
+@keyframes entra-derecha { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: none; } }
+@keyframes entra-izquierda { from { opacity: 0; transform: translateX(-32px); } to { opacity: 1; transform: none; } }
+.detalle-punto.saliendo { animation: sale-izquierda .18s ease-in both; }
+.detalle-punto.regresando { animation: entra-izquierda .28s cubic-bezier(.2, .8, .2, 1) both; }
+.vista-semana { container-type: inline-size; animation: entra-derecha .32s cubic-bezier(.2, .8, .2, 1) both; padding-bottom: var(--e-5); }
+.vista-semana h2 { font-size: var(--t-titulo); letter-spacing: -0.02em; margin-top: var(--e-3); }
+.vista-semana h2:focus { outline: none; }
+.vista-semana-cabecera { display: flex; align-items: center; justify-content: space-between; gap: var(--e-3); }
+
+/* Mientras carga: un bloque gris que late, del tamaño de la tabla */
+@keyframes late { 50% { opacity: .5; } }
+.semana-cargando { height: 18rem; margin-top: var(--e-5); border-radius: var(--r-m); background: var(--gris-claro); animation: late 1.2s ease-in-out infinite; }
+
+/* "Próximo buen momento": lo primero que se lee */
+.semana-mejor {
+  display: flex; align-items: center; gap: var(--e-3); margin-top: var(--e-4); padding: var(--e-3) var(--e-4);
+  border-radius: var(--r-m); background: var(--verde-bg); color: var(--verde);
+}
+.semana-mejor > .icono { width: 1.5rem; height: 1.5rem; }
+.semana-mejor span { display: block; font-size: var(--t-meta); }
+.semana-mejor strong { font-size: var(--t-sub); }
+
+/* La tabla: días en filas, horas en columnas. Se estira con el panel y, si no cabe, se desliza de lado */
+.semana-cuadro {
+  margin-top: var(--e-4); padding: var(--e-3); border: 1px solid var(--linea); border-radius: var(--r-m);
+  background: var(--blanco); box-shadow: var(--sombra-s); overflow-x: auto;
+}
+.semana-tabla { display: grid; gap: 4px; min-width: calc(4.5rem + var(--columnas) * 1.25rem); }
+.semana-fila { display: grid; grid-template-columns: 4.5rem repeat(var(--columnas), minmax(1.25rem, 1fr)); gap: 4px; align-items: center; }
+.semana-hora { font-size: .8125rem; color: var(--tinta-2); text-align: center; font-variant-numeric: tabular-nums; }
+.semana-hora.ahora { color: var(--rosa-hondo); font-weight: 700; }
+@container (max-width: 34rem) {
+  .semana-hora.impar { visibility: hidden; }
+  /* Panel angosto: la tabla se compacta para que quepan todas las horas sin deslizar */
+  .semana-tabla { gap: 3px; min-width: 0; }
+  .semana-fila { grid-template-columns: 3.5rem repeat(var(--columnas), minmax(0, 1fr)); gap: 2px; }
+  .semana-celda { height: 1.5rem; border-radius: 4px; }
+  .semana-cuadro { padding: var(--e-2); }
+}
+.semana-dia { font-size: var(--t-meta); color: var(--tinta); white-space: nowrap; text-transform: capitalize; padding-right: var(--e-2); }
+.semana-fila.hoy .semana-dia { color: var(--rosa-hondo); font-weight: 700; }
+.semana-celda {
+  height: 1.75rem; border-radius: 6px; background: var(--cerrado-bg); cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.semana-celda:hover { transform: scale(1.12); box-shadow: 0 2px 6px rgba(0, 0, 0, .2); }
 .semana-celda.verde { background: var(--verde-marca); }
 .semana-celda.amarillo { background: var(--ama-marca); }
 .semana-celda.rojo { background: var(--rojo-marca); }
 .semana-celda.sin_dato { background: var(--gris-bg); }
-.semana-celda.pasada { opacity: .3; }
-.semana-resumen { margin: 8px 0 0; padding-left: 18px; font-size: var(--t-meta); color: var(--tinta); }
-.semana-resumen li { margin: 2px 0; text-transform: none; }
+/* Las horas que ya pasaron: rayadas y tenues, para que no se confundan con las que vienen */
+.semana-celda.pasada { opacity: .35; background-image: repeating-linear-gradient(135deg, rgba(255, 255, 255, .55) 0 3px, transparent 3px 6px); }
+.semana-celda.ahora { box-shadow: 0 0 0 2px var(--blanco), 0 0 0 4px var(--rosa); }
+.semana-celda.elegida { box-shadow: 0 0 0 2px var(--blanco), 0 0 0 4px var(--tinta); transform: scale(1.12); }
+
+.semana-detalle { display: flex; align-items: center; gap: var(--e-2); min-height: 2.5rem; margin-top: var(--e-3); font-size: var(--t-cuerpo); }
+.semana-punto { display: inline-block; flex: none; width: .75rem; height: .75rem; border-radius: 3px; margin-right: 6px; vertical-align: middle; background: var(--cerrado-bg); }
+.semana-punto.verde { background: var(--verde-marca); }
+.semana-punto.amarillo { background: var(--ama-marca); }
+.semana-punto.rojo { background: var(--rojo-marca); }
+.semana-detalle .semana-punto { margin-right: 0; }
+.semana-leyenda { list-style: none; padding: 0; margin: var(--e-2) 0 0; display: flex; flex-wrap: wrap; gap: var(--e-2) var(--e-4); font-size: var(--t-meta); color: var(--tinta-2); }
+
+/* Día por día: la hora más tranquila y la más llena de cada día */
+.semana-subtitulo { margin-top: var(--e-5); font-size: var(--t-sub); font-weight: 650; }
+.semana-dias { list-style: none; padding: 0; margin: var(--e-3) 0 0; border: 1px solid var(--linea); border-radius: var(--r-m); overflow: hidden; background: var(--blanco); }
+.semana-dias li {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--e-5);
+  padding: var(--e-2) var(--e-4); font-size: var(--t-meta);
+}
+.semana-dias li + li { border-top: 1px solid var(--linea); }
+.semana-dias li.hoy { background: var(--rosa-claro); }
+.semana-dias-nombre { min-width: 4.5rem; font-weight: 650; text-transform: capitalize; }
+.semana-fila.hoy .semana-dia, .semana-dias li.hoy .semana-dias-nombre { text-transform: none; }
 @media (prefers-reduced-motion: reduce) { .control-mapa.ubicar.buscando span { animation: none; } }
 
 /* ───────────── Cuentas (feature 002): sesión, Favoritos y reseñas ───────────── */

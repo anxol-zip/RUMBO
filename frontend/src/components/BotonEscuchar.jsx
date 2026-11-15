@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useIdioma } from '../i18n/contexto.js'
 import { usePreferencias, VELOCIDAD_VOZ } from '../preferencias/contexto.js'
+import Icono from './Icono.jsx'
 
 const HAY_VOZ = typeof window !== 'undefined' && 'speechSynthesis' in window
 
@@ -47,7 +48,7 @@ function BotonEscuchar({ partes }) {
 
   return (
     <button type="button" className="boton escuchar" aria-pressed={hablando} onClick={alternar}>
-      <span aria-hidden="true">{hablando ? '■' : '🔊'}</span> {hablando ? t('voz.detener') : t('voz.escuchar')}
+      <Icono nombre={hablando ? 'detener' : 'altavoz'} />{hablando ? t('voz.detener') : t('voz.escuchar')}
     </button>
   )
 }
