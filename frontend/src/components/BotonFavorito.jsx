@@ -1,7 +1,8 @@
 import { useCuenta } from '../cuenta/contexto.js'
 import { useIdioma } from '../i18n/contexto.js'
+import Icono from './Icono.jsx'
 
-// ☆/★ Favoritos (feature 002, FR-018). El estado va en texto y en aria-pressed, no solo en el icono.
+// Corazón vacío/lleno: Favoritos (feature 002, FR-018). El estado va en texto y en aria-pressed, no solo en el icono.
 // `compacto` es el de la lista: solo el icono, con el nombre del lugar en la etiqueta para el lector.
 // Sin sesión, invita a iniciar sesión y guarda el lugar al volver (FR-020).
 function BotonFavorito({ puntoId, nombre, compacto = false }) {
@@ -19,7 +20,7 @@ function BotonFavorito({ puntoId, nombre, compacto = false }) {
       title={compacto ? texto : undefined}
       onClick={() => alternarFavorito(puntoId)}
     >
-      <span aria-hidden="true">{es ? '★' : '☆'}</span>{!compacto && ` ${texto}`}
+      <Icono nombre="corazon" relleno={es} />{!compacto && ` ${texto}`}
     </button>
   )
 }

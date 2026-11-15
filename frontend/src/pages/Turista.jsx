@@ -9,6 +9,7 @@ import BotonReporte from '../components/BotonReporte.jsx'
 import Chat from '../components/Chat.jsx'
 import FiltrosLugares from '../components/FiltrosLugares.jsx'
 import GuiaPrimerUso from '../components/GuiaPrimerUso.jsx'
+import BordePanel, { ANCHO_MINIMO } from '../components/BordePanel.jsx'
 import Inicio from '../components/Inicio.jsx'
 import ListaPuntos from '../components/ListaPuntos.jsx'
 import Mapa from '../components/Mapa.jsx'
@@ -88,6 +89,19 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
   const botonAsistente = useRef(null)
   const chatPrevio = useRef(false)
   const [panelAncho, setPanelAncho] = useState(400)    // para que el mapa encuadre a la derecha del panel
+  // Ancho elegido arrastrando el borde del panel (ficha, recomendación o "Ver todos"); null = el normal.
+  // Se recuerda en este navegador.
+  const [anchoElegido, setAnchoElegido] = useState(() => {
+    try { return Number(localStorage.getItem('rumbo.anchoPanel')) || null } catch { return null }
+  })
+  function guardarAncho(valor) {
+    setAnchoElegido(valor)
+    try {
+      if (valor == null) localStorage.removeItem('rumbo.anchoPanel')
+      else localStorage.setItem('rumbo.anchoPanel', String(valor))
+    } catch { /* sin almacenamiento: solo dura esta visita */ }
+  }
+  const cambiarAncho = (px) => guardarAncho(Math.round(Math.min(Math.max(px, ANCHO_MINIMO), window.innerWidth - 160)))
   const { letra, guiaAbierta, cerrarGuia } = usePreferencias()
   const hoja = useHoja(ESCALA_TEXTO[letra])
   const { t } = useIdioma()
@@ -218,7 +232,7 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
       <section
         ref={panel}
         className={`panel-flotante${hoja.arrastrando ? ' arrastrando' : ''}${mitad ? ' mitad' : ''}`}
-        style={hoja.movil ? { height: hoja.alto } : undefined}
+        style={hoja.movil ? { height: hoja.alto } : mitad && anchoElegido ? { width: anchoElegido } : undefined}
         aria-label={t('lista.region')}
       >
         <div className="zona-arrastre" {...hoja.zona}>
@@ -298,6 +312,9 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
               onError={onError}
             />
           </div>
+        )}
+        {mitad && !hoja.movil && (
+          <BordePanel panel={panel} ancho={panelAncho} onCambiar={cambiarAncho} onReiniciar={() => guardarAncho(null)} />
         )}
       </section>
 

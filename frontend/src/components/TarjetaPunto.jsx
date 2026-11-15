@@ -1,17 +1,23 @@
 import BotonFavorito from './BotonFavorito.jsx'
 import Resenas from './Resenas.jsx'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, codigoDe } from '../api/cliente.js'
 import { hora, horarioDeHoy, partesRazon, pesos, textoTraslado } from '../data/formato.js'
 import BotonEscuchar from './BotonEscuchar.jsx'
 import IconoEstado from './IconoEstado.jsx'
+import { textosConclusion } from '../data/conclusion.js'
 import { ficha } from '../i18n/backend.js'
 import { useIdioma } from '../i18n/contexto.js'
 import Foto from './Foto.jsx'
 import Semaforo from './Semaforo.jsx'
 import Semana from './Semana.jsx'
+import VistaSemana from './VistaSemana.jsx'
+import BotonCompartir from './BotonCompartir.jsx'
+import GenteAhora from './GenteAhora.jsx'
+import Icono from './Icono.jsx'
 
-const LLUVIA = { sin: '☀️', moderada: '🌦', fuerte: '🌧' }
+// Ícono del clima por hora según la lluvia
+const LLUVIA = { sin: 'sol', moderada: 'llovizna', fuerte: 'lluvia' }
 
 function confianzaTexto(e, t) {
   if (e.color === 'cerrado') return null
@@ -37,6 +43,24 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
   const [estado, setEstado] = useState(null)
   const [fallo, setFallo] = useState(false)
   const titulo = useRef(null)
+  // "¿Cuándo me conviene ir?": la ficha sale y entra la semana en su lugar; al cerrarla, la ficha regresa.
+  // fase: 'ficha' | 'saliendo' | 'semana' | 'regresando'
+  const [fase, setFase] = useState('ficha')
+  const botonSemana = useRef(null)
+  const espera = useRef(null)
+  useEffect(() => () => clearTimeout(espera.current), [])
+
+  function abrirSemana() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { setFase('semana'); return }
+    setFase('saliendo')
+    espera.current = setTimeout(() => setFase('semana'), 180)
+  }
+  const cerrarSemana = useCallback(() => setFase('regresando'), [])
+
+  // Al regresar, el foco vuelve al botón que abrió la semana
+  useEffect(() => {
+    if (fase === 'regresando') botonSemana.current?.focus()
+  }, [fase])
 
   useEffect(() => {
     let vigente = true
@@ -57,25 +81,43 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
   const traslado = textoTraslado(estado.traslado, t)
   const descripcion = estado.ficha && ficha(estado.clave, estado.ficha, idioma)
   const confianza = confianzaTexto(estado, t)
+  const concl = textosConclusion(estado, t)
+  const razones = [...partesRazon(estado.razon, idioma), ...estado.eventos.map((e) => t('ficha.hoy', { evento: e }))]
   // Lo que lee "Escuchar": lo mismo que se ve primero, en el orden en que se ve.
   const lectura = [
-    estado.nombre, t(`sem.${estado.color}`), ...partesRazon(estado.razon, idioma), descripcion,
+    estado.nombre, t(`sem.${estado.color}`), concl.titular, concl.siguiente, ...partesRazon(estado.razon, idioma), descripcion,
     `${t('ficha.horario')}: ${horarioDeHoy(estado.horario, t)}`, traslado && `${t('ficha.traslado')}: ${traslado}`,
   ]
 
+  if (fase === 'semana') {
+    return <VistaSemana puntoId={estado.id} nombre={estado.nombre} onCerrar={cerrarSemana} onError={onError} />
+  }
+
   return (
-    // Cuatro zonas: en la barra angosta van una tras otra; con la barra ampliada, lo principal y las
-    // acciones quedan a la izquierda y los datos a la derecha, sin tener que bajar (CSS).
-    <article className="detalle-punto">
+    // Con la barra ampliada: a la izquierda lo principal, las acciones y las fuentes; a la derecha los datos
+    // en tarjetas. En la barra angosta van una tras otra (CSS).
+    <article className={`detalle-punto${fase === 'saliendo' ? ' saliendo' : fase === 'regresando' ? ' regresando' : ''}`}
+      onAnimationEnd={(e) => { if (e.target === e.currentTarget && fase === 'regresando') setFase('ficha') }}>
       <div className="ficha-principal">
-      <button type="button" className="boton-texto" onClick={onVolver}>{t('ficha.volver')}</button>
-      <Foto id={estado.clave} nombre={estado.nombre} credito />
-      <p className="suave" style={{ marginTop: 12 }}>{estado.destino}{estado.es_inah ? t('ficha.inah') : ''}</p>
-      <h2 id="ficha-titulo" ref={titulo} tabIndex={-1}>{estado.nombre}</h2>
+      <button type="button" className="boton-texto volver" onClick={onVolver}>
+        <Icono nombre="atras" />{t('ficha.volver').replace(/^←\s*/, '')}
+      </button>
+      <p className="ficha-destino"><Icono nombre="pin" />{estado.destino}{estado.es_inah ? t('ficha.inah') : ''}</p>
+      <div className="ficha-titulo">
+        <h2 id="ficha-titulo" ref={titulo} tabIndex={-1}>{estado.nombre}</h2>
+        <div className="ficha-titulo-botones">
+          <BotonCompartir estado={estado} />
+          <BotonFavorito puntoId={estado.id} nombre={estado.nombre} compacto />
+        </div>
+      </div>
       <div className="estado-fila">
         <Semaforo color={estado.color} grande />
         <BotonEscuchar partes={lectura} />
-        <BotonFavorito puntoId={estado.id} nombre={estado.nombre} />
+      </div>
+      {/* HCI A2: la respuesta a "¿voy o no?" antes de cualquier dato */}
+      <div className={`conclusion ${estado.color}`}>
+        <p className="conclusion-titular">{concl.titular}</p>
+        {concl.siguiente && <p className="conclusion-siguiente">{concl.siguiente}</p>}
       </div>
       {estado.ajuste_manual && <p style={{ marginTop: 10 }}><span className="ajuste-etiqueta">{t('ficha.ajustado', { motivo: estado.ajuste_manual })}</span></p>}
       {(estado.vs_normal === 'mas_lleno' || estado.vs_normal === 'menos_lleno') && (
@@ -86,23 +128,33 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
         </p>
       )}
       {estado.espera_reportada && (
-        <p className="espera">⏱ {t('espera.texto', {
+        <p className="espera"><Icono nombre="reloj" /> {t('espera.texto', {
           min: estado.espera_reportada.minutos, n: estado.espera_reportada.n_reportes, hace: estado.espera_reportada.ultima_hace_min,
         })}</p>
       )}
+      <Foto id={estado.clave} nombre={estado.nombre} credito ampliable />
       {descripcion && <p className="descripcion">{descripcion}</p>}
       </div>
 
       <div className="ficha-datos">
-      <ul className="razones">
-        {partesRazon(estado.razon, idioma).map((r) => <li key={r}>{r}</li>)}
-        {estado.eventos.map((e) => <li key={e}>{t('ficha.hoy', { evento: e })}</li>)}
-      </ul>
-      {confianza && <p className="suave" style={{ marginTop: 8 }}>{confianza}</p>}
+      {/* Por qué tiene ese color y cuánta gente hay */}
+      <section className="ficha-tarjeta" aria-labelledby="ficha-por-que">
+        <div className="ficha-tarjeta-titulo">
+          <Icono nombre="grafica" />
+          <div>
+            <h3 id="ficha-por-que">{razones[0] ?? t(`sem.${estado.color}`)}</h3>
+            {confianza && <p className="ficha-tarjeta-sub">{confianza}</p>}
+          </div>
+        </div>
+        {razones.length > 1 && (
+          <ul className="razones">{razones.slice(1).map((r) => <li key={r}>{r}</li>)}</ul>
+        )}
+        <GenteAhora nivel={estado.nivel} color={estado.color} />
+      </section>
 
       {estado.proximas_horas.length > 0 && (
-        <>
-          <p className="etiqueta">{t('ficha.proximas')}</p>
+        <section className="ficha-tarjeta" aria-labelledby="ficha-proximas">
+          <div className="ficha-tarjeta-titulo"><Icono nombre="reloj" /><h3 id="ficha-proximas">{t('ficha.proximas')}</h3></div>
           <div className="pronostico" role="list">
             {estado.proximas_horas.slice(0, 8).map((h) => (
               <div key={h.hora} className={`franja-hora ${h.color}`} role="listitem" title={`${hora(h.hora)}: ${t(`sem.${h.color}`)}`}>
@@ -112,40 +164,42 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
               </div>
             ))}
           </div>
-        </>
+          {estado.hoy && (
+            <p className="suave" style={{ marginTop: 8 }}>
+              {t('hoy.resumen', { tranquila: estado.hoy.mas_tranquila.hora, llena: estado.hoy.mas_llena.hora })}
+            </p>
+          )}
+          <Semana ref={botonSemana} onAbrir={abrirSemana} />
+        </section>
       )}
-      {estado.hoy && (
-        <p className="suave" style={{ marginTop: 8 }}>
-          {t('hoy.resumen', { tranquila: estado.hoy.mas_tranquila.hora, llena: estado.hoy.mas_llena.hora })}
-        </p>
-      )}
-      <Semana puntoId={estado.id} onError={onError} />
 
       {estado.clima.length > 0 && (
-        <>
-          <p className="etiqueta">{t('ficha.clima')}</p>
+        <section className="ficha-tarjeta" aria-labelledby="ficha-clima">
+          <div className="ficha-tarjeta-titulo"><Icono nombre="sol" /><h3 id="ficha-clima">{t('ficha.clima')}</h3></div>
           <div className="horas">
             {estado.clima.slice(0, 6).map((c) => (
               <div key={c.hora} className={`hora${c.lluvia !== 'sin' ? ' lluvia' : ''}`}>
                 {hora(c.hora)}
-                <strong>{LLUVIA[c.lluvia]} {c.prob_lluvia_pct != null ? `${Math.round(c.prob_lluvia_pct)}%` : '—'}</strong>
+                <strong><Icono nombre={LLUVIA[c.lluvia]} /> {c.prob_lluvia_pct != null ? `${Math.round(c.prob_lluvia_pct)}%` : '—'}</strong>
               </div>
             ))}
           </div>
-        </>
+        </section>
       )}
 
-      <p className="etiqueta">{t('ficha.visita')}</p>
-      <div className="datos-visita">
-        <div className="dato"><span className="suave">{t('ficha.traslado')}</span><strong>{traslado ?? t('ficha.sinCalcular')}</strong></div>
-        <div className="dato"><span className="suave">{t('ficha.tiempo')}</span><strong>{estado.duracion_sugerida ?? t('ficha.porConfirmar')}</strong></div>
-        <div className="dato"><span className="suave">{t('ficha.horario')}</span><strong>{horarioDeHoy(estado.horario, t)}</strong></div>
-        <div className="dato"><span className="suave">{t('ficha.entrada')}</span><strong>{estado.costo_mxn == null ? t('ficha.porConfirmar') : estado.costo_mxn === 0 ? t('ficha.gratis') : pesos(estado.costo_mxn)}</strong></div>
-      </div>
+      <section className="ficha-tarjeta" aria-labelledby="ficha-visita">
+        <div className="ficha-tarjeta-titulo"><Icono nombre="bolsa" /><h3 id="ficha-visita">{t('ficha.visita')}</h3></div>
+        <div className="datos-visita">
+          <Dato icono={estado.traslado?.modo === 'en coche' ? 'coche' : 'caminar'} titulo={t('ficha.traslado')} valor={traslado ?? t('ficha.sinCalcular')} />
+          <Dato icono="reloj" titulo={t('ficha.tiempo')} valor={estado.duracion_sugerida ?? t('ficha.porConfirmar')} />
+          <Dato icono="calendario" titulo={t('ficha.horario')} valor={horarioDeHoy(estado.horario, t)} />
+          <Dato icono="etiqueta" titulo={t('ficha.entrada')} valor={estado.costo_mxn == null ? t('ficha.porConfirmar') : estado.costo_mxn === 0 ? t('ficha.gratis') : pesos(estado.costo_mxn)} />
+        </div>
+      </section>
 
       {estado.proximos_eventos.length > 0 && (
-        <>
-          <p className="etiqueta">{t('ficha.eventos')}</p>
+        <section className="ficha-tarjeta" aria-labelledby="ficha-eventos">
+          <div className="ficha-tarjeta-titulo"><Icono nombre="calendario" /><h3 id="ficha-eventos">{t('ficha.eventos')}</h3></div>
           <ul className="razones">
             {estado.proximos_eventos.map((e) => (
               <li key={e.nombre + e.inicio}>
@@ -154,26 +208,40 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
               </li>
             ))}
           </ul>
-        </>
+        </section>
       )}
-
       </div>
 
       <div className="ficha-acciones">
-      <div className={`acciones${conviene ? '' : ' dos'}`}>
-        {!conviene && <button type="button" className="boton primario" onClick={onAlternativa}>{t('ficha.mejorVe')}</button>}
-        <button type="button" className={`boton${conviene ? ' primario' : ''}`} onClick={onEstoyAqui}>{t('ficha.estoyAqui')}</button>
+        {!conviene && (
+          <button type="button" className="boton primario" onClick={onAlternativa}><Icono nombre="cambiar" />{t('ficha.mejorVe')}</button>
+        )}
+        <button type="button" className={`boton${conviene ? ' primario' : ''}`} onClick={onEstoyAqui}><Icono nombre="pin" />{t('ficha.estoyAqui')}</button>
+        <a className="boton" href={estado.como_llegar_url} target="_blank" rel="noreferrer">
+          <Icono nombre="navegar" />{t('ficha.comoLlegar')}<span className="oculto-accesible"> {t('ficha.enGoogleMaps')}</span>
+        </a>
       </div>
-      <a className="boton ancho" href={estado.como_llegar_url} target="_blank" rel="noreferrer">{t('ficha.comoLlegar')}</a>
-      </div>
-
-      <Resenas puntoId={estado.id} />
 
       <div className="ficha-fuentes">
-      {estado.fuente && <p className="fuente-dato">{t('ficha.fuente', { fuente: estado.fuente })}</p>}
-      <p className="fuente-dato">{actualizacion(estado.datos, t)} {t('datos.metodo')}</p>
+        <Icono nombre="info" />
+        <div>
+          {estado.fuente && <p className="fuente-dato">{t('ficha.fuente', { fuente: estado.fuente })}</p>}
+          <p className="fuente-dato">{actualizacion(estado.datos, t)} {t('datos.metodo')}</p>
+        </div>
       </div>
+
+      <div className="ficha-resenas"><Resenas puntoId={estado.id} /></div>
     </article>
+  )
+}
+
+// Un dato de "Tu visita": ícono, qué es y cuánto
+function Dato({ icono, titulo, valor }) {
+  return (
+    <div className="dato">
+      <Icono nombre={icono} />
+      <div><span className="suave">{titulo}</span><strong>{valor}</strong></div>
+    </div>
   )
 }
 
