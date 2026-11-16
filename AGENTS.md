@@ -143,3 +143,72 @@ La seguridad exigida es simple, pero **efectiva en el servidor**: no hay que cre
 - **Destino de trabajo:** nueva rama **local** `feature/rumbo-ux-auth-access` desde `develop` (si se puede crear sin tocar cambios previos).
 - **Publicación / push / PR / merge:** **NO AUTORIZADOS**.
 - Al finalizar la etapa 1, esperar la inspección y decisión humana antes de continuar.
+
+## 7. Checkpoint de continuidad — 2026-11-16
+
+Esta sección registra el avance solicitado por la persona usuaria para poder retomarlo después. No modifica las reglas anteriores ni autoriza publicación alguna.
+
+### Estado al detenerse
+
+- Rama local: `feature/rumbo-ux-auth-access`, creada desde `develop` sin sobrescribir trabajo previo.
+- Etapas 1 y 2 entregadas; la persona usuaria autorizó avanzar a la etapa 3. **Etapa 3 implementada y revisada, pendiente de validación humana final.**
+- **Etapas 4–6 no iniciadas.** La tanda actual termina aquí por solicitud de guardar el progreso y cuidar el límite de uso. No empezar la etapa 4 hasta que la persona usuaria retome y la autorice expresamente.
+- Se utilizaron exclusivamente los dos subagentes requeridos: Implementador (edición) y Supervisor (revisión independiente). El coordinador no editó código.
+- No se hicieron push, PR, merge, migraciones, cambios de backend ni escrituras de prueba en la base compartida. No hay autorización para publicarlos posteriormente.
+- Los archivos `.env` y `.env.local` quedaron en `backend/.env` y `frontend/.env.local`; no forman parte de estos commits ni deben copiarse a este documento.
+
+### Commits locales y cambios entregados
+
+| Commit | Mensaje | Resultado |
+| --- | --- | --- |
+| `7fc26ac` | `fix(nav): prevent mobile header overlap` | Etapa 1: menú móvil accesible, Aa persistente, opciones completas, foco y distribución sin solapamientos; escritorio preservado. Controles del mapa y asistente se acomodan únicamente cuando el menú móvil está abierto. |
+| `cf9decd` | `docs(codex): define staged review workflow` | Instrucciones de este archivo incorporadas intactas en un commit separado. |
+| `9f8602b` | `fix(auth): cover viewport with login backdrop` | Etapa 2: login y confirmación de cuenta comparten diálogo nativo en la capa superior; backdrop completo, fondo inerte, restauración de foco y scroll interior. |
+| `48de880` | `fix(account): clear canceled sign-in actions` | Etapa 3: cancelar, acceso genérico, fallo OAuth, cierre de sesión o fallo de lectura descartan la intención pendiente; el favorito retomado solo se muestra guardado tras confirmación exitosa. Rechazos muestran error y revierten el cambio optimista cuando corresponde. |
+
+El checkpoint se registra después en un commit documental separado; consultar `git log -5 --oneline` para identificarlo. Al cerrar esta tanda se espera un árbol de trabajo limpio, sin cambios ajenos ni secretos preparados.
+
+### Validación efectivamente ejecutada
+
+- Etapa 1: lint, build y `git diff --check` aprobados. Chromium verificó anchos 320, 360, 390 y 430 px, ES/EN, letra normal/150%, horizontal, escritorio y teclado. El Supervisor verificó además 24 casos finales de mapa: ubicación, zoom y asistente visibles y alcanzables.
+- Etapa 2: lint, build y diff aprobados. Validación propia y ocho casos independientes del login confirmaron cobertura del viewport, contenido nítido, fondo no enfocable, Escape, foco, bloqueo/restauración del scroll y desplazamiento interno en horizontal. El Supervisor comprobó Tab, clic fuera, privacidad y mapa usando una sesión simulada local.
+- Etapa 3: **8 pruebas Node aprobadas**, también ejecutadas por el Supervisor: cancelar/descartar, consumo único, una sola escritura, confirmación antes de actualizar el Set, favorito existente, fallos de respuesta/rechazo/síncronos y almacenamiento corrupto/bloqueado. Helpers probados: `frontend/src/cuenta/pendiente.js`, usados realmente por el proveedor.
+- Etapa 3: lint sin nuevas advertencias, build y diff aprobados. El Supervisor verificó en navegador favorito anónimo → un único modal sin marcar guardado, Escape → intención eliminada y foco en corazón, acceso genérico → intención anterior eliminada y fallo OAuth simulado → intención eliminada y aviso. El cierre del modal tras ese error se comprobó en código, sin repetir la prueba dinámica después de añadirlo. No se usaron cuentas reales ni se ejecutó OAuth real.
+- Dictamen independiente para las etapas entregadas: **APROBABLE CON LIMITACIONES**, sin bloqueantes pendientes de la etapa 3. El build conserva el aviso de bundle superior a 500 kB; no se cambió la división del bundle.
+
+Para repetir las comprobaciones de la etapa 3, desde la raíz:
+
+```bash
+cd frontend
+node src/cuenta/pendiente.test.js
+npm run lint
+npm run build
+cd ..
+git diff --check
+```
+
+### Límites conocidos y comprobación humana pendiente
+
+- Faltan dispositivo móvil físico, Safari/otros motores y OAuth Microsoft real. No confundir las pruebas con mocks con validación de integración autenticada.
+- Etapa 2: la apertura dinámica de confirmación de borrado y denuncia **no se verificó** porque los fixtures no aportaron evidencia válida. El Supervisor revisó el wrapper compartido de confirmación y los diálogos de denuncia/reporte no modificados. No probar borrados reales para suplir esta limitación.
+- Etapa 3: la interacción dinámica de “Opinar” no se ejecutó; su ruta existente hacia el mismo `pedirEntrar()` fue revisada. No se añadió restauración de ficha/formulario tras OAuth ni publicación automática de reseñas.
+- Se detectó un caso preexistente fuera del flujo de invitado: un JWT expirado en `FormResena` puede llamar a `pedirEntrar()` mientras `sesion` aún existe, pero `BotonCuenta` muestra el login solo con `!sesion`. Se documenta para una decisión posterior; no se cambió el sistema de autenticación ni se introdujo una guarda que lo agravara.
+- Para validar la etapa 3 manualmente: sin sesión, pulsar un corazón, cancelar y después abrir Cuenta u Opinar; no debe guardarse el favorito anterior. Repetir el corazón y completar login de forma autorizada para comprobar guardado único; cancelar/error no deben aparentar guardado. Con sesión, favorito y formulario de reseña deben seguir sus flujos habituales sin pedir login otra vez.
+
+### Servicios locales y cómo retomar
+
+- URLs: frontend `http://127.0.0.1:5173`, documentación API `http://127.0.0.1:8000/docs`.
+- Últimas sesiones de herramientas conocidas: backend `9111`, Vite `64240`; son referencias efímeras, comprobar que siguen activos. Un apagado limpio previo del backend produjo `ECONNREFUSED` en el proxy; se reinició el servicio sin modificar código. No asumir que un error de proxy exige cambiar el frontend.
+- Si es necesario arrancarlos, usar dos terminales desde la raíz, conservando los archivos de entorno existentes:
+
+```bash
+cd backend
+PUEBLA_TAREAS=0 uv run uvicorn app.main:app --reload --port 8000
+```
+
+```bash
+cd frontend
+npm run dev -- --host 127.0.0.1
+```
+
+- Antes de retomar: leer este checkpoint, revisar rama, `git status --short --branch` y commits locales; preservar cualquier cambio nuevo. Solicitar primero la validación pendiente de la etapa 3 si no consta y esperar autorización explícita para la etapa 4. No repetir ni ampliar las etapas anteriores sin un fallo reportado o una orden expresa.
