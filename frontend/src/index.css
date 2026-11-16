@@ -603,6 +603,17 @@ body.cambiando-ancho .panel-flotante { transition: none; }
   backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .modal { width: min(480px, 100%); background: var(--blanco); border-radius: var(--r-l); padding: 24px; box-shadow: var(--sombra); }
+/* Cuenta: diálogo en la capa superior del navegador, fuera del apilamiento de la navbar. */
+.dialogo-cuenta {
+  position: fixed; inset: 0; width: 100%; height: 100dvh; max-width: none; max-height: none;
+  margin: 0; padding: 16px; border: 0; background: transparent; color: var(--tinta);
+}
+.dialogo-cuenta[open] { display: grid; place-items: center; }
+.dialogo-cuenta::backdrop {
+  background: rgba(31, 31, 31, .35);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.dialogo-cuenta .modal { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
 .guia h2 { font-size: var(--t-titulo); margin: var(--e-1) 0 var(--e-2); }
 .guia .secundario { font-size: var(--t-sub); }
 .guia-estados { list-style: none; display: grid; gap: var(--e-2); margin: var(--e-4) 0 0; padding: 0; font-weight: 600; }

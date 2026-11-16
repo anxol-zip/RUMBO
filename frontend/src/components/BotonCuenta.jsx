@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCuenta } from '../cuenta/contexto.js'
 import { useDialogo } from '../hooks/useDialogo.js'
@@ -52,7 +52,7 @@ function VentanaEntrar({ onCerrar }) {
   const caja = useRef(null)
   useDialogo(caja, onCerrar, { atrapar: true })
   return (
-    <div className="modal-fondo" role="dialog" aria-modal="true" aria-labelledby="titulo-entrar" onClick={onCerrar}>
+    <DialogoCuenta titulo="titulo-entrar" onCerrar={onCerrar}>
       <div className="modal" ref={caja} onClick={(e) => e.stopPropagation()}>
         <h2 id="titulo-entrar">{t('cuenta.entrar')}</h2>
         <p className="secundario">{t('cuenta.paraQue')}</p>
@@ -65,7 +65,7 @@ function VentanaEntrar({ onCerrar }) {
           <button type="button" className="boton" onClick={onCerrar}>{t('cuenta.cancelar')}</button>
         </div>
       </div>
-    </div>
+    </DialogoCuenta>
   )
 }
 
@@ -84,7 +84,7 @@ function ConfirmarBorrado({ onCerrar }) {
   }
 
   return (
-    <div className="modal-fondo" role="alertdialog" aria-modal="true" aria-labelledby="titulo-borrar" aria-describedby="texto-borrar" onClick={onCerrar}>
+    <DialogoCuenta titulo="titulo-borrar" descripcion="texto-borrar" role="alertdialog" onCerrar={onCerrar}>
       <div className="modal" ref={caja} onClick={(e) => e.stopPropagation()}>
         <h2 id="titulo-borrar">{t('cuenta.confirmarBorrado')}</h2>
         <p id="texto-borrar" className="secundario">{t('cuenta.borradoDefinitivo')}</p>
@@ -93,7 +93,45 @@ function ConfirmarBorrado({ onCerrar }) {
           <button type="button" className="boton peligro" disabled={enviando} onClick={borrar}>{t('cuenta.borrar')}</button>
         </div>
       </div>
-    </div>
+    </DialogoCuenta>
+  )
+}
+
+// La capa superior nativa evita que el backdrop-filter de la cabecera limite el fondo fijo.
+// showModal también impide interactuar con la página que queda detrás.
+function DialogoCuenta({ titulo, descripcion, role = 'dialog', onCerrar, children }) {
+  const dialogo = useRef(null)
+  useLayoutEffect(() => {
+    const elemento = dialogo.current
+    const raiz = document.documentElement
+    const overflow = raiz.style.overflow
+    raiz.style.overflow = 'hidden'
+    if (!elemento.open) elemento.showModal()
+    return () => {
+      elemento.close()
+      raiz.style.overflow = overflow
+    }
+  }, [])
+
+  return (
+    <dialog
+      ref={dialogo}
+      className="dialogo-cuenta"
+      role={role}
+      aria-modal="true"
+      aria-labelledby={titulo}
+      aria-describedby={descripcion}
+      onCancel={(evento) => { evento.preventDefault(); onCerrar() }}
+      onKeyDown={(evento) => {
+        if (evento.key !== 'Escape') return
+        evento.preventDefault()
+        evento.stopPropagation()
+        onCerrar()
+      }}
+      onClick={(evento) => { if (evento.target === evento.currentTarget) onCerrar() }}
+    >
+      {children}
+    </dialog>
   )
 }
 
