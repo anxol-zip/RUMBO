@@ -1,23 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { regreso, supabase } from '../api/supabase.js'
 import { Contexto } from './contexto.js'
+import { descartarPendiente, guardarPendiente, reanudarFavorito, tomarPendiente } from './pendiente.js'
 
 // Cuenta del turista (feature 002): sesión de Supabase (Microsoft), perfil (nombre, rol, gustos) y
 // Favoritos. Todo es opcional: sin sesión, o sin Supabase configurado (disponible = false), la app
 // funciona igual que antes. Las reglas (quién ve y cambia qué) las hace cumplir la base con RLS.
-const PENDIENTE = 'rumbo:pendiente'   // lo que la persona quiso hacer antes de iniciar sesión (FR-020)
 const SIN_PERFIL = { nombre: '', rol: 'turista', gustos: [] }
-
-function guardarPendiente(pendiente) {
-  try { sessionStorage.setItem(PENDIENTE, JSON.stringify(pendiente)) } catch { /* sin almacenamiento */ }
-}
-function tomarPendiente() {
-  try {
-    const pendiente = JSON.parse(sessionStorage.getItem(PENDIENTE))
-    sessionStorage.removeItem(PENDIENTE)
-    return pendiente
-  } catch { return null }
-}
 
 export function ProveedorCuenta({ children }) {
   const [sesion, setSesion] = useState(null)
@@ -36,9 +25,17 @@ export function ProveedorCuenta({ children }) {
 
   useEffect(() => {
     if (!supabase) return undefined
-    if (regreso.conError) window.history.replaceState(null, '', window.location.pathname)   // quita el error de la URL
+    if (regreso.conError) {
+      descartarPendiente()
+      window.history.replaceState(null, '', window.location.pathname)   // quita el error de la URL
+    }
     // También avisa cuando la sesión cambia en otra pestaña o se renueva sola.
-    const { data } = supabase.auth.onAuthStateChange((_evento, nueva) => { setSesion(nueva); setLista(true) })
+    const { data } = supabase.auth.onAuthStateChange((_evento, nueva) => {
+      setSesion(nueva)
+      setLista(true)
+      if (nueva) setPidiendoEntrar(false)
+      if (_evento === 'SIGNED_OUT') descartarPendiente()
+    })
     return () => data.subscription.unsubscribe()
   }, [])
 
@@ -51,31 +48,54 @@ export function ProveedorCuenta({ children }) {
     Promise.all([
       supabase.from('perfil').select('nombre, rol, gustos').maybeSingle(),
       supabase.from('favorito').select('punto_id'),
-    ]).then(([perfil, favs]) => {
+    ]).then(async ([perfil, favs]) => {
       if (!vigente) return
-      const favoritos = new Set((favs.data ?? []).map((f) => f.punto_id))
-      const pendiente = tomarPendiente()
-      if (pendiente?.tipo === 'favorito' && !favoritos.has(pendiente.puntoId)) {
-        favoritos.add(pendiente.puntoId)
-        supabase.from('favorito').upsert({ punto_id: pendiente.puntoId }, { onConflict: 'usuario_id,punto_id', ignoreDuplicates: true })
-          .then(({ error }) => avisar(error ? 'error.servidor' : 'favorito.agregado'))
-      } else if (regreso.conSesion) {
+      const conocidos = new Set((favs.data ?? []).map((f) => f.punto_id))
+      if (favs.error) descartarPendiente()
+      // Consumir solo después de cargar y comprobar que esta cuenta sigue vigente (StrictMode).
+      const resultado = await reanudarFavorito(favs.error ? null : tomarPendiente(), conocidos,
+        (puntoId) => supabase.from('favorito').upsert({ punto_id: puntoId }, { onConflict: 'usuario_id,punto_id', ignoreDuplicates: true }))
+      if (!vigente) return
+      if (perfil.error || favs.error || resultado.error) avisar('error.servidor')
+      else if (resultado.agregado) avisar('favorito.agregado')
+      else if (regreso.conSesion) {
         avisar('cuenta.iniciada')
       }
       regreso.conSesion = false
-      setDatos({ uid, perfil: perfil.data ?? SIN_PERFIL, favoritos })
+      setDatos({ uid, perfil: perfil.data ?? SIN_PERFIL, favoritos: resultado.favoritos })
+    }).catch(() => {
+      if (!vigente) return
+      descartarPendiente()
+      avisar('error.servidor')
+      setDatos({ uid, perfil: SIN_PERFIL, favoritos: new Set() })
     })
     return () => { vigente = false }
   }, [uid, avisar])
 
-  const pedirEntrar = useCallback(() => setPidiendoEntrar(true), [])
-  const cancelarEntrar = useCallback(() => setPidiendoEntrar(false), [])
+  const pedirEntrar = useCallback(() => {
+    descartarPendiente()             // Cuenta u "Opinar" no reanudan un favorito anterior.
+    if (!supabase) { avisar('error.login'); return }
+    setPidiendoEntrar(true)
+  }, [avisar])
+  const cancelarEntrar = useCallback(() => {
+    descartarPendiente()
+    setPidiendoEntrar(false)
+  }, [])
 
   // Página completa, sin ventanas emergentes; al terminar, Microsoft regresa a esta misma pantalla.
-  const entrar = useCallback(() => supabase?.auth.signInWithOAuth({
-    provider: 'azure',
-    options: { scopes: 'email profile', redirectTo: window.location.origin + window.location.pathname },
-  }), [])
+  const entrar = useCallback(async () => {
+    try {
+      if (!supabase) throw new Error('Sin Supabase')
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'azure',
+        options: { scopes: 'email profile', redirectTo: window.location.origin + window.location.pathname },
+      })
+      if (!error) return
+    } catch { /* el aviso también cubre fallos de red y configuración */ }
+    descartarPendiente()
+    setPidiendoEntrar(false)
+    avisar('error.login')
+  }, [avisar])
 
   const salir = useCallback(async () => {
     await supabase.auth.signOut()
@@ -97,8 +117,9 @@ export function ProveedorCuenta({ children }) {
   }, [uid])
 
   const alternarFavorito = useCallback(async (puntoId) => {
+    if (!supabase) { avisar('error.login'); return }
     if (!uid) {                       // sin sesión: se recuerda y se completa al volver (FR-020)
-      guardarPendiente({ tipo: 'favorito', puntoId })
+      guardarPendiente(puntoId)
       setPidiendoEntrar(true)
       return
     }
@@ -110,10 +131,13 @@ export function ProveedorCuenta({ children }) {
       return { ...d, favoritos }
     })
     poner(!estaba)                    // se ve al instante; si la base lo rechaza, se regresa
-    const { error } = estaba
-      ? await supabase.from('favorito').delete().eq('punto_id', puntoId)
-      : await supabase.from('favorito').upsert({ punto_id: puntoId }, { onConflict: 'usuario_id,punto_id', ignoreDuplicates: true })
-    if (error) { poner(estaba); avisar('error.servidor') } else avisar(estaba ? 'favorito.quitado' : 'favorito.agregado')
+    try {
+      const { error } = estaba
+        ? await supabase.from('favorito').delete().eq('punto_id', puntoId)
+        : await supabase.from('favorito').upsert({ punto_id: puntoId }, { onConflict: 'usuario_id,punto_id', ignoreDuplicates: true })
+      if (error) throw error
+      avisar(estaba ? 'favorito.quitado' : 'favorito.agregado')
+    } catch { poner(estaba); avisar('error.servidor') }
   }, [uid, mios, avisar])
 
   const valor = useMemo(() => ({
