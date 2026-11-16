@@ -2,7 +2,7 @@
 // Los nombres propios (lugares, destinos, eventos) no se traducen.
 const es = {
   cargando: 'Cargando…',
-  'nav.inicio': 'Inicio', 'nav.secciones': 'Secciones', 'nav.explorar': 'Explorar', 'nav.panel': 'Panel', 'nav.acerca': 'Acerca de', 'nav.info': 'Info',
+  'nav.inicio': 'Inicio', 'nav.secciones': 'Secciones', 'nav.explorar': 'Explorar', 'nav.panel': 'Panel', 'nav.acerca': 'Acerca de', 'nav.info': 'Info', 'nav.menu': 'Menú', 'nav.cerrarMenu': 'Cerrar',
   'idioma.grupo': 'Idioma',
   'lectura.boton': 'Opciones para ver mejor', 'lectura.titulo': 'Ver mejor',
   'lectura.letra': 'Tamaño de letra', 'lectura.normal': 'Normal', 'lectura.grande': 'Grande', 'lectura.muy_grande': 'Muy grande',
@@ -161,7 +161,7 @@ const es = {
 
 const en = {
   cargando: 'Loading…',
-  'nav.inicio': 'Home', 'nav.secciones': 'Sections', 'nav.explorar': 'Explore', 'nav.panel': 'Dashboard', 'nav.acerca': 'About', 'nav.info': 'About',
+  'nav.inicio': 'Home', 'nav.secciones': 'Sections', 'nav.explorar': 'Explore', 'nav.panel': 'Dashboard', 'nav.acerca': 'About', 'nav.info': 'About', 'nav.menu': 'Menu', 'nav.cerrarMenu': 'Close',
   'idioma.grupo': 'Language',
   'lectura.boton': 'Display options', 'lectura.titulo': 'Easier to see',
   'lectura.letra': 'Text size', 'lectura.normal': 'Normal', 'lectura.grande': 'Large', 'lectura.muy_grande': 'Extra large',
