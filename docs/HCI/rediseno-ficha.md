@@ -4,6 +4,9 @@
 **Fecha:** 2026-11-14
 **Alcance:** solo frontend (`frontend/src`). No cambia el backend ni la base de datos.
 
+> [!note] Actualizado el 2026-11-17
+> La ficha pasó a una sola columna con lo secundario plegado, y se quitó la barra «Gente ahora» (§1.1 y §1.3 ya no aplican). Detalle en [`rediseno-perfil-y-ficha.md`](rediseno-perfil-y-ficha.md).
+
 **Objetivo:** que la ficha de un lugar responda primero "¿voy o no?" y luego muestre los datos ordenados en tarjetas fáciles de escanear, sin emojis y con el rosa de la marca. Aplica a **todos los lugares**, porque todas las fichas usan el mismo componente (`TarjetaPunto.jsx`).
 
 ---
