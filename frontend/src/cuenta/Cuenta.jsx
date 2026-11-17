@@ -33,17 +33,20 @@ export function ProveedorCuenta({ children }) {
       window.history.replaceState(null, '', window.location.pathname)   // quita el error de la URL
     }
     // También avisa cuando la sesión cambia en otra pestaña o se renueva sola.
-    const { data } = supabase.auth.onAuthStateChange((_evento, nueva) => {
+    const { data } = supabase.auth.onAuthStateChange((evento, nueva) => {
+      const otraCuenta = sesionActual.current?.user.id !== nueva?.user.id
       sesionActual.current = nueva
       setSesion(nueva)
       setLista(true)
       if (nueva) {
         setPidiendoEntrar(false)
-        // Un evento de la misma cuenta también puede traer un rol revocado o cambiado.
-        // Invalidar el perfil anterior hasta volver a confirmarlo en la base.
-        setRevision((n) => n + 1)
+        // Supabase emite SIGNED_IN cada vez que la pestaña vuelve a estar visible y TOKEN_REFRESHED
+        // cada hora. Recargar el perfil en esos eventos ponía `cargando` en true y desmontaba el panel.
+        // Solo se vuelve a confirmar con otra cuenta o si cambió el usuario; un rol revocado se nota al
+        // recargar, y el backend lo comprueba en cada petición (solo_admin).
+        if (otraCuenta || evento === 'USER_UPDATED') setRevision((n) => n + 1)
       }
-      if (_evento === 'SIGNED_OUT') { descartarPendiente(); setDatos(null) }
+      if (evento === 'SIGNED_OUT') { descartarPendiente(); setDatos(null) }
     })
     return () => data.subscription.unsubscribe()
   }, [])
