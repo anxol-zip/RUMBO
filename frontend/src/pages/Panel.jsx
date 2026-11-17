@@ -11,6 +11,7 @@ import Redirecciones from '../components/panel/Redirecciones.jsx'
 import ResenasDenunciadas from '../components/panel/ResenasDenunciadas.jsx'
 import SemaforoEstatal from '../components/panel/SemaforoEstatal.jsx'
 import Umbrales from '../components/panel/Umbrales.jsx'
+import Esqueleto from '../components/Esqueleto.jsx'
 
 const RECARGA_MS = 30_000
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
@@ -25,7 +26,7 @@ function Panel({ onError }) {
   // Solo administradores (feature 002). No se pide ningún dato del panel hasta saber el rol; el
   // backend lo vuelve a comprobar en cada petición (401 o 403).
   let cerrado = null
-  if (cargando) cerrado = <p className="suave">Cargando…</p>
+  if (cargando) cerrado = <Esqueleto tipo="cuenta" />
   else if (!sesion) {
     cerrado = (
       <>
@@ -88,7 +89,8 @@ function ContenidoPanel({ nota, etiquetaDemo, idiomaDemo, onError }) {
     }
   }
 
-  if (!datos) return <div className="gobierno">{!fallo && <p className="suave">Cargando panel…</p>}</div>
+  if (!datos) return <div className="gobierno">{!fallo ? <Esqueleto tipo="panel" />
+    : <button type="button" className="boton" onClick={() => { setFallo(false); setVersion((v) => v + 1) }}>Reintentar</button>}</div>
 
   const { afluencia, redirecciones, derrama, estatal, umbrales, ajustes } = datos
 

@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { claveDeError, supabase } from '../api/supabase.js'
 import { useCuenta } from '../cuenta/contexto.js'
 import { useDialogo } from '../hooks/useDialogo.js'
 import { useIdioma } from '../i18n/contexto.js'
 import FormResena from './FormResena.jsx'
+import Esqueleto from './Esqueleto.jsx'
 
 const PAGINA = 10
 const CAMPOS = 'id, usuario_id, autor, estrellas, accesible, texto, estado, utiles, creada_en, editada_en'
@@ -16,7 +17,8 @@ function pedirPagina(puntoId, orden, desde) {
 }
 async function pedirVotos(uid, resenas) {
   if (!uid || resenas.length === 0) return []
-  const { data } = await supabase.from('resena_util').select('resena_id').eq('usuario_id', uid).in('resena_id', resenas.map((r) => r.id))
+  const { data, error } = await supabase.from('resena_util').select('resena_id').eq('usuario_id', uid).in('resena_id', resenas.map((r) => r.id))
+  if (error) throw error
   return (data ?? []).map((v) => v.resena_id)
 }
 
@@ -35,9 +37,18 @@ function Resenas({ puntoId }) {
   const [orden, setOrden] = useState('utiles')
   const [version, setVersion] = useState(0)
   const [datos, setDatos] = useState(null)      // { clave, resumen, lista, hayMas, mia, votos }
+  const [errorCarga, setErrorCarga] = useState(null)
+  const [paginacion, setPaginacion] = useState(null)
   const [editando, setEditando] = useState(false)
   const [denunciada, setDenunciada] = useState(null)
-  const clave = `${puntoId}|${orden}|${uid}|${version}`
+  const clave = `${puntoId}|${orden}|${uid}`
+  // Un token nuevo también al volver al mismo orden: no reutilizar cargas ni errores anteriores.
+  const peticion = useMemo(() => ({ clave, version }), [clave, version])
+  const peticionActual = useRef(peticion)
+  useLayoutEffect(() => {
+    peticionActual.current = peticion
+    return () => { peticionActual.current = null }
+  }, [peticion])
 
   useEffect(() => {
     if (!disponible) return undefined
@@ -48,28 +59,44 @@ function Resenas({ puntoId }) {
         pedirPagina(puntoId, orden, 0),
         uid ? supabase.from('resena').select(CAMPOS).eq('punto_id', puntoId).eq('usuario_id', uid).maybeSingle() : { data: null },
       ])
+      if (resumen.error || pagina.error || mia.error) throw resumen.error || pagina.error || mia.error
       const lista = (pagina.data ?? []).slice(0, PAGINA)
       const votos = await pedirVotos(uid, lista)
       if (vigente) {
-        setDatos({ clave, resumen: resumen.data?.[0] ?? null, lista, hayMas: (pagina.data ?? []).length > PAGINA, mia: mia.data, votos: new Set(votos) })
+        setDatos({ clave, peticion, resumen: resumen.data?.[0] ?? null, lista, hayMas: (pagina.data ?? []).length > PAGINA, mia: mia.data, votos: new Set(votos) })
       }
     }
-    cargar()
+    cargar().catch(() => { if (vigente) setErrorCarga(peticion) })
     return () => { vigente = false }
-  }, [disponible, puntoId, orden, uid, version, clave])
+  }, [disponible, puntoId, orden, uid, version, clave, peticion])
 
   if (!disponible) return null
   const recargar = () => { setEditando(false); setVersion((v) => v + 1) }
   const fecha = (iso) => new Date(iso).toLocaleDateString(idioma === 'en' ? 'en-US' : 'es-MX', { year: 'numeric', month: 'short', day: 'numeric' })
-  const { resumen, lista = [], hayMas = false, mia = null, votos = new Set() } = datos ?? {}
+  const actuales = datos?.clave === clave ? datos : null
+  const fallo = errorCarga === peticion
+  const cargando = !actuales && !fallo
+  const masCargando = paginacion?.peticion === peticion && paginacion.cargando
+  const errorPagina = paginacion?.peticion === peticion && paginacion.error
+  const puedePaginar = actuales?.peticion === peticion
+  const { resumen, lista = [], hayMas = false, mia = null, votos = new Set() } = actuales ?? {}
 
   async function verMas() {
-    const { data } = await pedirPagina(puntoId, orden, lista.length)
-    const nuevas = (data ?? []).slice(0, PAGINA)
-    const suyos = await pedirVotos(uid, nuevas)
-    setDatos((d) => (d?.clave === clave
-      ? { ...d, lista: [...d.lista, ...nuevas], hayMas: (data ?? []).length > PAGINA, votos: new Set([...d.votos, ...suyos]) }
-      : d))
+    if (!puedePaginar || masCargando) return
+    setPaginacion({ peticion, cargando: true, error: false })
+    try {
+      const { data, error } = await pedirPagina(puntoId, orden, lista.length)
+      if (error) throw error
+      const nuevas = (data ?? []).slice(0, PAGINA)
+      const suyos = await pedirVotos(uid, nuevas)
+      if (peticionActual.current !== peticion) return
+      setDatos((d) => (d?.peticion === peticion && d.lista.length === lista.length
+        ? { ...d, lista: [...d.lista, ...nuevas], hayMas: (data ?? []).length > PAGINA, votos: new Set([...d.votos, ...suyos]) }
+        : d))
+      setPaginacion((p) => p?.peticion === peticion ? { peticion, cargando: false, error: false } : p)
+    } catch {
+      if (peticionActual.current === peticion) setPaginacion((p) => p?.peticion === peticion ? { peticion, cargando: false, error: true } : p)
+    }
   }
 
   async function alternarUtil(r) {
@@ -90,8 +117,9 @@ function Resenas({ puntoId }) {
     <section className="resenas" aria-labelledby="titulo-resenas">
       <h3 id="titulo-resenas">{t('resena.titulo')}</h3>
 
-      {!datos && <p className="suave">{t('cargando')}</p>}
-      {datos && (!resumen || resumen.total === 0) && <p className="secundario">{t('resena.sinResenas')}</p>}
+      {cargando && <Esqueleto tipo="resenas" />}
+      {fallo && <div><p role="alert">{t('carga.errorResenas')}</p><button type="button" className="boton-texto" onClick={recargar}>{t('error.reintentar')}</button></div>}
+      {actuales && (!resumen || resumen.total === 0) && <p className="secundario">{t('resena.sinResenas')}</p>}
       {resumen && resumen.total > 0 && (
         <div className="resumen-resenas">
           <p className="promedio"><strong>{t('resena.deCinco', { n: Number(resumen.promedio).toFixed(1) })}</strong> · {t(resumen.total === 1 ? 'resena.una' : 'resena.varias', { n: resumen.total })}</p>
@@ -108,9 +136,9 @@ function Resenas({ puntoId }) {
         </div>
       )}
 
-      {datos && !uid && <button type="button" className="boton" onClick={pedirEntrar}>{t('resena.opinar')}</button>}
-      {datos && uid && !mia && <FormResena key={`nueva-${puntoId}`} puntoId={puntoId} onGuardada={recargar} />}
-      {datos && uid && mia && !editando && (
+      {actuales && !uid && <button type="button" className="boton" onClick={pedirEntrar}>{t('resena.opinar')}</button>}
+      {actuales && uid && !mia && <FormResena key={`nueva-${puntoId}`} puntoId={puntoId} onGuardada={recargar} />}
+      {actuales && uid && mia && !editando && (
         <div className="resena mia">
           <p className="suave">{t('resena.tuResena')}{mia.estado === 'oculta' && <> · <strong>{t('resena.oculta')}</strong></>}</p>
           <p><Estrellas n={mia.estrellas} /></p>
@@ -118,15 +146,17 @@ function Resenas({ puntoId }) {
           <button type="button" className="boton" onClick={() => setEditando(true)}>{t('resena.editar')}</button>
         </div>
       )}
-      {datos && uid && mia && editando && <FormResena key={mia.id} puntoId={puntoId} mia={mia} onGuardada={recargar} onCancelar={() => setEditando(false)} />}
+      {actuales && uid && mia && editando && <FormResena key={mia.id} puntoId={puntoId} mia={mia} onGuardada={recargar} onCancelar={() => setEditando(false)} />}
 
-      {lista.length > 0 && (
-        <>
+      {(lista.length > 0 || cargando) && (
           <div className="filtros" role="group" aria-label={t('resena.ordenar')}>
             {Object.keys(ORDEN).map((o) => (
               <button key={o} type="button" className="chip" aria-pressed={orden === o} onClick={() => setOrden(o)}>{t(`resena.${o}`)}</button>
             ))}
           </div>
+      )}
+      {lista.length > 0 && (
+        <>
           <ul className="lista-resenas">
             {lista.map((r) => (
               <li key={r.id} className="resena">
@@ -142,7 +172,9 @@ function Resenas({ puntoId }) {
               </li>
             ))}
           </ul>
-          {hayMas && <button type="button" className="boton ancho" onClick={verMas}>{t('resena.verMas')}</button>}
+          {masCargando && <Esqueleto tipo="masResenas" />}
+          {errorPagina && <p role="alert">{t('carga.errorResenas')}</p>}
+          {hayMas && <button type="button" className="boton ancho" disabled={masCargando || !puedePaginar} onClick={verMas}>{t('resena.verMas')}</button>}
         </>
       )}
       {denunciada && <Denunciar resena={denunciada} onCerrar={() => setDenunciada(null)} />}

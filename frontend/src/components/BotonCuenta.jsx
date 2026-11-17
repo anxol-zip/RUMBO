@@ -3,17 +3,18 @@ import { Link, useLocation } from 'react-router-dom'
 import { useCuenta } from '../cuenta/contexto.js'
 import { useDialogo } from '../hooks/useDialogo.js'
 import { useIdioma } from '../i18n/contexto.js'
+import Esqueleto from './Esqueleto.jsx'
 
 // Cuenta en la cabecera (feature 002): "Iniciar sesión" o, con sesión, el nombre con su menú.
 // Si las cuentas no están configuradas (sin frontend/.env.local), no aparece nada.
-function BotonCuenta({ catalogo, errorCatalogo, onReintentarCatalogo, onNavegar }) {
+function BotonCuenta({ catalogo, cargandoCatalogo, errorCatalogo, onReintentarCatalogo, onNavegar }) {
   const { t } = useIdioma()
   const { disponible, sesion, pidiendoEntrar, pedirEntrar, cancelarEntrar } = useCuenta()
   if (!disponible) return null
   return (
     <div className="cuenta">
       {sesion
-        ? <CuentaConSesion key={sesion.user.id} catalogo={catalogo} errorCatalogo={errorCatalogo} onReintentarCatalogo={onReintentarCatalogo} onNavegar={onNavegar} />
+        ? <CuentaConSesion key={sesion.user.id} catalogo={catalogo} cargandoCatalogo={cargandoCatalogo} errorCatalogo={errorCatalogo} onReintentarCatalogo={onReintentarCatalogo} onNavegar={onNavegar} />
         : <button type="button" className="boton boton-cuenta" onClick={pedirEntrar}>{t('cuenta.entrar')}</button>}
       {!sesion && pidiendoEntrar && <VentanaEntrar onCerrar={cancelarEntrar} />}
     </div>
@@ -21,7 +22,7 @@ function BotonCuenta({ catalogo, errorCatalogo, onReintentarCatalogo, onNavegar 
 }
 
 // Se desmonta al salir o cambiar de usuario: ningún panel o confirmación pasa a otra sesión.
-function CuentaConSesion({ catalogo, errorCatalogo, onReintentarCatalogo, onNavegar }) {
+function CuentaConSesion({ catalogo, cargandoCatalogo, errorCatalogo, onReintentarCatalogo, onNavegar }) {
   const { t } = useIdioma()
   const { perfil } = useCuenta()
   const [menu, setMenu] = useState(false)
@@ -29,13 +30,13 @@ function CuentaConSesion({ catalogo, errorCatalogo, onReintentarCatalogo, onNave
   const nombre = perfil?.nombre?.split(' ')[0] || t('cuenta.miCuenta')
   return <>
     <button type="button" className="boton boton-cuenta" aria-expanded={menu} aria-controls="menu-cuenta" onClick={() => setMenu((m) => !m)}>{nombre}</button>
-    {menu && <MenuCuenta catalogo={catalogo} errorCatalogo={errorCatalogo} onReintentarCatalogo={onReintentarCatalogo}
+    {menu && <MenuCuenta catalogo={catalogo} cargandoCatalogo={cargandoCatalogo} errorCatalogo={errorCatalogo} onReintentarCatalogo={onReintentarCatalogo}
       onCerrar={() => setMenu(false)} onNavegar={onNavegar} onBorrar={() => { setMenu(false); setBorrando(true) }} />}
     {borrando && <ConfirmarBorrado onCerrar={() => setBorrando(false)} />}
   </>
 }
 
-function MenuCuenta({ catalogo, errorCatalogo, onReintentarCatalogo, onCerrar, onBorrar, onNavegar }) {
+function MenuCuenta({ catalogo, cargandoCatalogo, errorCatalogo, onReintentarCatalogo, onCerrar, onBorrar, onNavegar }) {
   const { t } = useIdioma()
   const ubicacion = useLocation()
   const { perfil, usuario, favoritos, cargando, errorCuenta, recargarCuenta, salir, alternarFavorito } = useCuenta()
@@ -57,6 +58,7 @@ function MenuCuenta({ catalogo, errorCatalogo, onReintentarCatalogo, onCerrar, o
   if (quitando !== null && !ids.includes(quitando)) ids.push(quitando)
   const lugares = ids.map((id) => catalogo.find((p) => p.id === id) ?? { id, nombre: t('cuenta.lugarNoDisponible'), ausente: true })
     .sort((a, b) => a.nombre.localeCompare(b.nombre))
+  const cargandoFavoritos = cargando || (!errorCuenta && ids.length > 0 && catalogo.length === 0 && cargandoCatalogo)
   function enlace(id) {
     const parametros = new URLSearchParams(ubicacion.search)
     parametros.set('lugar', String(id))
@@ -87,14 +89,14 @@ function MenuCuenta({ catalogo, errorCatalogo, onReintentarCatalogo, onCerrar, o
         <button type="button" className="boton-texto" onClick={onCerrar}>{t('cuenta.cerrarPanel')}</button>
         {usuario.email && <p className="menu-cuenta-correo">{usuario.email}</p>}
       </div>
-      <section className="menu-cuenta-favoritos" aria-labelledby="titulo-favoritos" aria-busy={cargando || quitando !== null}>
+      {cargandoFavoritos && <p className="oculto-accesible" role="status">{t('carga.favoritos')}</p>}
+      <section className="menu-cuenta-favoritos" aria-labelledby="titulo-favoritos" aria-busy={cargandoFavoritos || quitando !== null}>
         <h3 id="titulo-favoritos" tabIndex={-1}>{t('filtros.favoritos')}</h3>
-        {cargando ? <p role="status">{t('cuenta.cargando')}</p>
+        {cargandoFavoritos ? <Esqueleto tipo="favoritos" anunciar={false} />
           : errorCuenta ? <div><p role="alert">{t('cuenta.errorCargar')}</p><button type="button" className="boton-texto" onClick={recargarCuenta}>{t('error.reintentar')}</button></div>
             : ids.length === 0 ? <p className="secundario">{t('filtros.sinFavoritos')}</p>
               : errorCatalogo ? <div><p role="alert">{t('cuenta.errorCargar')}</p><button type="button" className="boton-texto" onClick={onReintentarCatalogo}>{t('error.reintentar')}</button></div>
-                : catalogo.length === 0 ? <p role="status">{t('cuenta.cargando')}</p>
-                  : <ul className="menu-cuenta-lista">{lugares.map((p) => (
+                : <ul className="menu-cuenta-lista">{lugares.map((p) => (
                     <li key={p.id}>
                       {p.ausente ? <p>{p.nombre}</p> : <Link to={enlace(p.id)} onClick={(e) => {
                         if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return

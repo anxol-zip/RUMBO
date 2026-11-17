@@ -6,6 +6,7 @@ import { useIdioma } from '../i18n/contexto.js'
 import BotonEscuchar from './BotonEscuchar.jsx'
 import Foto from './Foto.jsx'
 import Semaforo from './Semaforo.jsx'
+import Esqueleto from './Esqueleto.jsx'
 
 const corto = (nombre) => nombre.split(' (')[0]
 
@@ -59,7 +60,7 @@ function Recomendacion({ puntoId, sesionId, origenId, catalogo, intereses, onVol
   }
 
   if (fallo) return <button type="button" className="boton-texto" onClick={onVolver}>{t('rec.volver')}</button>
-  if (!rec) return <p className="suave">{t('rec.buscando')}</p>
+  if (!rec) return <Esqueleto tipo="recomendacion" />
 
   const { pedido, alternativa, otra_hora: otraHora } = rec
   const explicacion = idioma === 'en' ? explicacionRec(rec, t) : rec.razon

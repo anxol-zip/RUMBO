@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api, codigoDe } from '../api/cliente.js'
 import { useIdioma } from '../i18n/contexto.js'
 import Icono from './Icono.jsx'
+import Esqueleto from './Esqueleto.jsx'
 
 // "¿Cuándo me conviene ir?" a pantalla completa del panel: reemplaza la ficha mientras está abierta.
 // Tabla día × hora de los próximos días (GET /api/puntos/{id}/semana): es la estimación sin reportes,
@@ -67,7 +68,7 @@ function VistaSemana({ puntoId, nombre, onCerrar, onError }) {
       <h2 id="semana-titulo" ref={titulo} tabIndex={-1}>{t('semana.titulo')}</h2>
       <p className="suave">{nombre}{dias.length > 0 ? ` · ${t('semana.proximosDias', { n: dias.length })}` : ''}</p>
 
-      {!semana && <div className="semana-cargando" aria-busy="true"><span className="oculto-accesible">{t('cargando')}</span></div>}
+      {!semana && <Esqueleto tipo="semana" />}
 
       {semana && horas.length === 0 && <p className="suave" style={{ marginTop: 16 }}>{t('semana.sinDatos')}</p>}
 

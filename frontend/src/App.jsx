@@ -13,20 +13,32 @@ function App() {
   const { t } = useIdioma()
   const { aviso, perfil, guardarGustos } = useCuenta()
   // Estado que comparten varias pantallas: vive aquí y baja por props (docs/05c §3.3).
-  const [catalogo, setCatalogo] = useState([])
-  const [errorCatalogo, setErrorCatalogo] = useState(false)
+  const [revisionCatalogo, setRevisionCatalogo] = useState(0)
+  const [respuestaCatalogo, setRespuestaCatalogo] = useState(null)
+  const catalogo = respuestaCatalogo?.puntos ?? []
+  const cargandoCatalogo = respuestaCatalogo?.revision !== revisionCatalogo
+  const errorCatalogo = !cargandoCatalogo && respuestaCatalogo.error
   const [sesion, setSesion] = useState(null)        // { sesionId, perfil: { intereses, horas, origenId } }
 
   // Código del último error: las pantallas lo reportan con onError y aquí se convierte en mensaje.
   const [errorCodigo, setErrorCodigo] = useState(null)
 
-  const cargarCatalogo = useCallback(() => {
-    api.obtenerPuntos()
-      .then((puntos) => { setCatalogo(puntos); setErrorCatalogo(false); setErrorCodigo(null) })
-      .catch((e) => { setErrorCatalogo(true); setErrorCodigo(codigoDe(e)) })
-  }, [])
+  const cargarCatalogo = useCallback(() => setRevisionCatalogo((n) => n + 1), [])
 
-  useEffect(() => { cargarCatalogo() }, [cargarCatalogo])
+  useEffect(() => {
+    let vigente = true
+    api.obtenerPuntos()
+      .then((puntos) => {
+        if (vigente) { setRespuestaCatalogo({ puntos, revision: revisionCatalogo, error: false }); setErrorCodigo(null) }
+      })
+      .catch((e) => {
+        if (vigente) {
+          setRespuestaCatalogo((anterior) => ({ puntos: anterior?.puntos ?? [], revision: revisionCatalogo, error: true }))
+          setErrorCodigo(codigoDe(e))
+        }
+      })
+    return () => { vigente = false }
+  }, [revisionCatalogo])
 
   // Cuenta nueva sin gustos: se guardan los que la persona ya eligió en esta visita (FR-017).
   const deLaVisita = sesion?.perfil.intereses
@@ -38,13 +50,13 @@ function App() {
     <div className="app">
       {/* Primer elemento con teclado: salta la cabecera (D6) */}
       <a className="saltar" href="#contenido">{t('saltar')}</a>
-      <Cabecera catalogo={catalogo} errorCatalogo={errorCatalogo} onReintentarCatalogo={cargarCatalogo} />
+      <Cabecera catalogo={catalogo} cargandoCatalogo={cargandoCatalogo} errorCatalogo={errorCatalogo} onReintentarCatalogo={cargarCatalogo} />
       {/* Avisos de la cuenta (sesión iniciada, guardado, límite…): se ven y el lector de pantalla los anuncia. */}
       <p className="aviso-cuenta" role="status" aria-live="polite">{aviso && t(aviso.clave)}</p>
       {errorCodigo && <AvisoError codigo={errorCodigo} onCerrar={() => setErrorCodigo(null)} />}
       <main className="app-principal" id="contenido" tabIndex={-1}>
         <Routes>
-          <Route path="/" element={<Turista catalogo={catalogo} errorCatalogo={errorCatalogo} onReintentar={cargarCatalogo} sesion={sesion} onSesion={setSesion} onError={setErrorCodigo} />} />
+          <Route path="/" element={<Turista catalogo={catalogo} cargandoCatalogo={cargandoCatalogo} errorCatalogo={errorCatalogo} onReintentar={cargarCatalogo} sesion={sesion} onSesion={setSesion} onError={setErrorCodigo} />} />
           <Route path="/panel" element={<Panel onError={setErrorCodigo} />} />
           <Route path="/acerca" element={<Acerca />} />
         </Routes>

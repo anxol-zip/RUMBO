@@ -1,6 +1,11 @@
 // Textos de la interfaz en español e inglés. {variable} se reemplaza al usarlos: t('clave', { variable }).
 // Los nombres propios (lugares, destinos, eventos) no se traducen.
 const es = {
+  'carga.inicio': 'Cargando lugares y opciones de visita…', 'carga.lista': 'Cargando lugares…',
+  'carga.ficha': 'Cargando la ficha del lugar…', 'carga.resenas': 'Cargando reseñas…', 'carga.masResenas': 'Cargando más reseñas…',
+  'carga.favoritos': 'Cargando tus Favoritos…', 'carga.panel': 'Cargando el panel…', 'carga.cuenta': 'Comprobando tu cuenta…',
+  'carga.semana': 'Cargando la afluencia de la semana…', 'carga.recomendacion': 'Buscando una alternativa…',
+  'carga.sinLugares': 'No hay lugares disponibles en este momento.', 'carga.errorResenas': 'No pudimos cargar las reseñas.',
   cargando: 'Cargando…',
   'nav.inicio': 'Inicio', 'nav.secciones': 'Secciones', 'nav.explorar': 'Explorar', 'nav.panel': 'Panel', 'nav.acerca': 'Acerca de', 'nav.info': 'Info', 'nav.menu': 'Menú', 'nav.cerrarMenu': 'Cerrar',
   'idioma.grupo': 'Idioma',
@@ -167,6 +172,11 @@ const es = {
 }
 
 const en = {
+  'carga.inicio': 'Loading places and visit options…', 'carga.lista': 'Loading places…',
+  'carga.ficha': 'Loading place details…', 'carga.resenas': 'Loading reviews…', 'carga.masResenas': 'Loading more reviews…',
+  'carga.favoritos': 'Loading your Favorites…', 'carga.panel': 'Loading the dashboard…', 'carga.cuenta': 'Checking your account…',
+  'carga.semana': 'Loading weekly crowd levels…', 'carga.recomendacion': 'Finding an alternative…',
+  'carga.sinLugares': 'No places are available right now.', 'carga.errorResenas': 'We couldn’t load the reviews.',
   cargando: 'Loading…',
   'nav.inicio': 'Home', 'nav.secciones': 'Sections', 'nav.explorar': 'Explore', 'nav.panel': 'Dashboard', 'nav.acerca': 'About', 'nav.info': 'About', 'nav.menu': 'Menu', 'nav.cerrarMenu': 'Close',
   'idioma.grupo': 'Language',

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../api/supabase.js'
 import { useCuenta } from '../../cuenta/contexto.js'
+import Esqueleto from '../Esqueleto.jsx'
 
 // Moderación (feature 002, FR-029 a FR-031): reseñas con denuncias, primero las que tienen más.
 // El administrador solo oculta o restaura; la base no deja a nadie más (RLS + RN_R2).
@@ -8,13 +9,15 @@ function ResenasDenunciadas({ puntos }) {
   const { avisar } = useCuenta()
   const [grupos, setGrupos] = useState(null)
   const [version, setVersion] = useState(0)
+  const [errorCarga, setErrorCarga] = useState(null)
 
   useEffect(() => {
     let vigente = true
     supabase.from('resena_denuncia')
       .select('motivo, creada_en, resena:resena_id(id, punto_id, autor, estrellas, texto, estado)')
-      .then(({ data }) => {
+      .then(({ data, error }) => {
         if (!vigente) return
+        if (error) throw error
         const porResena = new Map()
         for (const d of data ?? []) {
           if (!d.resena) continue
@@ -23,6 +26,7 @@ function ResenasDenunciadas({ puntos }) {
         }
         setGrupos([...porResena.values()].sort((a, b) => b.motivos.length - a.motivos.length))
       })
+      .catch(() => { if (vigente) setErrorCarga(version) })
     return () => { vigente = false }
   }, [version])
 
@@ -32,12 +36,14 @@ function ResenasDenunciadas({ puntos }) {
     setVersion((v) => v + 1)
   }
 
-  if (!grupos) return <p className="suave">Cargando…</p>
-  if (grupos.length === 0) return <p className="secundario">No hay reseñas denunciadas.</p>
+  const avisoError = errorCarga === version && <div><p role="alert">No se pudieron cargar las reseñas denunciadas.</p>
+    <button type="button" className="boton-texto" onClick={() => setVersion((v) => v + 1)}>Reintentar</button></div>
+  if (!grupos) return avisoError || <Esqueleto tipo="resenas" />
+  if (grupos.length === 0) return <>{avisoError}<p className="secundario">No hay reseñas denunciadas.</p></>
   const lugar = (id) => puntos.find((p) => p.id === id)?.nombre ?? `Lugar ${id}`
 
   return (
-    <ul className="lista-resenas">
+    <>{avisoError}<ul className="lista-resenas">
       {grupos.map(({ resena, motivos }) => (
         <li key={resena.id} className="resena">
           <p><strong>{lugar(resena.punto_id)}</strong> · {resena.autor} · {resena.estrellas} de 5 estrellas
@@ -50,7 +56,7 @@ function ResenasDenunciadas({ puntos }) {
             : <button type="button" className="boton" onClick={() => cambiar(resena, 'visible')}>Restaurar</button>}
         </li>
       ))}
-    </ul>
+    </ul></>
   )
 }
 

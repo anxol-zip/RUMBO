@@ -15,6 +15,7 @@ import VistaSemana from './VistaSemana.jsx'
 import BotonCompartir from './BotonCompartir.jsx'
 import GenteAhora from './GenteAhora.jsx'
 import Icono from './Icono.jsx'
+import Esqueleto from './Esqueleto.jsx'
 
 // Ícono del clima por hora según la lluvia
 const LLUVIA = { sin: 'sol', moderada: 'llovizna', fuerte: 'lluvia' }
@@ -40,8 +41,10 @@ function actualizacion(datos, t) {
 // onCargado(título): Turista mueve ahí el foco cuando la ficha se abrió desde la lista (D6).
 function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui, onCargado, onError }) {
   const { idioma, t } = useIdioma()
-  const [estado, setEstado] = useState(null)
-  const [fallo, setFallo] = useState(false)
+  const clave = `${puntoId}|${origenId}`
+  const [respuesta, setRespuesta] = useState(null)
+  const estado = respuesta?.clave === clave ? respuesta.estado : null
+  const fallo = respuesta?.clave === clave && respuesta.error
   const titulo = useRef(null)
   // "¿Cuándo me conviene ir?": la ficha sale y entra la semana en su lugar; al cerrarla, la ficha regresa.
   // fase: 'ficha' | 'saliendo' | 'semana' | 'regresando'
@@ -65,17 +68,17 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
   useEffect(() => {
     let vigente = true
     api.obtenerEstadoPunto(puntoId, origenId)
-      .then((datos) => { if (vigente) setEstado(datos) })
-      .catch((e) => { if (vigente) { setFallo(true); onError(codigoDe(e)) } })
+      .then((datos) => { if (vigente) setRespuesta({ clave, estado: datos, error: false }) })
+      .catch((e) => { if (vigente) { setRespuesta({ clave, estado: null, error: true }); onError(codigoDe(e)) } })
     return () => { vigente = false }
-  }, [puntoId, origenId, onError])
+  }, [puntoId, origenId, onError, clave])
 
   useEffect(() => {
     if (estado) onCargado?.(titulo.current)
   }, [estado, onCargado])
 
   if (fallo) return <button type="button" className="boton-texto" onClick={onVolver}>{t('ficha.volver')}</button>
-  if (!estado || estado.id !== puntoId) return <p className="suave">{t('cargando')}</p>
+  if (!estado || estado.id !== puntoId) return <Esqueleto tipo="ficha" />
 
   const conviene = estado.color === 'verde'
   const traslado = textoTraslado(estado.traslado, t)

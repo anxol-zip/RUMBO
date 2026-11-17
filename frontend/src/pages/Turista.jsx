@@ -12,6 +12,7 @@ import FiltrosLugares from '../components/FiltrosLugares.jsx'
 import GuiaPrimerUso from '../components/GuiaPrimerUso.jsx'
 import BordePanel, { ANCHO_MINIMO } from '../components/BordePanel.jsx'
 import Inicio from '../components/Inicio.jsx'
+import Esqueleto from '../components/Esqueleto.jsx'
 import ListaPuntos from '../components/ListaPuntos.jsx'
 import Mapa from '../components/Mapa.jsx'
 import Recomendacion from '../components/Recomendacion.jsx'
@@ -70,13 +71,15 @@ function resumen(puntos, t) {
 }
 
 // "¿A dónde voy ahora?" — T1 a T6 en una sola página (docs/12).
-function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onError }) {
+function Turista({ catalogo, cargandoCatalogo, errorCatalogo, onReintentar, sesion, onSesion, onError }) {
   const [parametros, setParametros] = useSearchParams()
   const ubicacionPagina = useLocation()
   const lugarPedido = parametros.get('lugar')
   const idPedido = lugarPedido && /^\d+$/.test(lugarPedido) ? Number(lugarPedido) : null
   const lugarValido = Number.isSafeInteger(idPedido) && catalogo.some((p) => p.id === idPedido)
   const [puntos, setPuntos] = useState([])
+  const [listaCargada, setListaCargada] = useState(false)
+  const [errorLista, setErrorLista] = useState(false)
   // La base de desarrollo no tiene clima: traslados aproximados y sin datos en vivo (INSTALACION.md).
   // El semáforo lo dice en `datos`, así que el aviso aparece solo y nunca con los datos reales.
   const [simulados, setSimulados] = useState(false)
@@ -181,9 +184,12 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
     async function cargar() {
       try {
         const datos = await api.obtenerSemaforo(origenId)
-        if (vigente) { setPuntos(datos.puntos); setSimulados(datos.datos.clima_consultado_en === null); onError(null) }
+        if (vigente) {
+          setPuntos(datos.puntos); setListaCargada(true); setErrorLista(false)
+          setSimulados(datos.datos.clima_consultado_en === null); onError(null)
+        }
       } catch (e) {
-        if (vigente) onError(codigoDe(e))
+        if (vigente) { setErrorLista(true); onError(codigoDe(e)) }
       }
     }
     cargar()
@@ -261,9 +267,11 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
     ? Math.round(distanciaM(gps.lat, gps.lon, seleccionado.lat, seleccionado.lon)) : null
 
   // Primero la pantalla de inicio, limpia; el mapa aparece hasta que el turista termina.
-  if (parametros.has('lugar') && (errorCatalogo || catalogo.length === 0 || !lugarValido)) {
+  const catalogoPendiente = cargandoCatalogo && catalogo.length === 0
+  if (parametros.has('lugar') && catalogoPendiente) return <div className="favorito-publico"><Esqueleto tipo="ficha" /></div>
+  if (parametros.has('lugar') && (errorCatalogo || !lugarValido)) {
     return <div className="favorito-publico">
-      <p role={errorCatalogo || catalogo.length > 0 ? 'alert' : 'status'}>{t(errorCatalogo ? 'cuenta.errorCargar' : catalogo.length > 0 ? 'cuenta.lugarInvalido' : 'cargando')}</p>
+      <p role="alert">{t(errorCatalogo ? 'cuenta.errorCargar' : 'cuenta.lugarInvalido')}</p>
       {errorCatalogo && <button type="button" className="boton" onClick={onReintentar}>{t('error.reintentar')}</button>}
       <button type="button" className="boton-texto" onClick={volverALista}>{t('ficha.volver')}</button>
     </div>
@@ -274,7 +282,8 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
   }
   if (!sesion) {
     if (errorCatalogo) return <div className="cargando"><button type="button" className="boton" onClick={onReintentar}>{t('error.reintentar')}</button></div>
-    return catalogo.length > 0 ? <Inicio puntos={catalogo} onListo={empezar} onError={onError} /> : <p className="cargando">{t('cargando')}</p>
+    if (catalogoPendiente) return <Esqueleto tipo="inicio" />
+    return catalogo.length > 0 ? <Inicio puntos={catalogo} onListo={empezar} onError={onError} /> : <p className="cargando" role="status">{t('carga.sinLugares')}</p>
   }
 
   return (
@@ -306,7 +315,7 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
                 </button>
               </div>
               <p className="suave">{t('lista.desde', { lugar: origen?.nombre ?? t('lista.tuUbicacion') })}</p>
-              <p className="resumen" aria-live="polite">{puntos.length > 0 ? resumen(visibles, t) : t('resumen.cargando')}</p>
+              <p className="resumen" aria-live="polite">{listaCargada ? resumen(visibles, t) : null}</p>
               {simulados && <p className="aviso-simulados">{t('datos.simulados')}</p>}
             </div>
           )}
@@ -318,13 +327,15 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
 
         {vista === 'lista' && (
           <div className="panel-cuerpo">
+            {!listaCargada && !errorLista ? <Esqueleto tipo="lista" /> : !listaCargada && errorLista ?
+              <button type="button" className="boton" onClick={() => { setErrorLista(false); setVersion((v) => v + 1) }}>{t('error.reintentar')}</button> : <>
             {!ampliada && filtroActivo && (
               <p className="filtro-activo">
                 {t('filtros.activo', { filtro: filtroActivo })}
                 <button type="button" className="boton-texto" onClick={() => setFiltro(SIN_FILTRO)}>{t('filtros.quitar')}</button>
               </p>
             )}
-            {puntos.length > 0 && visibles.length === 0 && (
+            {listaCargada && visibles.length === 0 && (
               <p className="aviso info sin-resultados">
                 {t(filtro.favoritos && favoritos?.size === 0 ? 'filtros.sinFavoritos' : 'filtros.vacio')} <button type="button" className="boton-texto" onClick={() => setFiltro(SIN_FILTRO)}>{t('filtros.quitar')}</button>
               </p>
@@ -332,6 +343,7 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
             {ampliada
               ? <TodosLosLugares puntos={ordenados} seleccionadoId={seleccionadoId} onSeleccionar={seleccionar} />
               : <ListaPuntos puntos={ordenados} seleccionadoId={seleccionadoId} onSeleccionar={seleccionar} />}
+            </>}
           </div>
         )}
 

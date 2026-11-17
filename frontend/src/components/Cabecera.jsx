@@ -7,7 +7,7 @@ import { NOMBRE } from '../data/marca.js'
 import { useIdioma } from '../i18n/contexto.js'
 import { useCuenta } from '../cuenta/contexto.js'
 
-function Cabecera({ catalogo, errorCatalogo, onReintentarCatalogo }) {
+function Cabecera({ catalogo, cargandoCatalogo, errorCatalogo, onReintentarCatalogo }) {
   const { idioma, setIdioma, t } = useIdioma()
   const { pidiendoEntrar } = useCuenta()
   const [abierto, setAbierto] = useState(false)
@@ -72,7 +72,7 @@ function Cabecera({ catalogo, errorCatalogo, onReintentarCatalogo }) {
         <div className="cabecera-derecha">
           <EnVivo />
           <OpcionesLectura />
-          <BotonCuenta catalogo={catalogo} errorCatalogo={errorCatalogo} onReintentarCatalogo={onReintentarCatalogo} onNavegar={navegar} />
+          <BotonCuenta catalogo={catalogo} cargandoCatalogo={cargandoCatalogo} errorCatalogo={errorCatalogo} onReintentarCatalogo={onReintentarCatalogo} onNavegar={navegar} />
           <div className="idioma" role="group" aria-label={t('idioma.grupo')}>
             <button type="button" lang="es" aria-pressed={idioma === 'es'} onClick={() => setIdioma('es')} aria-label="Español">ES</button>
             <button type="button" lang="en" aria-pressed={idioma === 'en'} onClick={() => setIdioma('en')} aria-label="English">EN</button>
