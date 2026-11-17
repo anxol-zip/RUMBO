@@ -134,8 +134,12 @@ function VistaSemana({ puntoId, nombre, onCerrar, onError }) {
             {dias.filter((d) => d.resumen).map((d) => (
               <li key={d.fecha} className={d.fecha === hoy ? 'hoy' : undefined}>
                 <span className="semana-dias-nombre">{dia(d.fecha)}</span>
-                <span><span className="semana-punto verde" aria-hidden="true" />{t('semana.tranquila', { hora: d.resumen.mas_tranquila.hora })}</span>
-                <span><span className="semana-punto rojo" aria-hidden="true" />{t('semana.llena', { hora: d.resumen.mas_llena.hora })}</span>
+                {d.resumen.ultima_hora || d.resumen.parejo
+                  ? <span>{d.resumen.ultima_hora ? t('semana.ultima', { hora: d.resumen.ultima_hora }) : t('semana.parejo')}</span>
+                  : <>
+                      <span><span className="semana-punto verde" aria-hidden="true" />{t('semana.tranquila', { hora: d.resumen.mas_tranquila.hora })}</span>
+                      <span><span className="semana-punto rojo" aria-hidden="true" />{t('semana.llena', { hora: d.resumen.mas_llena.hora })}</span>
+                    </>}
               </li>
             ))}
           </ul>

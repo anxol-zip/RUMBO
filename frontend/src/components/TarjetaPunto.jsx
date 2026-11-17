@@ -169,7 +169,11 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
           </div>
           {estado.hoy && (
             <p className="suave" style={{ marginTop: 8 }}>
-              {t('hoy.resumen', { tranquila: estado.hoy.mas_tranquila.hora, llena: estado.hoy.mas_llena.hora })}
+              {estado.hoy.ultima_hora
+                ? t(estado.hoy.cierra_pronto ? 'hoy.casiCierra' : 'hoy.ultimaHora', { hora: estado.hoy.ultima_hora })
+                : estado.hoy.parejo
+                  ? t('hoy.parejo')
+                  : t('hoy.resumen', { tranquila: estado.hoy.mas_tranquila.hora, llena: estado.hoy.mas_llena.hora })}
             </p>
           )}
           <Semana ref={botonSemana} onAbrir={abrirSemana} />

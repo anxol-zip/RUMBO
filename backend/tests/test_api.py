@@ -261,6 +261,25 @@ def test_semaforo_estatal_dato_y_estimado(cliente):
     assert c.get("/api/panel/semaforo-estatal?mes=13").status_code == 422
 
 
+def _h(hora, nivel, color="amarillo"):
+    return {"hora": hora, "nivel": nivel, "color": color}
+
+
+def test_extremos_con_una_sola_hora_no_la_presenta_como_dos():
+    r = servicio._extremos([_h("20:00", 1.2)])                       # la Estrella a las 20:37, cierra a las 21
+    assert r["parejo"] and r["ultima_hora"] == "20:00" and r["cierra_pronto"]
+    r = servicio._extremos([_h("21:00", 1.2), _h("22:00", 1.0)])      # abre más tarde que el horario de visita
+    assert r["ultima_hora"] == "21:00" and not r["cierra_pronto"]
+
+
+def test_extremos_parejo_y_con_contraste():
+    r = servicio._extremos([_h("14:00", 1.1), _h("15:00", 1.1)])
+    assert r["parejo"] and r["ultima_hora"] is None
+    r = servicio._extremos([_h("14:00", 0.8, "verde"), _h("15:00", 1.5, "rojo")])
+    assert not r["parejo"] and (r["mas_tranquila"]["hora"], r["mas_llena"]["hora"]) == ("14:00", "15:00")
+    assert servicio._extremos([]) is None
+
+
 def test_semana_hoy_espera_y_vs_normal(cliente):
     c, reloj = cliente
     s = c.get("/api/puntos/1/semana").json()

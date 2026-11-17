@@ -161,6 +161,9 @@ class ResumenDia(BaseModel):
     mas_tranquila: HoraResumen
     mas_llena: HoraResumen
     horas_verdes: list[str]
+    parejo: bool = Field(description="Todas las horas que quedan tienen el mismo nivel: no hay una más tranquila")
+    ultima_hora: str | None = Field(description="Si solo queda una hora en horario de visita, cuál es")
+    cierra_pronto: bool = Field(description="Esa última hora es también la última en que abre el lugar")
 
 
 class EsperaReportada(BaseModel):

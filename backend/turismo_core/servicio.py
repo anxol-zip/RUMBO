@@ -290,16 +290,25 @@ VENTANA_ESPERA = timedelta(hours=2)
 
 
 def _extremos(horas: list[dict]) -> dict | None:
-    """La hora más tranquila y la más llena entre las horas abiertas en horario de visita (por nivel estimado)."""
+    """La hora más tranquila y la más llena entre las horas abiertas en horario de visita (por nivel estimado).
+
+    Con una sola hora, o con todas al mismo nivel, la más tranquila y la más llena salen iguales: ``parejo``
+    lo avisa para no presentar la misma hora como las dos. ``ultima_hora`` es la única hora que queda y
+    ``cierra_pronto`` dice si después de ella el lugar ya no abre (y no solo que termina el horario de visita).
+    """
     abiertas = [h for h in horas if h["nivel"] is not None and h["color"] in ORDEN_COLOR
                 and int(h["hora"][:2]) in HORAS_VISITA]
     if not abiertas:
         return None
     tranquila = min(abiertas, key=lambda h: h["nivel"])
     llena = max(abiertas, key=lambda h: h["nivel"])
+    ultima = abiertas[0]["hora"] if len(abiertas) == 1 else None
     return {"mas_tranquila": {"hora": tranquila["hora"], "color": tranquila["color"]},
             "mas_llena": {"hora": llena["hora"], "color": llena["color"]},
-            "horas_verdes": [h["hora"] for h in abiertas if h["color"] == "verde"]}
+            "horas_verdes": [h["hora"] for h in abiertas if h["color"] == "verde"],
+            "parejo": tranquila["nivel"] == llena["nivel"],
+            "ultima_hora": ultima,
+            "cierra_pronto": ultima is not None and not any(h["hora"] > ultima for h in horas)}
 
 
 def semana_punto(con: psycopg.Connection, punto_id: int, ahora: datetime) -> dict:
