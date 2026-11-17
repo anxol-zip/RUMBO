@@ -212,3 +212,53 @@ npm run dev -- --host 127.0.0.1
 ```
 
 - Antes de retomar: leer este checkpoint, revisar rama, `git status --short --branch` y commits locales; preservar cualquier cambio nuevo. Solicitar primero la validación pendiente de la etapa 3 si no consta y esperar autorización explícita para la etapa 4. No repetir ni ampliar las etapas anteriores sin un fallo reportado o una orden expresa.
+
+## 8. Checkpoint de continuidad actualizado — 2026-11-16
+
+Esta sección actualiza el **estado de avance** de la sección 7, que se conserva como historial. Las reglas operativas y la prohibición de publicar siguen intactas.
+
+### Estado actual y commits locales
+
+- Rama: `feature/rumbo-ux-auth-access`. Árbol limpio antes de esta actualización documental; al cerrarla se espera nuevamente limpio. No hubo push, PR, merge, migraciones, cambios de backend ni escrituras de prueba en bases compartidas.
+- **Etapa 3 validada** por la persona usuaria con «todo bien»; no volver a solicitar esa validación por el checkpoint anterior.
+- **Etapa 4 entregada y validada para avanzar**, con la observación «la tendremos que mejorar despues, pero de momento sigue con la etapa5». Las mejoras futuras del perfil quedan pendientes de definir y autorizar; no se inició una segunda versión.
+- **Etapa 5 entregada y validada para avanzar**: la persona usuaria expresó «te quedaron perros» y autorizó la etapa 6.
+- **Etapa 6 implementada y entregada**, pendiente de comprobación manual de la UI y de integración real. No quedan etapas nuevas autorizadas ni trabajo adicional de producto iniciado.
+- Se mantuvieron exactamente los dos subagentes: Implementador como único editor y Supervisor independiente de solo lectura. El coordinador no editó código.
+
+| Commit | Mensaje | Resultado |
+| --- | --- | --- |
+| `9217cb0` | `feat(account): add favorites to profile panel` | Etapa 4: identidad/correo, favoritos con enlaces a fichas públicas y opción de quitar, carga/vacío/error/reintento, acciones de sesión separadas y confirmación que permanece ante fallo de borrado. Aislamiento por usuario y protección ante respuesta tardía de borrado de otra sesión. |
+| `3f52a17` | `feat(ui): add loading skeletons` | Etapa 5: componente reutilizable en catálogo/inicio, listado, ficha, reseñas/paginación, favoritos, recomendación, semana y panel/moderación. Anuncios fuera de regiones ocupadas, formas decorativas, movimiento reducido y separación carga/vacío/error; las recargas conservan datos válidos. |
+| `864eaaf` | `fix(admin): hide dashboard navigation from non-admins` | Etapa 6: enlace solo con sesión y rol administrador confirmado; los eventos de autenticación revalidan también el perfil de la misma cuenta. Se preservaron la guarda de ruta, `solo_admin`, el router protegido y las reglas SQL existentes. |
+
+### Evidencia y límites de esta tanda
+
+- En las etapas 4–6 se aprobaron lint, build, las **8 pruebas Node existentes de intención pendiente** y `git diff --check`. Esas 8 pruebas no constituyen una batería nueva de perfil, skeletons o autorización. Se conserva el aviso conocido de bundle superior a 500 kB.
+- **Etapa 4:** el Implementador verificó 11 casos CDP con API/Supabase simulados. El Supervisor comprobó independientemente errores/reintentos, aislamiento, la carrera de borrado entre cuentas, teclado/Escape/clic fuera y 24 variantes de distribución. La navegación con visita ya iniciada quedó revisada en código; la ficha pública sin visita se verificó dinámicamente.
+- **Etapa 5:** el Implementador verificó 14 casos CDP de carga, fin de carga, vacíos/errores, anuncios, movimiento reducido y conservación del listado al refrescar. El Supervisor verificó cargas, errores/reintentos, paginación, semana, panel/moderación y 10 variantes de distribución. Tras corregir la paginación, el Implementador pasó **5 comprobaciones finales** con respuesta retenida y cambio de orden A→B→A: no reaparece el skeleton viejo, no se anexan respuestas obsoletas y una petición nueva funciona. El Supervisor revisó el cambio final en código; su repetición dinámica independiente quedó limitada por una herramienta bloqueada. Los fixtures CDP fueron temporales, sin dependencias nuevas en el repositorio.
+- **Etapa 6:** el Supervisor aprobó **65 comprobaciones HTTP aisladas sin BD real**: ocho rutas GET/POST/DELETE frente a ocho estados de identidad/token y una revocación de rol con el mismo token. Se ejecutaron `solo_admin` y la verificación criptográfica real con una llave EC de prueba; **JWKS, BD, servicios y dispatcher de hilos fueron simulados**. No equivalen a pruebas con Microsoft/Supabase desplegados. Las pruebas existentes que crean usuarios de `auth.users` no se ejecutaron contra la base compartida.
+- La protección del rol y de la moderación en SQL se revisó estáticamente: el turista solo puede actualizar `gustos` en su perfil; la moderación depende de `es_admin`, RLS y la regla `RN_R2`. No se verificaron esas políticas contra una BD real en esta tanda.
+- **La UI de la etapa 6 no se verificó dinámicamente:** la herramienta quedó bloqueada y fue abortada. La evidencia frontend de esa etapa es revisión de código y lint/build. No dar por comprobados los destellos o la interacción real de invitado/turista/admin.
+- Dictamen independiente de las tres etapas: **APROBABLE CON LIMITACIONES**, sin bloqueantes pendientes identificados. Faltan móvil físico, Safari/otros motores, OAuth Microsoft real y RLS/integración reales. No se usaron cuentas reales ni se hicieron borrados reales para probar.
+- Un cambio externo del rol en BD no se notifica instantáneamente a la UI sin un mecanismo adicional. La UI se actualiza al recargar/revalidar el perfil y en eventos de autenticación; durante esa confirmación oculta el enlace y el contenido protegido. **El servidor consulta el rol en cada petición** y no depende de lo mostrado en la navbar. No se añadió realtime ni infraestructura.
+
+### Cómo retomar y comprobar
+
+1. Leer este estado actualizado y ejecutar `git status --short --branch` y `git log -8 --oneline`; preservar cualquier cambio nuevo. No reiniciar las etapas 1–5 por las notas históricas ni asumir autorización para mejoras futuras.
+2. Repetir las comprobaciones locales desde la raíz:
+
+   ```bash
+   cd frontend
+   node src/cuenta/pendiente.test.js
+   npm run lint
+   npm run build
+   cd ..
+   git diff --check
+   ```
+
+3. Las URLs habituales son `http://127.0.0.1:5173` y `http://127.0.0.1:8000/docs`; comprobar que los servicios siguen activos. Si hace falta, arrancarlos con los comandos de la sección 7, conservando los archivos de entorno existentes. No reutilizar identificadores de sesiones de herramientas como si fueran permanentes.
+4. Validación manual pendiente: invitado y turista no deben ver Dashboard, tampoco en el menú móvil; abrir `/panel` directamente no debe mostrar datos administrativos. Con una cuenta administradora autorizada, el enlace aparece tras confirmar el perfil y la ruta funciona; al cerrar/cambiar sesión debe desaparecer. Revisar también teclado y ausencia de destellos durante la carga del perfil. No compartir tokens ni credenciales para comprobarlo.
+5. Para revisar lo visual, activar una red lenta en DevTools y cargar catálogo/ficha/reseñas/perfil; distinguir skeleton, vacío y error. En móvil comprobar lectura ampliada y desplazamiento; con reducción de movimiento, los skeletons no deben animarse. La confirmación de borrado puede abrirse y cancelarse; no ejecutar un borrado real como prueba rutinaria.
+
+La actualización de este checkpoint se registra en un commit documental separado. **Publicación, push, PR y merge siguen sin autorización.**
