@@ -148,10 +148,15 @@ export function ProveedorCuenta({ children }) {
     return true
   }, [avisar, uid])
 
+  // Devuelve si se guardó: el panel de perfil lo confirma o avisa del error.
   const guardarGustos = useCallback(async (gustos) => {
-    if (!uid) return
-    const { error } = await supabase.from('perfil').update({ gustos }).eq('id', uid)
-    if (!error) setDatos((d) => (d?.uid === uid ? { ...d, perfil: { ...d.perfil, gustos } } : d))
+    if (!uid) return false
+    try {
+      const { error } = await supabase.from('perfil').update({ gustos }).eq('id', uid)
+      if (error) return false
+    } catch { return false }
+    setDatos((d) => (d?.uid === uid ? { ...d, perfil: { ...d.perfil, gustos } } : d))
+    return true
   }, [uid])
 
   const alternarFavorito = useCallback(async (puntoId) => {
