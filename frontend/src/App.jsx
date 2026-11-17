@@ -38,7 +38,7 @@ function App() {
     <div className="app">
       {/* Primer elemento con teclado: salta la cabecera (D6) */}
       <a className="saltar" href="#contenido">{t('saltar')}</a>
-      <Cabecera />
+      <Cabecera catalogo={catalogo} errorCatalogo={errorCatalogo} onReintentarCatalogo={cargarCatalogo} />
       {/* Avisos de la cuenta (sesión iniciada, guardado, límite…): se ven y el lector de pantalla los anuncia. */}
       <p className="aviso-cuenta" role="status" aria-live="polite">{aviso && t(aviso.clave)}</p>
       {errorCodigo && <AvisoError codigo={errorCodigo} onCerrar={() => setErrorCodigo(null)} />}

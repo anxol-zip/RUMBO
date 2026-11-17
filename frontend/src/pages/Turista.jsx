@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { api, codigoDe } from '../api/cliente.js'
 import { distanciaM, masCercano } from '../data/geo.js'
 import { ORDEN } from '../data/semaforo.js'
@@ -70,6 +71,11 @@ function resumen(puntos, t) {
 
 // "¿A dónde voy ahora?" — T1 a T6 en una sola página (docs/12).
 function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onError }) {
+  const [parametros, setParametros] = useSearchParams()
+  const ubicacionPagina = useLocation()
+  const lugarPedido = parametros.get('lugar')
+  const idPedido = lugarPedido && /^\d+$/.test(lugarPedido) ? Number(lugarPedido) : null
+  const lugarValido = Number.isSafeInteger(idPedido) && catalogo.some((p) => p.id === idPedido)
   const [puntos, setPuntos] = useState([])
   // La base de desarrollo no tiene clima: traslados aproximados y sin datos en vivo (INSTALACION.md).
   // El semáforo lo dice en `datos`, así que el aviso aparece solo y nunca con los datos reales.
@@ -130,6 +136,39 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
 
   const origenId = sesion?.perfil.origenId
 
+  // Los Favoritos enlazan a la ficha pública, incluso antes de iniciar una visita.
+  const abrirEnlace = useEffectEvent(() => {
+    enfocarFicha.current = true
+    onError(null)
+    if (sesion) {
+      setSeleccionadoId(idPedido)
+      setAlternativaId(null)
+      setVista('punto')
+      hoja.mostrar()
+    }
+    // Si ya está abierta esa misma ficha no se vuelve a cargar su título.
+    if (!sesion || seleccionadoId === idPedido) {
+      const titulo = document.getElementById('ficha-titulo')
+      if (titulo) { titulo.focus(); enfocarFicha.current = false }
+    }
+  })
+  const conVisita = Boolean(sesion)
+  useEffect(() => {
+    if (!lugarValido) return undefined
+    // Tras cerrar el menú, sincronizar la URL con la hoja y su foco en el siguiente frame.
+    const frame = requestAnimationFrame(() => abrirEnlace())
+    return () => cancelAnimationFrame(frame)
+  }, [lugarValido, idPedido, ubicacionPagina.key, conVisita])
+
+  function quitarEnlace() {
+    if (!parametros.has('lugar')) return
+    setParametros((actuales) => {
+      const siguientes = new URLSearchParams(actuales)
+      siguientes.delete('lugar')
+      return siguientes
+    }, { replace: true })
+  }
+
   useEffect(() => {
     if (!aviso) return undefined
     const id = setTimeout(() => setAviso(null), AVISO_MS)
@@ -158,6 +197,7 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
   }
 
   function seleccionar(id) {
+    quitarEnlace()
     enfocarFicha.current = true
     onError(null)
     setSeleccionadoId(id)
@@ -167,6 +207,7 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
   }
 
   function volverALista() {
+    quitarEnlace()
     volverA.current = seleccionadoId
     setVista('lista')
     setSeleccionadoId(null)
@@ -220,6 +261,17 @@ function Turista({ catalogo, errorCatalogo, onReintentar, sesion, onSesion, onEr
     ? Math.round(distanciaM(gps.lat, gps.lon, seleccionado.lat, seleccionado.lon)) : null
 
   // Primero la pantalla de inicio, limpia; el mapa aparece hasta que el turista termina.
+  if (parametros.has('lugar') && (errorCatalogo || catalogo.length === 0 || !lugarValido)) {
+    return <div className="favorito-publico">
+      <p role={errorCatalogo || catalogo.length > 0 ? 'alert' : 'status'}>{t(errorCatalogo ? 'cuenta.errorCargar' : catalogo.length > 0 ? 'cuenta.lugarInvalido' : 'cargando')}</p>
+      {errorCatalogo && <button type="button" className="boton" onClick={onReintentar}>{t('error.reintentar')}</button>}
+      <button type="button" className="boton-texto" onClick={volverALista}>{t('ficha.volver')}</button>
+    </div>
+  }
+  if (!sesion && lugarValido) {
+    return <div className="favorito-publico"><TarjetaPunto key={idPedido} puntoId={idPedido}
+      onVolver={volverALista} onCargado={alCargarFicha} onError={onError} /></div>
+  }
   if (!sesion) {
     if (errorCatalogo) return <div className="cargando"><button type="button" className="boton" onClick={onReintentar}>{t('error.reintentar')}</button></div>
     return catalogo.length > 0 ? <Inicio puntos={catalogo} onListo={empezar} onError={onError} /> : <p className="cargando">{t('cargando')}</p>

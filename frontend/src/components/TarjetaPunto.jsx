@@ -213,10 +213,10 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
       </div>
 
       <div className="ficha-acciones">
-        {!conviene && (
+        {!conviene && onAlternativa && (
           <button type="button" className="boton primario" onClick={onAlternativa}><Icono nombre="cambiar" />{t('ficha.mejorVe')}</button>
         )}
-        <button type="button" className={`boton${conviene ? ' primario' : ''}`} onClick={onEstoyAqui}><Icono nombre="pin" />{t('ficha.estoyAqui')}</button>
+        {onEstoyAqui && <button type="button" className={`boton${conviene ? ' primario' : ''}`} onClick={onEstoyAqui}><Icono nombre="pin" />{t('ficha.estoyAqui')}</button>}
         <a className="boton" href={estado.como_llegar_url} target="_blank" rel="noreferrer">
           <Icono nombre="navegar" />{t('ficha.comoLlegar')}<span className="oculto-accesible"> {t('ficha.enGoogleMaps')}</span>
         </a>
