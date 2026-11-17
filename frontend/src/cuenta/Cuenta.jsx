@@ -37,7 +37,12 @@ export function ProveedorCuenta({ children }) {
       sesionActual.current = nueva
       setSesion(nueva)
       setLista(true)
-      if (nueva) setPidiendoEntrar(false)
+      if (nueva) {
+        setPidiendoEntrar(false)
+        // Un evento de la misma cuenta también puede traer un rol revocado o cambiado.
+        // Invalidar el perfil anterior hasta volver a confirmarlo en la base.
+        setRevision((n) => n + 1)
+      }
       if (_evento === 'SIGNED_OUT') { descartarPendiente(); setDatos(null) }
     })
     return () => data.subscription.unsubscribe()

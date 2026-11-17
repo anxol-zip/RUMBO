@@ -9,7 +9,8 @@ import { useCuenta } from '../cuenta/contexto.js'
 
 function Cabecera({ catalogo, cargandoCatalogo, errorCatalogo, onReintentarCatalogo }) {
   const { idioma, setIdioma, t } = useIdioma()
-  const { pidiendoEntrar } = useCuenta()
+  const { pidiendoEntrar, sesion, perfil, cargando } = useCuenta()
+  const administrador = Boolean(sesion && !cargando && perfil?.rol === 'administrador')
   const [abierto, setAbierto] = useState(false)
   const cabecera = useRef(null)
   const boton = useRef(null)
@@ -65,7 +66,7 @@ function Cabecera({ catalogo, cargandoCatalogo, errorCatalogo, onReintentarCatal
       <div id="cabecera-panel" ref={panel} className={`cabecera-panel${abierto ? ' abierto' : ''}`}>
         <nav className="navegacion" aria-label={t('nav.secciones')} onClick={(evento) => { if (evento.target.closest('a')) navegar() }}>
           <NavLink to="/" end>{t('nav.explorar')}</NavLink>
-          <NavLink to="/panel">{t('nav.panel')}</NavLink>
+          {administrador && <NavLink to="/panel">{t('nav.panel')}</NavLink>}
           <NavLink to="/acerca"><span className="largo">{t('nav.acerca')}</span><span className="corto">{t('nav.info')}</span></NavLink>
         </nav>
 
