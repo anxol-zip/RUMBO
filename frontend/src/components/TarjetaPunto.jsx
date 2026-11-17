@@ -39,7 +39,9 @@ function actualizacion(datos, t) {
 
 // T3 — Tarjeta del punto (CU_03): qué es, si conviene ir, por qué y cuándo conviene más.
 // onCargado(título): Turista mueve ahí el foco cuando la ficha se abrió desde la lista (D6).
-function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui, onCargado, onError }) {
+// revision: sube cuando entra un reporte. La ficha se vuelve a pedir sin desmontarse: lo que ya se veía
+// se queda (con su scroll) hasta que llega lo nuevo, en lugar de regresar al esqueleto.
+function TarjetaPunto({ puntoId, origenId, revision = 0, onVolver, onAlternativa, onEstoyAqui, onCargado, onError }) {
   const { idioma, t } = useIdioma()
   const clave = `${puntoId}|${origenId}`
   const [respuesta, setRespuesta] = useState(null)
@@ -71,7 +73,7 @@ function TarjetaPunto({ puntoId, origenId, onVolver, onAlternativa, onEstoyAqui,
       .then((datos) => { if (vigente) setRespuesta({ clave, estado: datos, error: false }) })
       .catch((e) => { if (vigente) { setRespuesta({ clave, estado: null, error: true }); onError(codigoDe(e)) } })
     return () => { vigente = false }
-  }, [puntoId, origenId, onError, clave])
+  }, [puntoId, origenId, onError, clave, revision])
 
   useEffect(() => {
     if (estado) onCargado?.(titulo.current)

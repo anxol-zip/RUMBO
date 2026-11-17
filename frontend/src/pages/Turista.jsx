@@ -350,9 +350,10 @@ function Turista({ catalogo, cargandoCatalogo, errorCatalogo, onReintentar, sesi
         {vista === 'punto' && seleccionadoId != null && (
           <div className="panel-cuerpo con-acciones" style={{ paddingTop: 16 }}>
             <TarjetaPunto
-              key={`${seleccionadoId}-${version}`}
+              key={seleccionadoId}
               puntoId={seleccionadoId}
               origenId={origenId}
+              revision={version}
               onVolver={volverALista}
               onAlternativa={() => setVista('recomendacion')}
               onEstoyAqui={() => setReportando(true)}

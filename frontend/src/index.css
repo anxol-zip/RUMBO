@@ -201,6 +201,8 @@ a { color: inherit; }
 .forma.rojo { --relleno: var(--rojo-marca); --glifo: var(--rojo-glifo); }
 .forma.sin_dato { --relleno: var(--gris-marca); --glifo: var(--gris-glifo); }
 .forma.cerrado { --relleno: var(--cerrado-marca); --glifo: var(--cerrado-glifo); }
+.forma path.glifo-relleno { fill: var(--glifo); }
+.forma path.glifo-trazo { fill: none; stroke: var(--glifo); stroke-width: 2.8; stroke-linecap: round; }
 
 .ajuste-etiqueta { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-meta); font-weight: 600; background: var(--tinta); color: var(--blanco); border-radius: var(--r-pill); padding: 3px 10px; }
 
@@ -213,8 +215,10 @@ a { color: inherit; }
 .marcador { filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .35)); }
 .marcador .forma { width: 100%; height: 100%; }
 .marcador .forma path { stroke: var(--marca-borde); stroke-width: 3; stroke-linejoin: round; }
-.marcador.seleccionado .forma path { stroke: var(--tinta); stroke-width: 4; }
-.marcador.propuesto .forma path { stroke: var(--rosa); stroke-width: 4; }
+.marcador .forma path.glifo-relleno { stroke: none; }
+.marcador .forma path.glifo-trazo { stroke: var(--glifo); stroke-width: 2.8; }
+.marcador.seleccionado .forma path:not([class]) { stroke: var(--tinta); stroke-width: 4; }
+.marcador.propuesto .forma path:not([class]) { stroke: var(--rosa); stroke-width: 4; }
 .etiqueta-mapa { font-family: var(--fuente); font-weight: 650; font-size: var(--t-meta); border-radius: var(--r-s); padding: 4px 10px; box-shadow: var(--sombra); }
 .etiqueta-mapa.propuesta { background: var(--rosa); color: var(--blanco); border-color: var(--rosa); }
 .etiqueta-mapa.propuesta::before { border-top-color: var(--rosa); }
