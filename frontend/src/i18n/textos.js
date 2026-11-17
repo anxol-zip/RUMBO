@@ -70,6 +70,9 @@ const es = {
   'ficha.traslado': 'Traslado', 'ficha.sinCalcular': 'Sin calcular', 'ficha.tiempo': 'Tiempo sugerido', 'ficha.porConfirmar': 'Por confirmar',
   'ficha.horario': 'Horario de hoy', 'ficha.cerradoHoy': 'Cerrado hoy', 'ficha.entrada': 'Entrada', 'ficha.gratis': 'Gratis',
   'ficha.eventos': 'Próximos eventos', 'ficha.eventoFechas': '{inicio} a {fin}',
+  'ficha.porQue': '¿Por qué está así?', 'ficha.fuentesTitulo': '¿De dónde salen estos datos?',
+  'ficha.abierto24': 'Abierto las 24 horas', 'ficha.hoyHorario': 'Hoy {horario}', 'ficha.duracionVisita': '{duracion} de visita',
+  'ficha.entradaPrecio': 'Entrada {precio}', 'ficha.entradaLibre': 'Entrada libre',
   // Conclusión arriba de la ficha (HCI A2): "¿voy o no?" en una línea
   'concl.verde': 'Buen momento para ir.', 'concl.verdeHasta': 'Sigue tranquilo hasta las {hora}.',
   'concl.amarillo': 'Hay algo de gente ahora.', 'concl.rojo': 'Ahora está lleno.',
@@ -100,7 +103,6 @@ const es = {
   'datos.simulados': 'Datos de demostración: los traslados son aproximados, sin clima ni tráfico en vivo.',
   'foto.credito': 'Foto: {autor}, {licencia}', 'foto.alt': 'Foto de {nombre}', 'foto.ampliar': 'Ver la foto de {nombre} en grande', 'foto.cerrar': 'Cerrar la foto',
   'compartir.titulo': 'Compartir', 'compartir.boton': 'Compartir {lugar}', 'compartir.copiado': 'Enlace copiado', 'compartir.error': 'No se pudo copiar el enlace',
-  'gente.poca': 'Poca gente', 'gente.normal': 'Gente como de costumbre', 'gente.mucha': 'Mucha gente',
 
   'rec.buscando': 'Buscando una alternativa parecida…', 'rec.volver': '← Volver', 'rec.volverA': '← Volver a {lugar}',
   'rec.sinAlternativa': 'Ahora no hay una alternativa cerca', 'rec.estaBien': '{lugar} está bien ahora',
@@ -169,6 +171,7 @@ const es = {
   'resena.una': '{n} reseña', 'resena.varias': '{n} reseñas', 'resena.accesiblePct': '{n} % dice que es accesible',
   'resena.ordenar': 'Ordenar reseñas', 'resena.utiles': 'Más útiles', 'resena.recientes': 'Más recientes', 'resena.verMas': 'Ver más reseñas',
   'resena.editada': 'editada', 'resena.oculta': 'Oculta por moderación', 'resena.tuResena': 'Tu reseña', 'resena.editar': 'Editar mi reseña',
+  'resena.escribir': 'Escribir una reseña',
   'resena.opinar': 'Inicia sesión para opinar', 'resena.estrellas': '¿Cuántas estrellas le das?', 'resena.accesible': '¿Es accesible?',
   'resena.si': 'Sí', 'resena.no': 'No', 'resena.noSe': 'No sé', 'resena.esAccesible': 'Accesible: sí', 'resena.noAccesible': 'Accesible: no',
   'resena.comentario': 'Comentario (opcional)', 'resena.publicar': 'Publicar', 'resena.guardar': 'Guardar cambios', 'resena.borrar': 'Borrar mi reseña',
@@ -257,6 +260,9 @@ const en = {
   'ficha.traslado': 'Travel time', 'ficha.sinCalcular': 'Not available', 'ficha.tiempo': 'Suggested time', 'ficha.porConfirmar': 'To be confirmed',
   'ficha.horario': 'Today’s hours', 'ficha.cerradoHoy': 'Closed today', 'ficha.entrada': 'Admission', 'ficha.gratis': 'Free',
   'ficha.eventos': 'Upcoming events', 'ficha.eventoFechas': '{inicio} to {fin}',
+  'ficha.porQue': 'Why is it like this?', 'ficha.fuentesTitulo': 'Where does this data come from?',
+  'ficha.abierto24': 'Open 24 hours', 'ficha.hoyHorario': 'Today {horario}', 'ficha.duracionVisita': '{duracion} visit',
+  'ficha.entradaPrecio': 'Admission {precio}', 'ficha.entradaLibre': 'Free admission',
   // Conclusion at the top of the place card (HCI A2)
   'concl.verde': 'Good time to go.', 'concl.verdeHasta': 'It stays quiet until {hora}.',
   'concl.amarillo': 'It’s getting busy.', 'concl.rojo': 'It’s crowded right now.',
@@ -287,7 +293,6 @@ const en = {
   'datos.simulados': 'Demo data: travel times are approximate, with no live weather or traffic.',
   'foto.credito': 'Photo: {autor}, {licencia}', 'foto.alt': 'Photo of {nombre}', 'foto.ampliar': 'View the photo of {nombre} larger', 'foto.cerrar': 'Close photo',
   'compartir.titulo': 'Share', 'compartir.boton': 'Share {lugar}', 'compartir.copiado': 'Link copied', 'compartir.error': 'Couldn’t copy the link',
-  'gente.poca': 'Few people', 'gente.normal': 'About as usual', 'gente.mucha': 'Very crowded',
 
   'rec.buscando': 'Looking for a similar alternative…', 'rec.volver': '← Back', 'rec.volverA': '← Back to {lugar}',
   'rec.sinAlternativa': 'No nearby alternative right now', 'rec.estaBien': '{lugar} is fine right now',
@@ -356,6 +361,7 @@ const en = {
   'resena.una': '{n} review', 'resena.varias': '{n} reviews', 'resena.accesiblePct': '{n}% say it’s accessible',
   'resena.ordenar': 'Sort reviews', 'resena.utiles': 'Most helpful', 'resena.recientes': 'Most recent', 'resena.verMas': 'See more reviews',
   'resena.editada': 'edited', 'resena.oculta': 'Hidden by moderation', 'resena.tuResena': 'Your review', 'resena.editar': 'Edit my review',
+  'resena.escribir': 'Write a review',
   'resena.opinar': 'Sign in to leave a review', 'resena.estrellas': 'How many stars?', 'resena.accesible': 'Is it accessible?',
   'resena.si': 'Yes', 'resena.no': 'No', 'resena.noSe': 'Not sure', 'resena.esAccesible': 'Accessible: yes', 'resena.noAccesible': 'Accessible: no',
   'resena.comentario': 'Comment (optional)', 'resena.publicar': 'Post', 'resena.guardar': 'Save changes', 'resena.borrar': 'Delete my review',

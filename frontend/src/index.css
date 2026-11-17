@@ -342,32 +342,24 @@ body.cambiando-ancho .panel-flotante { transition: none; }
 .lugar-traslado { font-size: var(--t-meta); font-weight: 600; color: var(--tinta); }
 .lugar-destino { font-size: var(--t-meta); color: var(--tinta-2); }
 
-/* Ficha a media pantalla: lo principal a la izquierda y los datos a la derecha, con las acciones
-   en una barra a todo lo ancho. Si el panel no da para dos columnas (letra muy grande), van una tras otra. */
+/* La recomendación compara dos lugares lado a lado cuando el panel da para dos columnas. */
 @container panel (min-width: 40rem) {
-  .detalle-punto {
-    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); column-gap: var(--e-6);
-    grid-template-areas: 'principal datos' 'acciones datos' 'fuentes fuentes' 'resenas resenas';
-    grid-template-rows: auto 1fr auto auto; align-items: start;
-  }
-  .ficha-principal { grid-area: principal; }
-  .ficha-datos { grid-area: datos; margin-top: 0; }
-  .ficha-acciones { grid-area: acciones; }
-  .ficha-fuentes { grid-area: fuentes; }
-  .ficha-resenas { grid-area: resenas; }
-  /* Con dos columnas las acciones van debajo de la descripción, no en una barra fija a todo lo ancho */
-  .detalle-punto .ficha-acciones { position: static; margin-inline: 0; padding: 0; background: none; border: 0; }
-  .ficha-principal .foto.grande img { max-height: 10rem; }
   .comparacion { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); align-items: start; }
 }
 /* Acciones de la ficha: la principal primero y en rosa; las demás con borde. Con una sola columna,
    en el escritorio se quedan fijas abajo aunque se baje por los datos. */
-.ficha-acciones { display: flex; flex-wrap: wrap; gap: var(--e-2); margin-top: var(--e-5); }
-.ficha-acciones .boton { flex: 1 1 auto; padding: 0 var(--e-2); font-size: var(--t-meta); text-align: center; white-space: nowrap; }
+/* Con tres botones, el principal va solo arriba y los otros dos debajo: ninguno queda huérfano.
+   Si el panel es ancho, los tres van en un renglón. */
+.ficha-acciones { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e-2); margin-top: var(--e-5); }
+.ficha-acciones > .primario:first-child:nth-last-child(3) { grid-column: 1 / -1; }
+@container panel (min-width: 36rem) {
+  .ficha-acciones { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+  .ficha-acciones > .primario:first-child:nth-last-child(3) { grid-column: auto; }
+}
+.ficha-acciones .boton { padding: 0 var(--e-2); font-size: var(--t-meta); text-align: center; white-space: nowrap; }
 .ficha-acciones .boton.primario { box-shadow: 0 6px 16px rgba(228, 0, 124, .25); }
 @media (min-width: 821px) {
   .panel-cuerpo.con-acciones { padding-bottom: 0; }
-  .ficha-principal .foto.grande img { max-height: 14rem; }
   .ficha-fuentes { padding-bottom: var(--e-4); }
   .ficha-acciones {
     position: sticky; bottom: 0; z-index: 3; margin-inline: calc(-1 * var(--e-4)); padding: var(--e-3) var(--e-4);
@@ -422,27 +414,39 @@ body.cambiando-ancho .panel-flotante { transition: none; }
   border: 0; border-radius: 50%; background: rgba(0, 0, 0, .6); color: #FFFFFF;
 }
 
-/* Datos en tarjetas blancas con título e ícono rosa */
-.ficha-datos { display: grid; gap: var(--e-3); align-content: start; margin-top: var(--e-5); }
-.ficha-tarjeta .pronostico { grid-template-columns: repeat(auto-fit, minmax(2.75rem, 1fr)); }
-.ficha-tarjeta .datos-visita { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
-.ficha-tarjeta { background: var(--blanco); border: 1px solid var(--linea); border-radius: var(--r-m); padding: var(--e-4); box-shadow: var(--sombra-s); }
-.ficha-tarjeta-titulo { display: flex; align-items: flex-start; gap: var(--e-3); margin-bottom: var(--e-3); }
-.ficha-tarjeta-titulo > .icono { width: 1.5rem; height: 1.5rem; color: var(--rosa); }
-.ficha-tarjeta-titulo h3 { font-size: var(--t-sub); font-weight: 650; letter-spacing: -0.01em; line-height: 1.3; }
-.ficha-tarjeta-sub { margin-top: 2px; font-size: var(--t-meta); color: var(--tinta-2); }
-.ficha-tarjeta > .razones { margin: 0 0 var(--e-3); }
+/* Ficha: portada, próximas horas en una tira, datos de la visita en un renglón y lo demás plegado. */
+/* La foto también se limita por el alto de la pantalla: con letra grande no empuja la conclusión
+   debajo de la barra de acciones. */
+.ficha-portada .foto.grande img { aspect-ratio: 16 / 9; max-height: min(15rem, 26vh); object-fit: cover; }
+.ficha-portada .foto.grande.sin-foto { aspect-ratio: 16 / 9; max-height: min(15rem, 26vh); }
+.ficha-subtitulo { margin-bottom: var(--e-2); font-size: var(--t-cuerpo); font-weight: 650; }
+.ficha-horas { margin-top: var(--e-5); }
+.ficha-horas .pronostico { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@container panel (min-width: 24rem) { .ficha-horas .pronostico { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+.ficha-nota { margin-top: var(--e-2); font-size: var(--t-meta); color: var(--tinta-2); text-wrap: pretty; }
+.ficha-nota.fuerte { color: var(--tinta); font-weight: 600; }
+.ficha-hechos { list-style: none; display: flex; flex-wrap: wrap; gap: var(--e-2) var(--e-4); margin: var(--e-4) 0 0; padding: 0; }
+.ficha-hechos li { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-meta); font-weight: 600; }
+.ficha-hechos .icono { color: var(--rosa); }
 
-/* "Gente ahora": barra de Menos a Más en rosa, con una marca donde está ahora */
-.gente-ahora { background: var(--gris-claro); border-radius: var(--r-s); padding: var(--e-3) var(--e-4); }
-.gente-ahora-titulo { display: flex; align-items: center; gap: var(--e-2); font-weight: 600; }
-.gente-barra { position: relative; height: 10px; margin: var(--e-4) 0 var(--e-2); }
-.gente-rampa { height: 100%; border-radius: var(--r-pill); }
-.gente-marca {
-  position: absolute; top: 50%; width: 20px; height: 20px; border-radius: 50%; transform: translate(-50%, -50%);
-  background: var(--rosa-hondo); border: 3px solid var(--blanco); box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+.ficha-mas { display: grid; gap: var(--e-2); margin-top: var(--e-5); }
+.ficha-mas .boton.semana-ver { margin-top: 0; }
+.plegable { border: 1px solid var(--linea); border-radius: var(--r-m); background: var(--blanco); }
+.plegable > summary {
+  display: flex; align-items: center; gap: var(--e-3); min-height: 3rem; padding: var(--e-2) var(--e-4);
+  list-style: none; cursor: pointer; font-size: var(--t-meta); font-weight: 600; border-radius: inherit;
 }
-.gente-extremos { display: flex; justify-content: space-between; font-size: var(--t-meta); color: var(--tinta-2); }
+.plegable > summary::-webkit-details-marker { display: none; }
+.plegable > summary:hover { background: var(--gris-claro); }
+.plegable > summary > .icono:first-child { color: var(--rosa); }
+.plegable-titulo { flex: 1; display: inline-flex; align-items: center; gap: var(--e-2); }
+.plegable-flecha { color: var(--tinta-3); transition: transform .18s ease; }
+.plegable[open] > summary .plegable-flecha { transform: rotate(90deg); }
+.plegable-cuerpo { padding: 0 var(--e-4) var(--e-4); }
+.plegable-cuerpo .razones { margin-top: var(--e-1); }
+.plegable-cuerpo .fuente-dato + .fuente-dato { margin-top: var(--e-2); }
+.ficha-resenas { margin-top: var(--e-2); }
+@media (prefers-reduced-motion: reduce) { .plegable-flecha { transition: none; } }
 
 /* "¿Cuándo me conviene ir?": botón rosa claro con ícono y flecha */
 .boton.semana-ver { margin-top: var(--e-3); font-size: var(--t-meta); justify-content: flex-start; background: var(--rosa-claro); border-color: transparent; color: var(--rosa-hondo); }
@@ -537,10 +541,6 @@ body.cambiando-ancho .panel-flotante { transition: none; }
 .hora { background: var(--gris-claro); border-radius: var(--r-s); padding: 8px 4px; text-align: center; font-size: var(--t-meta); }
 .hora strong { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: var(--t-meta); margin-top: 2px; }
 .hora.lluvia { background: #E3ECFB; }
-.datos-visita { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.dato { display: flex; align-items: flex-start; gap: var(--e-3); background: var(--gris-claro); border-radius: var(--r-s); padding: var(--e-3); }
-.dato > .icono { width: 1.5rem; height: 1.5rem; color: var(--rosa); margin-top: 2px; }
-.dato .suave { display: block; }
 .acciones { display: grid; gap: var(--e-3); margin-top: var(--e-5); }
 .acciones.dos { grid-template-columns: 1fr 1fr; }
 
@@ -629,10 +629,6 @@ body.cambiando-ancho .panel-flotante { transition: none; }
 .esqueleto-semana > div { display: grid; grid-template-columns: 3rem repeat(7, minmax(0, 1fr)); gap: var(--e-1); }
 .esqueleto-semana .esqueleto-bloque { height: 2rem; border-radius: 3px; }
 .favorito-publico > .carga-ficha { max-width: 65rem; margin-inline: auto; }
-@container panel (min-width: 40rem) {
-  .esqueleto-ficha { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); column-gap: var(--e-6); }
-  .esqueleto-ficha .esqueleto-foto { max-height: 10rem; }
-}
 @media (max-width: 820px) {
   .esqueleto-indicadores { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .esqueleto-graficas { grid-template-columns: minmax(0, 1fr); }
@@ -853,7 +849,7 @@ th { font-size: var(--t-meta); font-weight: 600; color: var(--tinta-2); }
 :root[data-contraste='alto'] :is(.cabecera, .panel-flotante, .leyenda-mapa, .chat, .opciones-lectura) {
   backdrop-filter: none; -webkit-backdrop-filter: none; border: 2px solid #000000;
 }
-:root[data-contraste='alto'] :is(.tarjeta-lugar, .lugar-tarjeta, .opcion, .dato, .franja-hora, .hora, .espera, .segmentado, .idioma, .control-grupo, .mensaje.asistente) {
+:root[data-contraste='alto'] :is(.tarjeta-lugar, .lugar-tarjeta, .opcion, .franja-hora, .hora, .espera, .segmentado, .idioma, .control-grupo, .mensaje.asistente) {
   border: 1px solid var(--linea);
 }
 :root[data-contraste='alto'] :is(.tarjeta-lugar, .lugar-tarjeta)[aria-current='true'] { border: 3px solid #000000; }
@@ -1117,6 +1113,8 @@ th { font-size: var(--t-meta); font-weight: 600; color: var(--tinta-2); }
 
 .resenas { margin-top: var(--e-5); display: grid; gap: var(--e-3); }
 .resenas h3 { font-size: var(--t-sub); }
+.boton.escribir-resena { justify-self: start; }
+.boton.escribir-resena .icono { color: var(--rosa); }
 .resumen-resenas .promedio { font-size: var(--t-sub); }
 .barras { list-style: none; margin: var(--e-2) 0; padding: 0; display: grid; gap: 4px; }
 .barras li { display: grid; grid-template-columns: 2.5rem 1fr 2rem; align-items: center; gap: var(--e-2); font-size: var(--t-meta); }

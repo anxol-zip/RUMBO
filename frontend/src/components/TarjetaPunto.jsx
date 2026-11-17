@@ -2,7 +2,8 @@ import BotonFavorito from './BotonFavorito.jsx'
 import Resenas from './Resenas.jsx'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, codigoDe } from '../api/cliente.js'
-import { hora, horarioDeHoy, partesRazon, pesos, textoTraslado } from '../data/formato.js'
+import { hora, horarioDeHoy, partesRazon, textoTraslado } from '../data/formato.js'
+import { hechosVisita } from '../data/hechos.js'
 import BotonEscuchar from './BotonEscuchar.jsx'
 import IconoEstado from './IconoEstado.jsx'
 import { textosConclusion } from '../data/conclusion.js'
@@ -13,7 +14,6 @@ import Semaforo from './Semaforo.jsx'
 import Semana from './Semana.jsx'
 import VistaSemana from './VistaSemana.jsx'
 import BotonCompartir from './BotonCompartir.jsx'
-import GenteAhora from './GenteAhora.jsx'
 import Icono from './Icono.jsx'
 import Esqueleto from './Esqueleto.jsx'
 
@@ -98,15 +98,25 @@ function TarjetaPunto({ puntoId, origenId, revision = 0, onVolver, onAlternativa
     return <VistaSemana puntoId={estado.id} nombre={estado.nombre} onCerrar={cerrarSemana} onError={onError} />
   }
 
+  // Las horas solo se muestran si en alguna se puede ir: un lugar cerrado lo dice la conclusión
+  // ("Abre mañana a las 10:00") y ocho cuadros de "cerrado" no agregan nada.
+  const horasUtiles = estado.proximas_horas.some((h) => h.color !== 'cerrado')
+  const hechos = hechosVisita(estado, t)
+  const ajustes = [
+    estado.ajuste_manual && t('ficha.ajustado', { motivo: estado.ajuste_manual }),
+    (estado.vs_normal === 'mas_lleno' || estado.vs_normal === 'menos_lleno')
+      && `${t(`vs.${estado.vs_normal}`)} ${estado.ajuste_manual ? t('vs.porSecretaria') : t('vs.porReportes', { n: estado.n_reportes })}`,
+  ].filter(Boolean)
+
   return (
-    // Con la barra ampliada: a la izquierda lo principal, las acciones y las fuentes; a la derecha los datos
-    // en tarjetas. En la barra angosta van una tras otra (CSS).
+    // Una respuesta, tres datos y una acción a la vista (HCI A2 y A3): la conclusión, las próximas horas,
+    // los datos de la visita y la barra de acciones. Lo demás se abre solo si se pide.
     <article className={`detalle-punto${fase === 'saliendo' ? ' saliendo' : fase === 'regresando' ? ' regresando' : ''}`}
       onAnimationEnd={(e) => { if (e.target === e.currentTarget && fase === 'regresando') setFase('ficha') }}>
-      <div className="ficha-principal">
       <button type="button" className="boton-texto volver" onClick={onVolver}>
         <Icono nombre="atras" />{t('ficha.volver').replace(/^←\s*/, '')}
       </button>
+      <div className="ficha-portada"><Foto id={estado.clave} nombre={estado.nombre} credito ampliable /></div>
       <p className="ficha-destino"><Icono nombre="pin" />{estado.destino}{estado.es_inah ? t('ficha.inah') : ''}</p>
       <div className="ficha-titulo">
         <h2 id="ficha-titulo" ref={titulo} tabIndex={-1}>{estado.nombre}</h2>
@@ -119,47 +129,19 @@ function TarjetaPunto({ puntoId, origenId, revision = 0, onVolver, onAlternativa
         <Semaforo color={estado.color} grande />
         <BotonEscuchar partes={lectura} />
       </div>
-      {/* HCI A2: la respuesta a "¿voy o no?" antes de cualquier dato */}
       <div className={`conclusion ${estado.color}`}>
         <p className="conclusion-titular">{concl.titular}</p>
         {concl.siguiente && <p className="conclusion-siguiente">{concl.siguiente}</p>}
       </div>
-      {estado.ajuste_manual && <p style={{ marginTop: 10 }}><span className="ajuste-etiqueta">{t('ficha.ajustado', { motivo: estado.ajuste_manual })}</span></p>}
-      {(estado.vs_normal === 'mas_lleno' || estado.vs_normal === 'menos_lleno') && (
-        <p style={{ marginTop: 10 }}>
-          <span className={`vs-normal ${estado.vs_normal}`}>
-            {t(`vs.${estado.vs_normal}`)} {estado.ajuste_manual ? t('vs.porSecretaria') : t('vs.porReportes', { n: estado.n_reportes })}
-          </span>
-        </p>
-      )}
       {estado.espera_reportada && (
         <p className="espera"><Icono nombre="reloj" /> {t('espera.texto', {
           min: estado.espera_reportada.minutos, n: estado.espera_reportada.n_reportes, hace: estado.espera_reportada.ultima_hace_min,
         })}</p>
       )}
-      <Foto id={estado.clave} nombre={estado.nombre} credito ampliable />
-      {descripcion && <p className="descripcion">{descripcion}</p>}
-      </div>
 
-      <div className="ficha-datos">
-      {/* Por qué tiene ese color y cuánta gente hay */}
-      <section className="ficha-tarjeta" aria-labelledby="ficha-por-que">
-        <div className="ficha-tarjeta-titulo">
-          <Icono nombre="grafica" />
-          <div>
-            <h3 id="ficha-por-que">{razones[0] ?? t(`sem.${estado.color}`)}</h3>
-            {confianza && <p className="ficha-tarjeta-sub">{confianza}</p>}
-          </div>
-        </div>
-        {razones.length > 1 && (
-          <ul className="razones">{razones.slice(1).map((r) => <li key={r}>{r}</li>)}</ul>
-        )}
-        <GenteAhora nivel={estado.nivel} color={estado.color} />
-      </section>
-
-      {estado.proximas_horas.length > 0 && (
-        <section className="ficha-tarjeta" aria-labelledby="ficha-proximas">
-          <div className="ficha-tarjeta-titulo"><Icono nombre="reloj" /><h3 id="ficha-proximas">{t('ficha.proximas')}</h3></div>
+      {horasUtiles && (
+        <section className="ficha-horas" aria-labelledby="ficha-proximas">
+          <h3 id="ficha-proximas" className="ficha-subtitulo">{t('ficha.proximas')}</h3>
           <div className="pronostico" role="list">
             {estado.proximas_horas.slice(0, 8).map((h) => (
               <div key={h.hora} className={`franja-hora ${h.color}`} role="listitem" title={`${hora(h.hora)}: ${t(`sem.${h.color}`)}`}>
@@ -170,7 +152,7 @@ function TarjetaPunto({ puntoId, origenId, revision = 0, onVolver, onAlternativa
             ))}
           </div>
           {estado.hoy && (
-            <p className="suave" style={{ marginTop: 8 }}>
+            <p className="ficha-nota">
               {estado.hoy.ultima_hora
                 ? t(estado.hoy.cierra_pronto ? 'hoy.casiCierra' : 'hoy.ultimaHora', { hora: estado.hoy.ultima_hora })
                 : estado.hoy.parejo
@@ -178,48 +160,15 @@ function TarjetaPunto({ puntoId, origenId, revision = 0, onVolver, onAlternativa
                   : t('hoy.resumen', { tranquila: estado.hoy.mas_tranquila.hora, llena: estado.hoy.mas_llena.hora })}
             </p>
           )}
-          <Semana ref={botonSemana} onAbrir={abrirSemana} />
         </section>
       )}
 
-      {estado.clima.length > 0 && (
-        <section className="ficha-tarjeta" aria-labelledby="ficha-clima">
-          <div className="ficha-tarjeta-titulo"><Icono nombre="sol" /><h3 id="ficha-clima">{t('ficha.clima')}</h3></div>
-          <div className="horas">
-            {estado.clima.slice(0, 6).map((c) => (
-              <div key={c.hora} className={`hora${c.lluvia !== 'sin' ? ' lluvia' : ''}`}>
-                {hora(c.hora)}
-                <strong><Icono nombre={LLUVIA[c.lluvia]} /> {c.prob_lluvia_pct != null ? `${Math.round(c.prob_lluvia_pct)}%` : '—'}</strong>
-              </div>
-            ))}
-          </div>
-        </section>
+      {hechos.length > 0 && (
+        <ul className="ficha-hechos" aria-label={t('ficha.visita')}>
+          {hechos.map((h) => <li key={h.clave}><Icono nombre={h.icono} />{h.texto}</li>)}
+        </ul>
       )}
-
-      <section className="ficha-tarjeta" aria-labelledby="ficha-visita">
-        <div className="ficha-tarjeta-titulo"><Icono nombre="bolsa" /><h3 id="ficha-visita">{t('ficha.visita')}</h3></div>
-        <div className="datos-visita">
-          <Dato icono={estado.traslado?.modo === 'en coche' ? 'coche' : 'caminar'} titulo={t('ficha.traslado')} valor={traslado ?? t('ficha.sinCalcular')} />
-          <Dato icono="reloj" titulo={t('ficha.tiempo')} valor={estado.duracion_sugerida ?? t('ficha.porConfirmar')} />
-          <Dato icono="calendario" titulo={t('ficha.horario')} valor={horarioDeHoy(estado.horario, t)} />
-          <Dato icono="etiqueta" titulo={t('ficha.entrada')} valor={estado.costo_mxn == null ? t('ficha.porConfirmar') : estado.costo_mxn === 0 ? t('ficha.gratis') : pesos(estado.costo_mxn)} />
-        </div>
-      </section>
-
-      {estado.proximos_eventos.length > 0 && (
-        <section className="ficha-tarjeta" aria-labelledby="ficha-eventos">
-          <div className="ficha-tarjeta-titulo"><Icono nombre="calendario" /><h3 id="ficha-eventos">{t('ficha.eventos')}</h3></div>
-          <ul className="razones">
-            {estado.proximos_eventos.map((e) => (
-              <li key={e.nombre + e.inicio}>
-                <strong>{e.nombre}</strong>
-                <span className="suave" style={{ display: 'block' }}>{t('ficha.eventoFechas', { inicio: e.inicio.slice(0, 10), fin: e.fin.slice(0, 10) })}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      </div>
+      {descripcion && <p className="descripcion">{descripcion}</p>}
 
       <div className="ficha-acciones">
         {!conviene && onAlternativa && (
@@ -231,12 +180,42 @@ function TarjetaPunto({ puntoId, origenId, revision = 0, onVolver, onAlternativa
         </a>
       </div>
 
-      <div className="ficha-fuentes">
-        <Icono nombre="info" />
-        <div>
+      {/* Lo que no decide la visita va plegado (divulgación progresiva): se abre con un clic o con Enter. */}
+      <div className="ficha-mas">
+        {estado.proximas_horas.length > 0 && <Semana ref={botonSemana} onAbrir={abrirSemana} />}
+        <Plegable icono="grafica" titulo={t('ficha.porQue')}>
+          <ul className="razones">{razones.map((r) => <li key={r}>{r}</li>)}</ul>
+          {confianza && <p className="ficha-nota">{confianza}</p>}
+          {ajustes.map((a) => <p key={a} className="ficha-nota fuerte">{a}</p>)}
+        </Plegable>
+        {estado.clima.length > 0 && (
+          <Plegable icono="sol" titulo={t('ficha.clima')}>
+            <div className="horas">
+              {estado.clima.slice(0, 6).map((c) => (
+                <div key={c.hora} className={`hora${c.lluvia !== 'sin' ? ' lluvia' : ''}`}>
+                  {hora(c.hora)}
+                  <strong><Icono nombre={LLUVIA[c.lluvia]} /> {c.prob_lluvia_pct != null ? `${Math.round(c.prob_lluvia_pct)}%` : '—'}</strong>
+                </div>
+              ))}
+            </div>
+          </Plegable>
+        )}
+        {estado.proximos_eventos.length > 0 && (
+          <Plegable icono="calendario" titulo={t('ficha.eventos')} cuenta={estado.proximos_eventos.length}>
+            <ul className="razones">
+              {estado.proximos_eventos.map((e) => (
+                <li key={e.nombre + e.inicio}>
+                  <strong>{e.nombre}</strong>
+                  <span className="ficha-nota" style={{ display: 'block' }}>{t('ficha.eventoFechas', { inicio: e.inicio.slice(0, 10), fin: e.fin.slice(0, 10) })}</span>
+                </li>
+              ))}
+            </ul>
+          </Plegable>
+        )}
+        <Plegable icono="info" titulo={t('ficha.fuentesTitulo')}>
           {estado.fuente && <p className="fuente-dato">{t('ficha.fuente', { fuente: estado.fuente })}</p>}
           <p className="fuente-dato">{actualizacion(estado.datos, t)} {t('datos.metodo')}</p>
-        </div>
+        </Plegable>
       </div>
 
       <div className="ficha-resenas"><Resenas puntoId={estado.id} /></div>
@@ -244,13 +223,17 @@ function TarjetaPunto({ puntoId, origenId, revision = 0, onVolver, onAlternativa
   )
 }
 
-// Un dato de "Tu visita": ícono, qué es y cuánto
-function Dato({ icono, titulo, valor }) {
+// Sección plegada de la ficha: <details> nativo, accesible con teclado y lector sin JavaScript.
+function Plegable({ icono, titulo, cuenta, children }) {
   return (
-    <div className="dato">
-      <Icono nombre={icono} />
-      <div><span className="suave">{titulo}</span><strong>{valor}</strong></div>
-    </div>
+    <details className="plegable">
+      <summary>
+        <Icono nombre={icono} />
+        <span className="plegable-titulo">{titulo}{cuenta != null && <span className="perfil-contador">{cuenta}</span>}</span>
+        <Icono nombre="derecha" className="plegable-flecha" />
+      </summary>
+      <div className="plegable-cuerpo">{children}</div>
+    </details>
   )
 }
 
