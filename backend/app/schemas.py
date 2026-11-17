@@ -240,7 +240,7 @@ class OtraHora(BaseModel):
 class RecomendacionOut(BaseModel):
     busqueda_id: int = Field(description="Para POST /api/busquedas/{id}/aceptar")
     pedido: PuntoEstado | None
-    motivo: Literal["afluencia", "lluvia", "cerrado"] | None = Field(description="Por qué cambiar; null = el pedido está bien")
+    motivo: Literal["afluencia", "lluvia", "cerrado", "precaucion"] | None = Field(description="Por qué cambiar; null = el pedido está bien")
     alternativa: Candidato | None
     otras: list[Candidato]
     otra_hora: OtraHora | None = Field(description="'O regresa a las …'")

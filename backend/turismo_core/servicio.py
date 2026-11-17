@@ -395,7 +395,7 @@ def recomendacion_dict(r: rec.Recomendacion, factores: trafico.Factores | None =
 
     return {
         "pedido": punto_dict(r.pedido) if r.pedido else None,
-        "motivo": r.motivo,                       # afluencia · lluvia · cerrado · None (no hace falta cambiar)
+        "motivo": r.motivo,                       # afluencia · lluvia · cerrado · precaucion · None (no hace falta cambiar)
         "alternativa": _candidato_dict(r.alternativa, factor(r.alternativa)) if r.alternativa else None,
         "otras": [_candidato_dict(c, factor(c)) for c in r.otras],
         "otra_hora": None if r.otra_hora is None else {

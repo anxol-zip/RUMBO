@@ -100,6 +100,7 @@ const es = {
 
   'rec.buscando': 'Buscando una alternativa parecida…', 'rec.volver': '← Volver', 'rec.volverA': '← Volver a {lugar}',
   'rec.sinAlternativa': 'Ahora no hay una alternativa cerca', 'rec.estaBien': '{lugar} está bien ahora',
+  'rec.sinMejores': 'Lo sentimos, no hay mejores opciones para ir ahora', 'rec.verSemana': 'Ver la semana de {lugar}',
   'rec.otraHora': 'Mejor a las {hora}: estará en {color}.', 'rec.prefieres': '¿Prefieres {lugar}? Ve a las {hora}: estará en {color}.',
   'rec.titulo': 'Mejor ve a {lugar}', 'rec.pediste': 'Lo que pediste', 'rec.recomendamos': 'Te recomendamos',
   'rec.encontrar': 'Qué vas a encontrar', 'rec.coincide': 'Coincide con lo que buscas:', 'rec.porQue': 'Por qué ahora',
@@ -271,6 +272,7 @@ const en = {
 
   'rec.buscando': 'Looking for a similar alternative…', 'rec.volver': '← Back', 'rec.volverA': '← Back to {lugar}',
   'rec.sinAlternativa': 'No nearby alternative right now', 'rec.estaBien': '{lugar} is fine right now',
+  'rec.sinMejores': 'Sorry, there are no better options right now', 'rec.verSemana': 'See the week for {lugar}',
   'rec.otraHora': 'Better at {hora}, when it should show “{color}”.', 'rec.prefieres': 'Still want {lugar}? Go at {hora}, when it should show “{color}”.',
   'rec.titulo': 'Better go to {lugar}', 'rec.pediste': 'What you asked for', 'rec.recomendamos': 'We recommend',
   'rec.encontrar': 'What you’ll find', 'rec.coincide': 'Matches what you like:', 'rec.porQue': 'Why now',

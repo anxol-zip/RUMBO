@@ -103,6 +103,27 @@ def test_si_esta_bien_no_cambia():
     assert r.motivo is None and r.alternativa is None and "buen momento" in r.razon
 
 
+def test_en_amarillo_solo_propone_lugares_con_menos_gente():
+    puntos = {
+        1: punto(1, 1.3, "historia"),                  # pedido, en amarillo
+        2: punto(2, 1.35, "historia"),                 # amarillo con más gente: no
+        5: punto(5, 1.1, "historia"),                  # amarillo con menos gente: sí
+    }
+    pron = [(datetime(2026, 10, 18, 14), "amarillo", 1.1), (datetime(2026, 10, 18, 16), "verde", 0.8)]
+    r = recomendar(puntos, MATRIZ, AHORA, pedido_id=1, pronostico_pedido=pron)
+    assert r.motivo == "precaucion" and r.alternativa.punto.id == 5 and not r.otras
+    assert "en amarillo" in r.razon and "Mejor ve a Punto 5" in r.razon
+    assert r.otra_hora.hora == datetime(2026, 10, 18, 16)          # otra hora en amarillo no sería mejor
+
+
+def test_en_amarillo_sin_lugares_mas_tranquilos_lo_dice():
+    puntos = {1: punto(1, 1.1), 2: punto(2, 1.3), 3: punto(3, 2.0)}
+    pron = [(datetime(2026, 10, 18, 14), "amarillo", 1.0)]
+    r = recomendar(puntos, MATRIZ, AHORA, pedido_id=1, pronostico_pedido=pron)
+    assert r.motivo == "precaucion" and r.alternativa is None and r.otra_hora is None
+    assert "con menos gente" in r.razon
+
+
 def test_sin_pedido_usa_intereses_y_poco_tiempo_limita_el_traslado():
     puntos = {1: punto(1, 0.5, "historia"), 2: punto(2, 0.5, "naturaleza"), 3: punto(3, 0.5, "naturaleza")}
     r = recomendar(puntos, MATRIZ, AHORA, intereses=["naturaleza"])

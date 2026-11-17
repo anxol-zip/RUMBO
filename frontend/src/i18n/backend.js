@@ -49,10 +49,13 @@ export function explicacionRec(rec, t) {
   if (!motivo) return `${corto(pedido.nombre)} is fine right now: a good time to go.`
   if (motivo === 'afluencia') partes.push(`${corto(pedido.nombre)} is very busy right now${pedido.nivel ? ` (${pedido.nivel.toFixed(1)}× the usual)` : ''}.`)
   else if (motivo === 'cerrado') partes.push(`${corto(pedido.nombre)} is closed at this hour.`)
+  else if (motivo === 'precaucion') partes.push(`${corto(pedido.nombre)} is somewhat busy right now${pedido.nivel ? ` (${pedido.nivel.toFixed(1)}× the usual)` : ''}.`)
   else partes.push(`Heavy rain is expected and ${corto(pedido.nombre)} is outdoors.`)
   if (alt) {
     const traslado = alt.traslado ? `, ${alt.traslado.minutos} min away ${t(`modo.${alt.traslado.modo}`)}` : ''
     partes.push(`Go to ${corto(alt.nombre)} instead: it shows "${t(`sem.${alt.color}`)}"${traslado}.`)
+  } else if (motivo === 'precaucion') {
+    partes.push('There is no similar open place within 1 hour with fewer people right now.')
   } else {
     partes.push('There is no similar open place within 1 hour that is not busy.')
   }

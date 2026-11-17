@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { api, codigoDe } from '../api/cliente.js'
 import { hora, partesRazon, textoTraslado } from '../data/formato.js'
 import { explicacionRec, ficha } from '../i18n/backend.js'
 import { useIdioma } from '../i18n/contexto.js'
 import BotonEscuchar from './BotonEscuchar.jsx'
 import Foto from './Foto.jsx'
+import Icono from './Icono.jsx'
 import Semaforo from './Semaforo.jsx'
 import Esqueleto from './Esqueleto.jsx'
+import VistaSemana from './VistaSemana.jsx'
 
 const corto = (nombre) => nombre.split(' (')[0]
 
@@ -34,6 +36,8 @@ function Recomendacion({ puntoId, sesionId, origenId, catalogo, intereses, onVol
   const [rec, setRec] = useState(null)
   const [fallo, setFallo] = useState(false)
   const [aceptada, setAceptada] = useState(false)
+  const [verSemana, setVerSemana] = useState(false)   // sin alternativa: la semana del lugar pedido
+  const cerrarSemana = useCallback(() => setVerSemana(false), [])
 
   useEffect(() => {
     let vigente = true
@@ -72,13 +76,23 @@ function Recomendacion({ puntoId, sesionId, origenId, catalogo, intereses, onVol
   )
 
   if (!alternativa) {
+    if (verSemana && pedido) {
+      return <VistaSemana puntoId={pedido.id} nombre={pedido.nombre} onCerrar={cerrarSemana} onError={onError} />
+    }
+    const titulo = !rec.motivo ? t('rec.estaBien', { lugar: corto(pedido.nombre) })
+      : rec.motivo === 'precaucion' ? t('rec.sinMejores') : t('rec.sinAlternativa')
     return (
       <div>
         {volver}
-        <h2 className="titulo-rec">{rec.motivo ? t('rec.sinAlternativa') : t('rec.estaBien', { lugar: corto(pedido.nombre) })}</h2>
+        <h2 className="titulo-rec">{titulo}</h2>
         <p className="aviso info">{explicacion}</p>
-        <BotonEscuchar partes={[rec.motivo ? t('rec.sinAlternativa') : t('rec.estaBien', { lugar: corto(pedido.nombre) }), explicacion]} />
+        <BotonEscuchar partes={[titulo, explicacion]} />
         {otraHora && <p className="tip">{t('rec.otraHora', { hora: hora(otraHora.hora), color: colorOtraHora })}</p>}
+        {rec.motivo && pedido && (
+          <button type="button" className="boton primario" style={{ marginTop: 16 }} onClick={() => setVerSemana(true)}>
+            <Icono nombre="calendario" />{t('rec.verSemana', { lugar: corto(pedido.nombre) })}
+          </button>
+        )}
       </div>
     )
   }

@@ -3,7 +3,9 @@
 Dos preguntas:
 
 1. **Con un punto pedido**: si está en rojo, cerrado, o al aire libre con lluvia fuerte, propone
-   una alternativa y, además, **otra hora** para el mismo lugar (también es redistribuir).
+   una alternativa y, además, **otra hora** para el mismo lugar (también es redistribuir). Si está en
+   amarillo ("con precaución"), solo propone lugares con **menos gente**: en verde, o en amarillo con un
+   nivel más bajo (el nivel es relativo a lo normal de cada lugar, así que se puede comparar entre ellos).
 2. **Sin punto pedido**: los mejores lugares para ir ahora según los intereses del turista.
 
 Reglas de una alternativa (RN_02): nunca está en rojo, está abierta, **se parece** al punto pedido
@@ -27,7 +29,7 @@ from typing import Literal
 from turismo_core.conveniencia import MAX_MINUTOS, Conveniencia, conveniencia
 from turismo_core.situacion import PuntoAhora
 
-Motivo = Literal["afluencia", "lluvia", "cerrado"]
+Motivo = Literal["afluencia", "lluvia", "cerrado", "precaucion"]
 Modo = Literal["a pie", "en coche"]
 
 PESO_SIMILITUD = 0.3
@@ -99,12 +101,22 @@ def motivo_de_cambio(p: PuntoAhora) -> Motivo | None:
     return None
 
 
+def mas_tranquilo(p: PuntoAhora, que: PuntoAhora) -> bool:
+    """``p`` tiene menos gente que ``que``: está en verde, o en amarillo con un nivel más bajo."""
+    if p.color == "verde":
+        return True
+    return p.color == "amarillo" and p.nivel is not None and que.nivel is not None and p.nivel < que.nivel
+
+
 def candidatos(puntos: Iterable[PuntoAhora], referencia: frozenset[str], origen: int | None,
                matriz: Mapping[tuple[int, int], tuple[float, float]], excluir: int | None = None,
-               max_minutos: float = MAX_MINUTOS, preferir_techado: bool = False) -> list[Candidato]:
+               max_minutos: float = MAX_MINUTOS, preferir_techado: bool = False,
+               mas_tranquilo_que: PuntoAhora | None = None) -> list[Candidato]:
     salida = []
     for p in puntos:
         if p.id == excluir or not p.abierto or p.color in ("rojo", "cerrado"):
+            continue
+        if mas_tranquilo_que is not None and not mas_tranquilo(p, mas_tranquilo_que):
             continue
         sim = similitud(referencia, p.categorias) if referencia else 1.0
         if sim <= 0:
@@ -120,9 +132,11 @@ def candidatos(puntos: Iterable[PuntoAhora], referencia: frozenset[str], origen:
     return sorted(salida, key=lambda c: (-c.puntaje, c.minutos if c.minutos is not None else 0))
 
 
-def mejor_hora(pronostico: Sequence[tuple[datetime, str, float | None]]) -> OtraHora | None:
-    """La primera hora siguiente en que el punto no está en rojo ni cerrado (prefiere verde si hay)."""
-    abiertas = [(h, c, n) for h, c, n in pronostico if c in ("verde", "amarillo")]
+def mejor_hora(pronostico: Sequence[tuple[datetime, str, float | None]], solo_verde: bool = False
+               ) -> OtraHora | None:
+    """La primera hora siguiente en que el punto no está en rojo ni cerrado (prefiere verde si hay).
+    Con ``solo_verde`` (el punto ya está en amarillo), otra hora en amarillo no sería mejor: solo verde."""
+    abiertas = [(h, c, n) for h, c, n in pronostico if c in (("verde",) if solo_verde else ("verde", "amarillo"))]
     if not abiertas:
         return None
     verde = next(((h, c, n) for h, c, n in abiertas if c == "verde"), None)
@@ -180,12 +194,16 @@ def explicar(pedido: PuntoAhora | None, motivo: Motivo | None, alt: Candidato | 
             partes.append(f"{pedido.nombre} está en rojo{_nivel(pedido)}.")
         elif motivo == "cerrado":
             partes.append(f"{pedido.nombre} está cerrado a esta hora.")
+        elif motivo == "precaucion":
+            partes.append(f"{pedido.nombre} está en amarillo{_nivel(pedido)}.")
         else:
             partes.append(f"Se pronostica lluvia fuerte y {pedido.nombre} es al aire libre.")
         if alt is not None:
             techado = " (techado)" if motivo == "lluvia" and alt.punto.interior else ""
             partes.append(f"Mejor ve a {alt.punto.nombre}{techado}: está {_COLOR[alt.punto.color]}"
                           f"{_como_llegar(alt)}{_por_que_se_parece(pedido.categorias, alt)}.")
+        elif motivo == "precaucion":
+            partes.append("No hay un lugar parecido, abierto y a menos de 1 h con menos gente ahora.")
         else:
             partes.append("No hay una alternativa parecida, abierta y a menos de 1 h que no esté en rojo.")
         if otra_hora is not None:
@@ -217,14 +235,16 @@ def recomendar(puntos: Mapping[int, PuntoAhora], matriz: Mapping[tuple[int, int]
                              explicar(None, None, alt, None, momento, intereses))
 
     pedido = puntos[pedido_id]
-    motivo = motivo_de_cambio(pedido)
+    # El amarillo no entra en motivo_de_cambio: el asistente (rag) no lo trata como "hay que cambiar".
+    motivo = motivo_de_cambio(pedido) or ("precaucion" if pedido.color == "amarillo" else None)
     if motivo is None:
         return Recomendacion(pedido, None, None, (), None, explicar(pedido, None, None, None, momento))
 
     referencia = pedido.categorias | intereses
+    precaucion = motivo == "precaucion"
     lista = candidatos(puntos.values(), referencia, origen, matriz, excluir=pedido_id, max_minutos=max_min,
-                       preferir_techado=(motivo == "lluvia"))
+                       preferir_techado=(motivo == "lluvia"), mas_tranquilo_que=pedido if precaucion else None)
     alt = lista[0] if lista else None
-    otra = mejor_hora(pronostico_pedido)
+    otra = mejor_hora(pronostico_pedido, solo_verde=precaucion)
     return Recomendacion(pedido, motivo, alt, tuple(lista[1:1 + MAX_ALTERNATIVAS]), otra,
                          explicar(pedido, motivo, alt, otra, momento))
