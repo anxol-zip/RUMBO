@@ -25,9 +25,12 @@ function TodosLosLugares({ puntos, seleccionadoId, onSeleccionar }) {
         const titulo = g.id === 'otros' ? t('todos.otros') : t(`sem.${g.id}`)
         return (
           <section key={g.id} className={`grupo-estado ${g.id}`} aria-labelledby={`grupo-${g.id}`}>
+            {/* La franja (h3) es de vidrio y cubre lo que pasa por debajo al bajar; la pastilla lleva el color. */}
             <h3 id={`grupo-${g.id}`}>
-              <IconoEstado color={g.colores[0]} />
-              {titulo} <span className="cuenta">{lugares.length}</span>
+              <span className="grupo-pastilla">
+                <IconoEstado color={g.colores[0]} />
+                {titulo} <span className="cuenta">{lugares.length}</span>
+              </span>
             </h3>
             <ul>
               {lugares.map((p) => (
