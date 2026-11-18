@@ -342,7 +342,7 @@ function Turista({ catalogo, cargandoCatalogo, errorCatalogo, onReintentar, sesi
             )}
             {ampliada
               ? <TodosLosLugares puntos={ordenados} seleccionadoId={seleccionadoId} onSeleccionar={seleccionar} />
-              : <ListaPuntos puntos={ordenados} seleccionadoId={seleccionadoId} onSeleccionar={seleccionar} />}
+              : <ListaPuntos puntos={ordenados} intereses={intereses} seleccionadoId={seleccionadoId} onSeleccionar={seleccionar} />}
             </>}
           </div>
         )}

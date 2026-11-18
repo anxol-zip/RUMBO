@@ -1,4 +1,5 @@
-import { partesRazon, textoTraslado } from '../data/formato.js'
+import { detalleLista } from '../data/detalleLista.js'
+import { textoTraslado } from '../data/formato.js'
 import { useIdioma } from '../i18n/contexto.js'
 import BotonFavorito from './BotonFavorito.jsx'
 import Foto from './Foto.jsx'
@@ -7,11 +8,14 @@ import Semaforo from './Semaforo.jsx'
 // Lista ordenada por conveniencia (T2): primero lo que está en buen momento,
 // luego lo que coincide con tus intereses; lo cerrado, al final.
 // Es una lista real (<ul>): el lector de pantalla anuncia cuántos lugares hay (D6).
-function ListaPuntos({ puntos, seleccionadoId, onSeleccionar }) {
+// El renglón de abajo dice lo que distingue a cada lugar (data/detalleLista.js), no lo que ya dice el chip.
+function ListaPuntos({ puntos, intereses = [], seleccionadoId, onSeleccionar }) {
   const { idioma, t } = useIdioma()
   return (
     <ul className="lista-lugares">
-      {puntos.map((p) => (
+      {puntos.map((p) => {
+        const detalle = detalleLista(p, intereses, idioma, t)
+        return (
         <li key={p.id} className="con-favorito">
           <button
             type="button"
@@ -28,7 +32,7 @@ function ListaPuntos({ puntos, seleccionadoId, onSeleccionar }) {
                 {p.traslado && <span className="meta-fuerte numero">{textoTraslado(p.traslado, t)}</span>}
                 <span>{p.destino}</span>
               </div>
-              <p className="detalle">{partesRazon(p.razon, idioma)[0]}</p>
+              {detalle && <p className="detalle">{detalle}</p>}
               {(p.confianza === 'confirmado por turistas' || p.ajuste_manual) && (
                 <div className="meta">
                   {p.confianza === 'confirmado por turistas' && <span className="insignia">{t('lista.confirmado')}</span>}
@@ -40,7 +44,8 @@ function ListaPuntos({ puntos, seleccionadoId, onSeleccionar }) {
           {/* Botón aparte, no dentro de la tarjeta: un botón no puede ir dentro de otro. */}
           <BotonFavorito puntoId={p.id} nombre={p.nombre} compacto />
         </li>
-      ))}
+        )
+      })}
     </ul>
   )
 }
