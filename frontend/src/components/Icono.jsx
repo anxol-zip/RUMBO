@@ -8,6 +8,7 @@ const TRAZOS = {
   corazon: <path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z" />,
   expandir: <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />,
   reducir: <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />,
+  semaforo: <><rect x="7" y="2" width="10" height="20" rx="3" /><circle cx="12" cy="7" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="17" r="1.5" /></>,
   estrella: <path d="M12 2 15.1 8.3 22 9.3l-5 4.9 1.2 6.8L12 17.8 5.8 21 7 14.1 2 9.3l6.9-1Z" />,
   cerrar: <path d="M18 6 6 18M6 6l12 12" />,
   camara: <><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3Z" /><circle cx="12" cy="13" r="3" /></>,

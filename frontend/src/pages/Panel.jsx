@@ -1,70 +1,73 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api, codigoDe } from '../api/cliente.js'
 import { useCuenta } from '../cuenta/contexto.js'
 import { hora } from '../data/formato.js'
+import { atencion } from '../data/tablero.js'
+import { useDenuncias } from '../hooks/useDenuncias.js'
 import { useIdioma } from '../i18n/contexto.js'
-import { IdiomaFijo } from '../i18n/Idioma.jsx'
+import Atencion from '../components/panel/Atencion.jsx'
 import FijarColor from '../components/panel/FijarColor.jsx'
 import Indicadores from '../components/panel/Indicadores.jsx'
+import LugaresAhora from '../components/panel/LugaresAhora.jsx'
 import MapaCalor from '../components/panel/MapaCalor.jsx'
 import Redirecciones from '../components/panel/Redirecciones.jsx'
 import ResenasDenunciadas from '../components/panel/ResenasDenunciadas.jsx'
 import SemaforoEstatal from '../components/panel/SemaforoEstatal.jsx'
 import Umbrales from '../components/panel/Umbrales.jsx'
 import Esqueleto from '../components/Esqueleto.jsx'
+import Icono from '../components/Icono.jsx'
 
 const RECARGA_MS = 30_000
-const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+const PESTANAS = ['resumen', 'moderacion', 'ajustes', 'observatorio']
 
-// G1 — Panel de gobierno (CU_07): saturación, a dónde se van los turistas y cuánto dinero llegó.
-// Solo agregados (RN_12). La actividad de demostración se cuenta aparte, rotulada (RN_11).
-// Su público es la Secretaría: se queda en español aunque el turista haya elegido inglés.
+// G1 — Panel de la Secretaría (CU_07). Responde primero "¿qué necesita que yo haga?" (Atención) y luego
+// "¿cómo va hoy?". Solo agregados (RN_12). Se traduce como el resto de la app.
 function Panel({ onError }) {
-  const { idioma, t } = useIdioma()
+  const { t } = useIdioma()
   const { disponible, cargando, sesion, perfil, pedirEntrar } = useCuenta()
-  const nota = t('panel.soloEspanol')
   // Solo administradores (feature 002). No se pide ningún dato del panel hasta saber el rol; el
   // backend lo vuelve a comprobar en cada petición (401 o 403).
-  let cerrado = null
-  if (cargando) cerrado = <Esqueleto tipo="cuenta" />
-  else if (!sesion) {
-    cerrado = (
-      <>
-        <h1>Panel de la Secretaría</h1>
-        <p className="secundario">Inicia sesión para entrar al panel.</p>
+  if (cargando) return <div className="tablero"><Esqueleto tipo="cuenta" /></div>
+  if (!sesion) {
+    return (
+      <div className="tablero tablero-cerrado">
+        <h1>{t('tablero.entrarTitulo')}</h1>
+        <p className="secundario">{t('tablero.entrarTexto')}</p>
         {disponible
-          ? <button type="button" className="boton primario" style={{ marginTop: 16 }} onClick={pedirEntrar}>Iniciar sesión</button>
-          : <p className="aviso info" style={{ marginTop: 16 }}>Las cuentas no están configuradas en este equipo (falta frontend/.env.local; ver INSTALACION.md).</p>}
-      </>
-    )
-  } else if (perfil?.rol !== 'administrador') {
-    cerrado = (
-      <>
-        <h1>Solo administradores</h1>
-        <p className="secundario">Tu cuenta no tiene permiso para ver el panel de la Secretaría.</p>
-      </>
+          ? <button type="button" className="boton primario" onClick={pedirEntrar}>{t('cuenta.entrar')}</button>
+          : <p className="aviso info">{t('tablero.sinCuentas')}</p>}
+      </div>
     )
   }
-  return (
-    <IdiomaFijo idioma="es">
-      {cerrado
-        ? <div className="gobierno">{cerrado}</div>
-        : <ContenidoPanel nota={nota} etiquetaDemo={t('panel.contarDemo')} idiomaDemo={idioma} onError={onError} />}
-    </IdiomaFijo>
-  )
+  if (perfil?.rol !== 'administrador') {
+    return (
+      <div className="tablero tablero-cerrado">
+        <h1>{t('tablero.soloAdminTitulo')}</h1>
+        <p className="secundario">{t('tablero.soloAdminTexto')}</p>
+      </div>
+    )
+  }
+  return <ContenidoPanel onError={onError} />
 }
 
-function ContenidoPanel({ nota, etiquetaDemo, idiomaDemo, onError }) {
+function ContenidoPanel({ onError }) {
+  const { t } = useIdioma()
   const [datos, setDatos] = useState(null)
   const [fallo, setFallo] = useState(false)
-  const [incluirDemo, setIncluirDemo] = useState(true)
+  // RN_11: las sesiones del stand de la Expo (API con PUEBLA_DEMO=1) se marcan como prueba. Separar las
+  // bases de desarrollo y de datos reales no lo cubre: el stand y los turistas reales usan la misma.
+  const [actividad, setActividad] = useState('todas')
   const [version, setVersion] = useState(0)
+  const [pestana, setPestana] = useState('resumen')
+  const [puntoAjuste, setPuntoAjuste] = useState(null)
+  const pestanas = useRef(null)
+  const denuncias = useDenuncias()
 
   useEffect(() => {
     let vigente = true
     async function cargar() {
       try {
-        const d = await api.obtenerPanel({ incluirDemo })
+        const d = await api.obtenerPanel({ incluirDemo: actividad === 'todas' })
         if (vigente) { setDatos(d); setFallo(false); onError(null) }
       } catch (e) {
         if (vigente) { setFallo(true); onError(codigoDe(e)) }
@@ -73,7 +76,7 @@ function ContenidoPanel({ nota, etiquetaDemo, idiomaDemo, onError }) {
     cargar()
     const id = setInterval(cargar, RECARGA_MS)
     return () => { vigente = false; clearInterval(id) }
-  }, [incluirDemo, version, onError])
+  }, [actividad, version, onError])
 
   async function fijar(ajuste) {
     await api.fijarColor(ajuste)
@@ -89,74 +92,124 @@ function ContenidoPanel({ nota, etiquetaDemo, idiomaDemo, onError }) {
     }
   }
 
-  if (!datos) return <div className="gobierno">{!fallo ? <Esqueleto tipo="panel" />
-    : <button type="button" className="boton" onClick={() => { setFallo(false); setVersion((v) => v + 1) }}>Reintentar</button>}</div>
+  // Desde un aviso o desde la lista de lugares: cambia de pestaña y, si aplica, deja el lugar elegido.
+  // ancla: un elemento dentro de la pestaña (p. ej. la lista de lugares) al que se lleva la vista y el foco.
+  function ir(destino, puntoId = null, ancla = null) {
+    if (puntoId != null) setPuntoAjuste(puntoId)
+    setPestana(destino)
+    const suave = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+    requestAnimationFrame(() => {
+      const objetivo = ancla ? document.getElementById(ancla) : null
+      if (objetivo) { objetivo.scrollIntoView({ block: 'start', behavior: suave }); objetivo.focus({ preventScroll: true }); return }
+      pestanas.current?.querySelector(`#tablero-pestana-${destino}`)?.focus()
+      pestanas.current?.scrollIntoView({ block: 'start', behavior: suave })
+    })
+  }
+
+  // Pestañas con flechas, Inicio y Fin (patrón de pestañas de ARIA).
+  function teclaPestana(e) {
+    const i = PESTANAS.indexOf(pestana)
+    const siguiente = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: PESTANAS.length - 1 }[e.key]
+    if (siguiente === undefined) return
+    e.preventDefault()
+    const nueva = PESTANAS[(siguiente + PESTANAS.length) % PESTANAS.length]
+    setPestana(nueva)
+    pestanas.current?.querySelector(`#tablero-pestana-${nueva}`)?.focus()
+  }
+
+  if (!datos) {
+    return (
+      <div className="tablero">
+        {!fallo ? <Esqueleto tipo="panel" />
+          : <button type="button" className="boton" onClick={() => { setFallo(false); setVersion((v) => v + 1) }}>{t('error.reintentar')}</button>}
+      </div>
+    )
+  }
 
   const { afluencia, redirecciones, derrama, estatal, umbrales, ajustes } = datos
+  const avisos = atencion({ grupos: denuncias.grupos, puntos: afluencia.puntos, ajustes })
+  const cuenta = {
+    moderacion: denuncias.grupos.filter((g) => g.resena.estado === 'visible').length || null,
+    ajustes: ajustes.length || null,
+  }
 
   return (
-    <div className="gobierno">
-      <div className="gobierno-titulo">
+    <div className="tablero">
+      <header className="tablero-cabeza">
         <div>
-          <p className="suave">Secretaría de Turismo, zona piloto Puebla–Cholula–Atlixco</p>
-          <h1>Panel de hoy</h1>
+          <p className="tablero-zona">{t('tablero.zona')}</p>
+          <h1>{t('tablero.titulo')}</h1>
+          <p className="tablero-actualizado"><span className="punto-vivo" aria-hidden="true" />{t('tablero.actualizado', { hora: hora(afluencia.datos.ahora) })}</p>
         </div>
-        <div className="gobierno-opciones">
-          <label className="interruptor">
-            <input type="checkbox" checked={incluirDemo} onChange={(e) => setIncluirDemo(e.target.checked)} />
-            <span lang={idiomaDemo}>{etiquetaDemo}</span>
-          </label>
-          <p className="suave">Solo totales por lugar y hora. Actualizado a las {hora(afluencia.datos.ahora)}.</p>
+        <div className="tablero-actividad" role="group" aria-labelledby="tablero-actividad-titulo" aria-describedby="tablero-actividad-ayuda">
+          <p id="tablero-actividad-titulo" className="tablero-actividad-titulo">{t('tablero.actividad')}</p>
+          <div className="segmentado">
+            {['todas', 'reales'].map((a) => (
+              <button key={a} type="button" aria-pressed={actividad === a} onClick={() => setActividad(a)}>{t(`tablero.actividad.${a}`)}</button>
+            ))}
+          </div>
+          <p id="tablero-actividad-ayuda" className="tablero-ayuda">{t('tablero.actividadAyuda')}</p>
         </div>
+      </header>
+
+      <div ref={pestanas} className="tablero-pestanas" role="tablist" aria-label={t('tablero.secciones')} onKeyDown={teclaPestana}>
+        {PESTANAS.map((p) => (
+          <button key={p} type="button" role="tab" id={`tablero-pestana-${p}`} aria-controls={`tablero-seccion-${p}`}
+            aria-selected={pestana === p} tabIndex={pestana === p ? 0 : -1} onClick={() => setPestana(p)}>
+            <Icono nombre={{ resumen: 'grafica', moderacion: 'estrella', ajustes: 'semaforo', observatorio: 'calendario' }[p]} />
+            {t(`tablero.pestana.${p}`)}
+            {cuenta[p] != null && <span className="perfil-contador">{cuenta[p]}</span>}
+          </button>
+        ))}
       </div>
-      {nota && <p className="aviso info" lang="en" style={{ marginBottom: 16 }}>{nota}</p>}
 
-      <div className="rejilla">
-        <Indicadores hoy={afluencia.hoy} derrama={derrama} />
+      <section id={`tablero-seccion-${pestana}`} role="tabpanel" aria-labelledby={`tablero-pestana-${pestana}`} className="tablero-seccion">
+        {pestana === 'resumen' && <>
+          <Atencion avisos={avisos} cargandoDenuncias={denuncias.estado === 'cargando'} onIr={ir} />
+          <Indicadores hoy={afluencia.hoy} derrama={derrama} puntos={afluencia.puntos} />
+          <div className="tablero-rejilla">
+            <article className="tablero-caja t-mapa">
+              <h2>{t('tablero.mapaTitulo')}</h2>
+              <p className="tablero-sub">{t('tablero.mapaSub')}</p>
+              <MapaCalor puntos={afluencia.puntos} />
+            </article>
+            <article id="tablero-lugares" tabIndex={-1} className="tablero-caja t-lugares">
+              <h2>{t('tablero.lugaresTitulo')}</h2>
+              <p className="tablero-sub">{t('tablero.lugaresSub')}</p>
+              <LugaresAhora puntos={afluencia.puntos} onFijar={(id) => ir('ajustes', id)} />
+            </article>
+            <article className="tablero-caja t-ancho">
+              <h2>{t('tablero.redirTitulo')}</h2>
+              <p className="tablero-sub">{t('tablero.redirSub')}</p>
+              <Redirecciones datos={redirecciones} derrama={derrama} />
+            </article>
+          </div>
+        </>}
 
-        <div className="caja c-7">
-          <h2>Afluencia ahora</h2>
-          <p className="subtitulo">Estimada con datos oficiales y corregida con reportes de turistas</p>
-          <MapaCalor puntos={afluencia.puntos} />
-        </div>
-        <div className="caja c-5">
-          <h2>¿A dónde se fueron los turistas?</h2>
-          <p className="subtitulo">Alternativas que la app propuso hoy y cuántos turistas las aceptaron</p>
-          <Redirecciones filas={redirecciones.filas} />
-        </div>
+        {pestana === 'moderacion' && (
+          <article className="tablero-caja">
+            <h2>{t('tablero.moderacionTitulo')}</h2>
+            <p className="tablero-sub">{t('tablero.moderacionSub')}</p>
+            <ResenasDenunciadas {...denuncias} puntos={afluencia.puntos} />
+          </article>
+        )}
 
-        <div className="caja c-5">
-          <h2>Fijar el color de un lugar</h2>
-          <p className="subtitulo">Para cierres, obras o filas que el modelo no ve. Gana sobre el cálculo hasta la hora de fin.</p>
-          <FijarColor puntos={afluencia.puntos} ajustes={ajustes} onFijar={fijar} onQuitar={quitar} onError={onError} />
-        </div>
-        <div className="caja c-7">
-          <h2>Semáforo estatal de {MESES[estatal.mes - 1]}</h2>
-          <p className="subtitulo">{estatal.metodo}</p>
-          <SemaforoEstatal destinos={estatal.destinos} />
-          <p className="fuente-dato">Fuente: {estatal.fuente}</p>
-        </div>
+        {pestana === 'ajustes' && (
+          <article className="tablero-caja">
+            <h2>{t('tablero.ajustesTitulo')}</h2>
+            <p className="tablero-sub">{t('tablero.ajustesSub')}</p>
+            <FijarColor key={puntoAjuste ?? 'ninguno'} puntos={afluencia.puntos} puntoInicial={puntoAjuste} ajustes={ajustes}
+              onFijar={fijar} onQuitar={quitar} onError={onError} />
+          </article>
+        )}
 
-        <div className="caja c-7">
-          <h2>Umbrales por lugar</h2>
-          <p className="subtitulo">Cada lugar se compara con su propia historia: verde debajo del percentil 60 de sus horas, rojo arriba del 85</p>
-          <Umbrales filas={umbrales} />
-        </div>
-        <div className="caja c-5">
-          <h2>Cómo leer la derrama</h2>
-          <p className="subtitulo">Dos cifras distintas, cada una con su supuesto</p>
-          <p><strong>Redistribuida:</strong> dinero que llegó a otro destino porque el turista aceptó la alternativa.</p>
-          <p style={{ marginTop: 10 }}><strong>Nueva estimada:</strong> el turista aceptó la alternativa y después también visitó el lugar que había pedido; esa parada se sumó a su plan.</p>
-          <p className="suave" style={{ marginTop: 12 }}>{derrama.supuesto}</p>
-          <p className="fuente-dato">Fuente: {derrama.fuente}</p>
-        </div>
-
-        <div className="caja" style={{ gridColumn: '1 / -1' }}>
-          <h2>Reseñas denunciadas</h2>
-          <p className="subtitulo">Lo que los turistas reportaron como inapropiado. Ocultar la quita de la ficha; su autor la sigue viendo.</p>
-          <ResenasDenunciadas puntos={afluencia.puntos} />
-        </div>
-      </div>
+        {pestana === 'observatorio' && (
+          <article className="tablero-caja">
+            <SemaforoEstatal estatal={estatal} />
+            <Umbrales filas={umbrales} />
+          </article>
+        )}
+      </section>
     </div>
   )
 }
