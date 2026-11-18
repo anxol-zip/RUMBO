@@ -342,10 +342,6 @@ body.cambiando-ancho .panel-flotante { transition: none; }
 .lugar-traslado { font-size: var(--t-meta); font-weight: 600; color: var(--tinta); }
 .lugar-destino { font-size: var(--t-meta); color: var(--tinta-2); }
 
-/* La recomendación compara dos lugares lado a lado cuando el panel da para dos columnas. */
-@container panel (min-width: 40rem) {
-  .comparacion { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); align-items: start; }
-}
 /* Acciones de la ficha: la principal primero y en rosa; las demás con borde. Con una sola columna,
    en el escritorio se quedan fijas abajo aunque se baje por los datos. */
 /* Con tres botones, el principal va solo arriba y los otros dos debajo: ninguno queda huérfano.
@@ -515,6 +511,18 @@ body.cambiando-ancho .panel-flotante { transition: none; }
 .tarjeta-texto .detalle + .meta { margin-top: var(--e-2); }
 .opcion.con-foto { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: var(--e-3); align-items: start; }
 .opcion.recomendada .foto.grande { margin: 0 0 var(--e-3); }
+/* "Mejor ve a…": lo que pediste en un renglón compacto, arriba de la alternativa. */
+.rec-pedido {
+  display: grid; grid-template-columns: 3.5rem minmax(0, 1fr); align-items: center; gap: var(--e-3);
+  margin-top: var(--e-4); padding: var(--e-3); border-radius: var(--r-m); background: var(--gris-claro);
+}
+.rec-pedido .foto.mini { width: 3.5rem; height: 3.5rem; }
+.rec-pedido-nombre { font-weight: 650; line-height: 1.25; }
+.rec-pedido-estado { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e-1) var(--e-2); margin-top: var(--e-1); font-size: var(--t-meta); }
+.opcion.recomendada { margin-top: var(--e-3); }
+.opcion.recomendada .ficha-portada .foto.grande { margin-top: 0; }
+.opcion.recomendada > .descripcion { margin-top: var(--e-3); }
+.rec-acciones, .rec-acciones:is(*) { grid-auto-flow: row; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
 .pagina-texto .creditos { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--e-3) var(--e-5); font-size: var(--t-meta); }
 .creditos li { display: flex; flex-direction: column; }
 .creditos a { display: inline-flex; align-items: center; min-height: 44px; color: var(--tinta-2); }
@@ -545,7 +553,6 @@ body.cambiando-ancho .panel-flotante { transition: none; }
 .acciones.dos { grid-template-columns: 1fr 1fr; }
 
 /* ---------- Recomendación ---------- */
-.comparacion { display: grid; gap: 10px; }
 .opcion { border-radius: var(--r-m); padding: var(--e-4); background: var(--gris-claro); }
 .opcion.recomendada { background: var(--blanco); border: 2px solid var(--rosa); }
 .opcion h3 { font-size: 1.125rem; margin: 4px 0 8px; }
