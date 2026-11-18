@@ -424,6 +424,29 @@ body.cambiando-ancho .panel-flotante { transition: none; }
    debajo de la barra de acciones. */
 .ficha-portada .foto.grande img { aspect-ratio: 16 / 9; max-height: min(15rem, 26vh); object-fit: cover; }
 .ficha-portada .foto.grande.sin-foto { aspect-ratio: 16 / 9; max-height: min(15rem, 26vh); }
+/* "Gente ahora": la escala son los tres tramos del semáforo de ese lugar; el tramo actual va con su color. */
+.gente-ahora { margin-top: var(--e-4); padding: var(--e-3) var(--e-4) var(--e-2); border-radius: var(--r-m); background: var(--gris-claro); }
+.gente-cabeza { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--e-1) var(--e-3); }
+.gente-titulo { display: inline-flex; align-items: center; gap: var(--e-2); font-weight: 650; }
+.gente-titulo .icono { color: var(--rosa); }
+.gente-nivel { font-size: var(--t-meta); font-weight: 600; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.gente-barra { position: relative; display: flex; gap: 3px; height: 12px; margin-top: var(--e-3); }
+.gente-tramo { height: 100%; border-radius: 3px; opacity: .45; }
+.gente-tramo:first-child { border-radius: var(--r-pill) 3px 3px var(--r-pill); }
+.gente-tramo:nth-child(3) { border-radius: 3px var(--r-pill) var(--r-pill) 3px; }
+.gente-tramo.verde { background: var(--verde-marca); }
+.gente-tramo.amarillo { background: var(--ama-marca); }
+.gente-tramo.rojo { background: var(--rojo-marca); }
+.gente-tramo.activo { opacity: 1; }
+.gente-marca {
+  position: absolute; top: 50%; width: 22px; height: 22px; border-radius: 50%; transform: translate(-50%, -50%);
+  background: var(--tinta); border: 3px solid var(--blanco); box-shadow: 0 1px 4px rgba(0, 0, 0, .35);
+}
+.gente-etiquetas { display: flex; gap: 3px; margin-top: var(--e-2); font-size: .8125rem; color: var(--tinta-3); }
+.gente-etiquetas span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+.gente-etiquetas .activa { color: var(--tinta); font-weight: 650; }
+:root[data-contraste='alto'] .gente-tramo { opacity: 1; outline: 1px solid #000000; }
+:root[data-contraste='alto'] .gente-tramo:not(.activo) { background: #FFFFFF; }
 .ficha-subtitulo { margin-bottom: var(--e-2); font-size: var(--t-cuerpo); font-weight: 650; }
 .ficha-horas { margin-top: var(--e-5); }
 .ficha-horas .pronostico { grid-template-columns: repeat(4, minmax(0, 1fr)); }

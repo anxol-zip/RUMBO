@@ -10,6 +10,7 @@ import { textosConclusion } from '../data/conclusion.js'
 import { ficha } from '../i18n/backend.js'
 import { useIdioma } from '../i18n/contexto.js'
 import Foto from './Foto.jsx'
+import GenteAhora from './GenteAhora.jsx'
 import Semaforo from './Semaforo.jsx'
 import Semana from './Semana.jsx'
 import VistaSemana from './VistaSemana.jsx'
@@ -133,6 +134,7 @@ function TarjetaPunto({ puntoId, origenId, revision = 0, onVolver, onAlternativa
         <p className="conclusion-titular">{concl.titular}</p>
         {concl.siguiente && <p className="conclusion-siguiente">{concl.siguiente}</p>}
       </div>
+      <GenteAhora nivel={estado.nivel} umbrales={estado.umbrales} color={estado.color} ajustado={Boolean(estado.ajuste_manual)} />
       {estado.espera_reportada && (
         <p className="espera"><Icono nombre="reloj" /> {t('espera.texto', {
           min: estado.espera_reportada.minutos, n: estado.espera_reportada.n_reportes, hace: estado.espera_reportada.ultima_hace_min,
