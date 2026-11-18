@@ -1079,15 +1079,11 @@ th { font-size: var(--t-meta); font-weight: 600; color: var(--tinta-2); }
 
 /* Día por día: la hora más tranquila y la más llena de cada día */
 .semana-subtitulo { margin-top: var(--e-5); font-size: var(--t-sub); font-weight: 650; }
-.semana-dias { list-style: none; padding: 0; margin: var(--e-3) 0 0; border: 1px solid var(--linea); border-radius: var(--r-m); overflow: hidden; background: var(--blanco); }
-.semana-dias li {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--e-5);
-  padding: var(--e-2) var(--e-4); font-size: var(--t-meta);
-}
-.semana-dias li + li { border-top: 1px solid var(--linea); }
-.semana-dias li.hoy { background: var(--rosa-claro); }
-.semana-dias-nombre { min-width: 4.5rem; font-weight: 650; text-transform: capitalize; }
-.semana-fila.hoy .semana-dia, .semana-dias li.hoy .semana-dias-nombre { text-transform: none; }
+.semana-resumen { list-style: none; display: grid; gap: var(--e-3); margin: var(--e-3) 0 0; padding: var(--e-4); border-radius: var(--r-m); background: var(--gris-claro); }
+.semana-resumen li { display: flex; align-items: baseline; gap: var(--e-2); line-height: 1.4; text-wrap: pretty; }
+.semana-resumen li > .semana-punto { flex: none; }
+.semana-resumen li > .icono { flex: none; align-self: center; color: var(--rosa); }
+.semana-fila.hoy .semana-dia { text-transform: none; }
 @media (prefers-reduced-motion: reduce) { .control-mapa.ubicar.buscando span { animation: none; } }
 
 /* ───────────── Cuentas (feature 002): sesión, Favoritos y reseñas ───────────── */
