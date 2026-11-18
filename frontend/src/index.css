@@ -273,7 +273,9 @@ a { color: inherit; }
 .panel-encabezado .resumen { font-size: var(--t-cuerpo); font-weight: 550; margin-top: 2px; }
 /* Datos simulados identificados en pantalla (alcance mínimo 6 del proyecto) */
 .aviso-simulados { margin-top: var(--e-2); padding: var(--e-1) var(--e-3); border-radius: var(--r-s); background: var(--talavera-claro); color: var(--talavera); font-size: var(--t-meta); font-weight: 550; }
-.panel-cuerpo { flex: 1; min-height: 0; overflow: auto; padding: var(--e-1) var(--e-4) var(--e-5); }
+/* El último bloque (las reseñas) necesita aire abajo: la esquina redondeada del panel lo recortaba.
+   overscroll-behavior evita que, al llegar al final, el scroll pase al mapa y "rebote". */
+.panel-cuerpo { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: var(--e-1) var(--e-4) var(--e-6); }
 .zona-arrastre { flex: none; }
 
 /* ---------- Barra lateral ampliable y filtros (D4) ---------- */
@@ -355,7 +357,6 @@ body.cambiando-ancho .panel-flotante { transition: none; }
 .ficha-acciones .boton { padding: 0 var(--e-2); font-size: var(--t-meta); text-align: center; white-space: nowrap; }
 .ficha-acciones .boton.primario { box-shadow: 0 6px 16px rgba(228, 0, 124, .25); }
 @media (min-width: 821px) {
-  .panel-cuerpo.con-acciones { padding-bottom: 0; }
   .ficha-fuentes { padding-bottom: var(--e-4); }
   .ficha-acciones {
     position: sticky; bottom: 0; z-index: 3; margin-inline: calc(-1 * var(--e-4)); padding: var(--e-3) var(--e-4);
