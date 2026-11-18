@@ -9,11 +9,14 @@ const ZONAS = ['verde', 'amarillo', 'rojo']
 export function medidorGente(nivel, umbrales) {
   if (nivel == null || !umbrales || umbrales.bajo == null || umbrales.alto == null) return null
   const { bajo, alto } = umbrales
-  // El tramo rojo mide lo mismo que un tercio del amarillo o más; si el nivel lo rebasa, la escala crece.
-  const max = Math.max(alto + Math.max((alto - bajo) * 0.9, alto * 0.25), nivel * 1.08)
-  const pct = (x) => Math.round((x / max) * 1000) / 10
-  const limites = [0, bajo, alto, max]
-  const zonas = ZONAS.map((color, i) => ({ color, ancho: pct(limites[i + 1] - limites[i]) }))
+  // La escala no empieza en 0: empieza un tramo antes del umbral verde. Si empezara en 0, el verde
+  // ocuparía casi toda la barra (los umbrales rondan 1.0 y 1.5) y la marca se amontonaría al final.
+  const ancho = alto - bajo
+  const inicio = Math.max(0, Math.min(bajo - ancho * 1.1, nivel * 0.92))
+  const max = Math.max(alto + ancho * 0.9, nivel * 1.08)
+  const pct = (x) => Math.round(((x - inicio) / (max - inicio)) * 1000) / 10
+  const limites = [inicio, bajo, alto, max]
+  const zonas = ZONAS.map((color, i) => ({ color, ancho: Math.round(((limites[i + 1] - limites[i]) / (max - inicio)) * 1000) / 10 }))
   const zona = nivel < bajo ? 'verde' : nivel < alto ? 'amarillo' : 'rojo'
   return { zonas, zona, posicion: Math.min(98, Math.max(2, pct(nivel))) }
 }
