@@ -89,8 +89,21 @@ Debajo quedan **¿Cuándo me conviene ir?** (la vista de la semana, igual que an
 5. **Estoy aquí:** reporta y verifica que la ficha no vuelva al esqueleto.
 6. **Letra grande y celular** (F12 → Ctrl+Shift+M).
 
-## 5. Pendiente
+## 5. Segunda ronda (2026-11-17)
+
+| Cambio | Principio |
+|---|---|
+| **La lista** dice lo que distingue a cada lugar (lluvia, evento, ajuste, qué tan lleno está o con qué gustos coincide) en lugar de repetir el estado del chip (`data/detalleLista.js`). | Relación señal-ruido |
+| **«Mejor ve a…»** en una columna: lo que pediste en un renglón, la alternativa con su foto y «Vamos» en la barra fija; antes quedaba fuera de la vista a 1280×800. | Visibilidad, jerarquía |
+| **La semana** cambia «Día por día» por «En resumen»: el día más tranquilo, el más lleno con el rango a evitar y la hora tranquila que se repite (`data/resumenSemana.js`). | Reconocer en vez de recordar |
+| **Regresa «Gente ahora»**, medida contra los umbrales del propio lugar: tres tramos (tranquilo, lo habitual, lleno), y la marca cae siempre en el del color del semáforo (`data/genteAhora.js`). La versión anterior usaba una escala global y lo contradecía. | Consistencia (Nielsen 4) |
+| **Reseñas**: el cuerpo del panel vuelve a tener margen abajo y el scroll ya no rebota hacia el mapa. | Visibilidad |
+| **«Ver todos»**: el encabezado de cada grupo es una franja de vidrio que se desvanece; ya no se ven tarjetas cortadas alrededor de la pastilla. | Figura-fondo |
+| **Panel de la Secretaría** en cuatro pestañas (Resumen, Moderación, Fijar color, Observatorio), con «Requiere atención» primero, y traducido. | Carga cognitiva, jerarquía |
+
+**Actividad del stand:** el interruptor «Incluir actividad de demostración» se queda como «Qué actividad contar: Toda / Sin el stand de la Expo». Separar las bases de desarrollo y de datos reales no lo cubre: el stand (API con `PUEBLA_DEMO=1`) y los turistas reales escriben en la misma base, y RN_11 pide poder separarlos.
+
+## 6. Pendiente
 
 - **«Mejor ve a…» todavía no dice a dónde** (HCI B1): depende de un endpoint de recomendación de solo lectura (backend, Axel).
-- **En el Callejón de los Sapos** el backend manda color amarillo con la razón «Movimiento normal para este lugar». Ahora queda dentro de «¿Por qué está así?», pero conviene revisar `razon_corta` con Axel.
-- **La lista** repite «Tranquilo para este lugar» en cada tarjeta. **La recomendación** deja «Vamos» fuera de la vista a 1280×800. **«Día por día»** de la semana repite lo que ya muestra el mapa de calor.
+- **Probar con una sesión real de administrador** el panel (moderación y fijar color) y, con una de turista, «Mis reseñas» y «Mis gustos». Se revisaron con una cuenta simulada y una muestra de solo lectura de la base de desarrollo.
