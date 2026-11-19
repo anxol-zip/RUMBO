@@ -9,7 +9,7 @@
     "deploymentEnabled": { "*": false, "main": true, "develop": true, "feature/deploy-vercel-oracle": true }
   },
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://API-HOST-PENDIENTE/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://rumbo-api-dev.onrender.com/api/:path*" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [
