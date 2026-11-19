@@ -5,6 +5,7 @@ import { useDialogo } from '../hooks/useDialogo.js'
 import { useIdioma } from '../i18n/contexto.js'
 import FormResena from './FormResena.jsx'
 import Esqueleto from './Esqueleto.jsx'
+import Icono from './Icono.jsx'
 
 const PAGINA = 10
 const CAMPOS = 'id, usuario_id, autor, estrellas, accesible, texto, estado, utiles, creada_en, editada_en'
@@ -40,6 +41,19 @@ function Resenas({ puntoId }) {
   const [errorCarga, setErrorCarga] = useState(null)
   const [paginacion, setPaginacion] = useState(null)
   const [editando, setEditando] = useState(false)
+  // El formulario vacío ocupaba más que la ficha entera: ahora se abre con "Escribir una reseña".
+  // Si la sesión venció a media reseña, lo escrito quedó guardado (FormResena): se abre ya con eso.
+  const [escribiendo, setEscribiendo] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('rumbo:borradorResena'))?.puntoId === puntoId } catch { return false }
+  })
+  const zonaForm = useRef(null)
+  const botonEscribir = useRef(null)
+  const escribiendoAntes = useRef(false)
+  useEffect(() => {
+    if (escribiendo && !escribiendoAntes.current) zonaForm.current?.querySelector('input')?.focus()
+    if (!escribiendo && escribiendoAntes.current) botonEscribir.current?.focus()
+    escribiendoAntes.current = escribiendo
+  }, [escribiendo])
   const [denunciada, setDenunciada] = useState(null)
   const clave = `${puntoId}|${orden}|${uid}`
   // Un token nuevo también al volver al mismo orden: no reutilizar cargas ni errores anteriores.
@@ -71,7 +85,7 @@ function Resenas({ puntoId }) {
   }, [disponible, puntoId, orden, uid, version, clave, peticion])
 
   if (!disponible) return null
-  const recargar = () => { setEditando(false); setVersion((v) => v + 1) }
+  const recargar = () => { setEditando(false); setEscribiendo(false); setVersion((v) => v + 1) }
   const fecha = (iso) => new Date(iso).toLocaleDateString(idioma === 'en' ? 'en-US' : 'es-MX', { year: 'numeric', month: 'short', day: 'numeric' })
   const actuales = datos?.clave === clave ? datos : null
   const fallo = errorCarga === peticion
@@ -137,7 +151,14 @@ function Resenas({ puntoId }) {
       )}
 
       {actuales && !uid && <button type="button" className="boton" onClick={pedirEntrar}>{t('resena.opinar')}</button>}
-      {actuales && uid && !mia && <FormResena key={`nueva-${puntoId}`} puntoId={puntoId} onGuardada={recargar} />}
+      {actuales && uid && !mia && !escribiendo && (
+        <button ref={botonEscribir} type="button" className="boton escribir-resena" onClick={() => setEscribiendo(true)}>
+          <Icono nombre="estrella" />{t('resena.escribir')}
+        </button>
+      )}
+      {actuales && uid && !mia && escribiendo && (
+        <div ref={zonaForm}><FormResena key={`nueva-${puntoId}`} puntoId={puntoId} onGuardada={recargar} onCancelar={() => setEscribiendo(false)} /></div>
+      )}
       {actuales && uid && mia && !editando && (
         <div className="resena mia">
           <p className="suave">{t('resena.tuResena')}{mia.estado === 'oculta' && <> · <strong>{t('resena.oculta')}</strong></>}</p>

@@ -1,25 +1,35 @@
-import { intensidad, RAMPA } from '../data/calor.js'
+import { medidorGente, textoNivel } from '../data/genteAhora.js'
 import { useIdioma } from '../i18n/contexto.js'
 import Icono from './Icono.jsx'
 
-// "Gente ahora": la afluencia relativa en una barra de Menos a Más, con la misma rampa rosa
-// del mapa de calor. nivel 1.0 = una hora normal en ese lugar (cae a la mitad de la barra).
-// Cerrado o sin dato: no hay barra, porque no hay nada que medir.
-function GenteAhora({ nivel, color }) {
+// "Gente ahora": dónde está la afluencia de este lugar contra su propia escala. Los tres tramos son
+// los del semáforo (tranquilo, lo habitual, lleno) y el tramo en el que cae se marca con su color;
+// los otros dos quedan tenues. Así la barra explica el color en lugar de competir con él.
+// No sale con lugar cerrado, sin dato o con ajuste de la Secretaría (ahí el color no viene del nivel).
+function GenteAhora({ nivel, umbrales, color, ajustado }) {
   const { t } = useIdioma()
-  if (nivel == null || color === 'cerrado' || color === 'sin_dato') return null
-  const pos = Math.round(intensidad(nivel) * 100)
-  const texto = t(pos < 34 ? 'gente.poca' : pos < 67 ? 'gente.normal' : 'gente.mucha')
+  const medidor = !ajustado && ['verde', 'amarillo', 'rojo'].includes(color) ? medidorGente(nivel, umbrales) : null
+  if (!medidor) return null
+  const texto = textoNivel(nivel, t)
   return (
-    <div className="gente-ahora">
-      <p className="gente-ahora-titulo"><Icono nombre="personas" />{t('leyenda.titulo')}</p>
-      <div className="gente-barra" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pos}
-        aria-valuetext={texto} aria-label={t('leyenda.titulo')}>
-        <div className="gente-rampa" style={{ background: `linear-gradient(90deg, ${RAMPA.join(', ')})` }} />
-        <span className="gente-marca" style={{ left: `${pos}%` }} />
+    <section className="gente-ahora" aria-labelledby="gente-titulo">
+      <div className="gente-cabeza">
+        <p id="gente-titulo" className="gente-titulo"><Icono nombre="personas" />{t('gente.titulo')}</p>
+        <p className="gente-nivel">{texto}</p>
       </div>
-      <div className="gente-extremos" aria-hidden="true"><span>{t('leyenda.menos')}</span><span>{t('leyenda.mas')}</span></div>
-    </div>
+      <div className="gente-barra" role="meter" aria-labelledby="gente-titulo" aria-valuemin={0} aria-valuemax={100}
+        aria-valuenow={Math.round(medidor.posicion)} aria-valuetext={`${t(`gente.${medidor.zona}`)}: ${texto}`}>
+        {medidor.zonas.map((z) => (
+          <span key={z.color} className={`gente-tramo ${z.color}${z.color === medidor.zona ? ' activo' : ''}`} style={{ width: `${z.ancho}%` }} />
+        ))}
+        <span className="gente-marca" style={{ left: `${medidor.posicion}%` }} />
+      </div>
+      <div className="gente-etiquetas" aria-hidden="true">
+        {medidor.zonas.map((z) => (
+          <span key={z.color} className={z.color === medidor.zona ? 'activa' : undefined} style={{ width: `${z.ancho}%` }}>{t(`gente.${z.color}`)}</span>
+        ))}
+      </div>
+    </section>
   )
 }
 

@@ -29,7 +29,7 @@ function Cabecera({ catalogo, cargandoCatalogo, errorCatalogo, onReintentarCatal
     const consulta = window.matchMedia('(max-width: 820px)')
     function cerrar(evento) {
       // Los diálogos de cuenta y lectura gestionan su propio Escape y foco.
-      if (evento.target.closest('[role="dialog"], [role="alertdialog"], .menu-cuenta, .opciones-lectura')) return
+      if (evento.target.closest('[role="dialog"], [role="alertdialog"], .panel-perfil, .opciones-lectura')) return
       if (evento.type === 'keydown') {
         if (evento.key !== 'Escape' || !consulta.matches) return
         setAbierto(false)

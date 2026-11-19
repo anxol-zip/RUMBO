@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api, codigoDe } from '../api/cliente.js'
 import { useIdioma } from '../i18n/contexto.js'
 import Icono from './Icono.jsx'
+import { resumenSemana } from '../data/resumenSemana.js'
 import Esqueleto from './Esqueleto.jsx'
 
 // "¿Cuándo me conviene ir?" a pantalla completa del panel: reemplaza la ficha mientras está abierta.
@@ -53,6 +54,10 @@ function VistaSemana({ puntoId, nombre, onCerrar, onError }) {
   const horaActual = `${String(ahora.getHours()).padStart(2, '0')}:00`
   // El próximo buen momento: la primera hora en verde que todavía no pasa
   const mejor = dias.flatMap((d) => d.horas.filter((h) => h.color === 'verde' && !h.pasada).map((h) => ({ fecha: d.fecha, hora: h.hora })))[0]
+  // "En resumen" (data/resumenSemana.js): el día más tranquilo, el más lleno y la hora que se repite.
+  const resumen = resumenSemana(dias)
+  const conArticulo = (fecha) => fecha === hoy ? t('semana.hoyMinuscula')
+    : t('semana.elDia', { dia: new Date(`${fecha}T12:00`).toLocaleDateString(locale, { weekday: 'long', day: 'numeric' }) })
   const celdaElegida = elegida && dias.find((d) => d.fecha === elegida.fecha)?.horas.find((h) => h.hora === elegida.hora)
 
   return (
@@ -129,20 +134,21 @@ function VistaSemana({ puntoId, nombre, onCerrar, onError }) {
             {COLORES.map((c) => <li key={c}><span className={`semana-punto ${c}`} aria-hidden="true" />{t(`sem.${c}`)}</li>)}
           </ul>
 
-          <h3 className="semana-subtitulo">{t('semana.porDia')}</h3>
-          <ul className="semana-dias">
-            {dias.filter((d) => d.resumen).map((d) => (
-              <li key={d.fecha} className={d.fecha === hoy ? 'hoy' : undefined}>
-                <span className="semana-dias-nombre">{dia(d.fecha)}</span>
-                {d.resumen.ultima_hora || d.resumen.parejo
-                  ? <span>{d.resumen.ultima_hora ? t('semana.ultima', { hora: d.resumen.ultima_hora }) : t('semana.parejo')}</span>
-                  : <>
-                      <span><span className="semana-punto verde" aria-hidden="true" />{t('semana.tranquila', { hora: d.resumen.mas_tranquila.hora })}</span>
-                      <span><span className="semana-punto rojo" aria-hidden="true" />{t('semana.llena', { hora: d.resumen.mas_llena.hora })}</span>
-                    </>}
-              </li>
-            ))}
-          </ul>
+          {(resumen.tranquilo || resumen.lleno || resumen.horaTranquila) && <>
+            <h3 className="semana-subtitulo">{t('semana.resumen')}</h3>
+            <ul className="semana-resumen">
+              {resumen.tranquilo && (
+                <li><span className="semana-punto verde" aria-hidden="true" />{t('semana.diaTranquilo', { dia: conArticulo(resumen.tranquilo.fecha), n: resumen.tranquilo.verdes })}</li>
+              )}
+              {resumen.lleno && (
+                <li><span className="semana-punto rojo" aria-hidden="true" />{t(resumen.lleno.desde === resumen.lleno.hasta ? 'semana.diaLlenoHora' : 'semana.diaLleno',
+                  { dia: conArticulo(resumen.lleno.fecha), desde: resumen.lleno.desde, hasta: resumen.lleno.hasta })}</li>
+              )}
+              {resumen.horaTranquila && (
+                <li><Icono nombre="reloj" />{t('semana.horaTranquila', { hora: resumen.horaTranquila.hora, n: resumen.horaTranquila.dias, total: dias.length })}</li>
+              )}
+            </ul>
+          </>}
         </>
       )}
 

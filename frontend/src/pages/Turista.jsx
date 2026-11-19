@@ -342,7 +342,7 @@ function Turista({ catalogo, cargandoCatalogo, errorCatalogo, onReintentar, sesi
             )}
             {ampliada
               ? <TodosLosLugares puntos={ordenados} seleccionadoId={seleccionadoId} onSeleccionar={seleccionar} />
-              : <ListaPuntos puntos={ordenados} seleccionadoId={seleccionadoId} onSeleccionar={seleccionar} />}
+              : <ListaPuntos puntos={ordenados} intereses={intereses} seleccionadoId={seleccionadoId} onSeleccionar={seleccionar} />}
             </>}
           </div>
         )}
@@ -350,9 +350,10 @@ function Turista({ catalogo, cargandoCatalogo, errorCatalogo, onReintentar, sesi
         {vista === 'punto' && seleccionadoId != null && (
           <div className="panel-cuerpo con-acciones" style={{ paddingTop: 16 }}>
             <TarjetaPunto
-              key={`${seleccionadoId}-${version}`}
+              key={seleccionadoId}
               puntoId={seleccionadoId}
               origenId={origenId}
+              revision={version}
               onVolver={volverALista}
               onAlternativa={() => setVista('recomendacion')}
               onEstoyAqui={() => setReportando(true)}

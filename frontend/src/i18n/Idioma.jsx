@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Contexto, crearT } from './contexto.js'
 
 // Idioma de la interfaz (español o inglés). Se recuerda en este navegador; la primera vez
@@ -20,12 +20,5 @@ export function ProveedorIdioma({ children }) {
     try { localStorage.setItem(CLAVE, idioma) } catch { /* sin almacenamiento */ }
   }, [idioma])
   const valor = useMemo(() => ({ idioma, setIdioma, t: crearT(idioma) }), [idioma])
-  return <Contexto.Provider value={valor}>{children}</Contexto.Provider>
-}
-
-// Para una parte de la app que se queda en un solo idioma (el panel de la Secretaría).
-export function IdiomaFijo({ idioma, children }) {
-  const exterior = useContext(Contexto)
-  const valor = useMemo(() => ({ ...exterior, idioma, t: crearT(idioma) }), [exterior, idioma])
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>
 }

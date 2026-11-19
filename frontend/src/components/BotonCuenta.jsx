@@ -1,11 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useLayoutEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useCuenta } from '../cuenta/contexto.js'
 import { useDialogo } from '../hooks/useDialogo.js'
 import { useIdioma } from '../i18n/contexto.js'
-import Esqueleto from './Esqueleto.jsx'
+import PanelPerfil from '../cuenta/PanelPerfil.jsx'
+import { iniciales, nombreVisible } from '../cuenta/nombre.js'
 
-// Cuenta en la cabecera (feature 002): "Iniciar sesión" o, con sesión, el nombre con su menú.
+// Cuenta en la cabecera (feature 002): "Iniciar sesión" o, con sesión, el avatar que abre el panel de perfil.
 // Si las cuentas no están configuradas (sin frontend/.env.local), no aparece nada.
 function BotonCuenta({ catalogo, cargandoCatalogo, errorCatalogo, onReintentarCatalogo, onNavegar }) {
   const { t } = useIdioma()
@@ -22,98 +23,25 @@ function BotonCuenta({ catalogo, cargandoCatalogo, errorCatalogo, onReintentarCa
 }
 
 // Se desmonta al salir o cambiar de usuario: ningún panel o confirmación pasa a otra sesión.
+// El botón es el avatar con las iniciales: el nombre de las cuentas institucionales llega como
+// "APELLIDOS NOMBRE", y mostrar la primera palabra saludaba a la persona por su apellido.
 function CuentaConSesion({ catalogo, cargandoCatalogo, errorCatalogo, onReintentarCatalogo, onNavegar }) {
   const { t } = useIdioma()
-  const { perfil } = useCuenta()
-  const [menu, setMenu] = useState(false)
+  const { perfil, usuario } = useCuenta()
+  const [abierto, setAbierto] = useState(false)
   const [borrando, setBorrando] = useState(false)
-  const nombre = perfil?.nombre?.split(' ')[0] || t('cuenta.miCuenta')
+  const nombre = perfil?.nombre || usuario.user_metadata?.full_name || usuario.user_metadata?.name || ''
+  const visible = nombreVisible(nombre)
   return <>
-    <button type="button" className="boton boton-cuenta" aria-expanded={menu} aria-controls="menu-cuenta" onClick={() => setMenu((m) => !m)}>{nombre}</button>
-    {menu && <MenuCuenta catalogo={catalogo} cargandoCatalogo={cargandoCatalogo} errorCatalogo={errorCatalogo} onReintentarCatalogo={onReintentarCatalogo}
-      onCerrar={() => setMenu(false)} onNavegar={onNavegar} onBorrar={() => { setMenu(false); setBorrando(true) }} />}
+    <button type="button" className="boton boton-cuenta" aria-haspopup="dialog" aria-expanded={abierto}
+      aria-label={visible ? t('perfil.botonDe', { nombre: visible }) : t('perfil.boton')} onClick={() => setAbierto(true)}>
+      <span className="avatar" aria-hidden="true">{iniciales(nombre, usuario.email)}</span>
+      <span className="boton-cuenta-texto" aria-hidden="true">{t('perfil.boton')}</span>
+    </button>
+    {abierto && <PanelPerfil catalogo={catalogo} cargandoCatalogo={cargandoCatalogo} errorCatalogo={errorCatalogo} onReintentarCatalogo={onReintentarCatalogo}
+      onCerrar={() => setAbierto(false)} onNavegar={onNavegar} onBorrar={() => { setAbierto(false); setBorrando(true) }} />}
     {borrando && <ConfirmarBorrado onCerrar={() => setBorrando(false)} />}
   </>
-}
-
-function MenuCuenta({ catalogo, cargandoCatalogo, errorCatalogo, onReintentarCatalogo, onCerrar, onBorrar, onNavegar }) {
-  const { t } = useIdioma()
-  const ubicacion = useLocation()
-  const { perfil, usuario, favoritos, cargando, errorCuenta, recargarCuenta, salir, alternarFavorito } = useCuenta()
-  const [quitando, setQuitando] = useState(null)
-  const [saliendo, setSaliendo] = useState(false)
-  const [errorAccion, setErrorAccion] = useState(null)
-  const caja = useRef(null)
-  useDialogo(caja, onCerrar)
-  // Un clic fuera del menú lo cierra.
-  useEffect(() => {
-    const fuera = (e) => { if (!caja.current?.parentElement.contains(e.target)) onCerrar() }
-    document.addEventListener('pointerdown', fuera)
-    return () => document.removeEventListener('pointerdown', fuera)
-  }, [onCerrar])
-
-  const nombre = perfil?.nombre || usuario.user_metadata?.full_name || usuario.user_metadata?.name || t('cuenta.miCuenta')
-  const ids = [...(favoritos ?? [])]
-  // Mantener la fila durante el guardado optimista permite conservar el foco y anunciar su estado.
-  if (quitando !== null && !ids.includes(quitando)) ids.push(quitando)
-  const lugares = ids.map((id) => catalogo.find((p) => p.id === id) ?? { id, nombre: t('cuenta.lugarNoDisponible'), ausente: true })
-    .sort((a, b) => a.nombre.localeCompare(b.nombre))
-  const cargandoFavoritos = cargando || (!errorCuenta && ids.length > 0 && catalogo.length === 0 && cargandoCatalogo)
-  function enlace(id) {
-    const parametros = new URLSearchParams(ubicacion.search)
-    parametros.set('lugar', String(id))
-    return { pathname: '/', search: `?${parametros}` }
-  }
-
-  async function quitar(id) {
-    setErrorAccion(null)
-    setQuitando(id)
-    const correcto = await alternarFavorito(id)
-    setQuitando(null)
-    if (!correcto) setErrorAccion('cuenta.errorQuitar')
-    // La fila quitada dejará de existir; continuar desde el título de Favoritos.
-    caja.current?.querySelector('#titulo-favoritos')?.focus()
-  }
-
-  async function cerrarSesion() {
-    setSaliendo(true)
-    setErrorAccion(null)
-    if (await salir()) onCerrar()
-    else { setSaliendo(false); setErrorAccion('cuenta.errorSalir') }
-  }
-
-  return (
-    <div id="menu-cuenta" ref={caja} className="menu-cuenta" role="group" aria-label={t('cuenta.miCuenta')}>
-      <div className="menu-cuenta-identidad">
-        <h2 className="menu-cuenta-nombre">{nombre}</h2>
-        <button type="button" className="boton-texto" onClick={onCerrar}>{t('cuenta.cerrarPanel')}</button>
-        {usuario.email && <p className="menu-cuenta-correo">{usuario.email}</p>}
-      </div>
-      {cargandoFavoritos && <p className="oculto-accesible" role="status">{t('carga.favoritos')}</p>}
-      <section className="menu-cuenta-favoritos" aria-labelledby="titulo-favoritos" aria-busy={cargandoFavoritos || quitando !== null}>
-        <h3 id="titulo-favoritos" tabIndex={-1}>{t('filtros.favoritos')}</h3>
-        {cargandoFavoritos ? <Esqueleto tipo="favoritos" anunciar={false} />
-          : errorCuenta ? <div><p role="alert">{t('cuenta.errorCargar')}</p><button type="button" className="boton-texto" onClick={recargarCuenta}>{t('error.reintentar')}</button></div>
-            : ids.length === 0 ? <p className="secundario">{t('filtros.sinFavoritos')}</p>
-              : errorCatalogo ? <div><p role="alert">{t('cuenta.errorCargar')}</p><button type="button" className="boton-texto" onClick={onReintentarCatalogo}>{t('error.reintentar')}</button></div>
-                : <ul className="menu-cuenta-lista">{lugares.map((p) => (
-                    <li key={p.id}>
-                      {p.ausente ? <p>{p.nombre}</p> : <Link to={enlace(p.id)} onClick={(e) => {
-                        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
-                        onCerrar(); onNavegar()
-                      }}>{p.nombre}<span>{p.destino}</span></Link>}
-                      <button type="button" className="boton-texto" disabled={quitando !== null || saliendo} onClick={() => quitar(p.id)}
-                        aria-label={t('favorito.quitarLugar', { lugar: p.nombre })}>{t(quitando === p.id ? 'cuenta.guardando' : 'cuenta.quitar')}</button>
-                    </li>
-                  ))}</ul>}
-      </section>
-      {errorAccion && <p className="menu-cuenta-error" role="alert">{t(errorAccion)}</p>}
-      <div className="menu-cuenta-acciones">
-        <button type="button" className="boton ancho" disabled={saliendo || quitando !== null} onClick={cerrarSesion}>{t(saliendo ? 'cuenta.saliendo' : 'cuenta.salir')}</button>
-        <button type="button" className="boton-texto peligro" disabled={saliendo || quitando !== null} onClick={onBorrar}>{t('cuenta.borrar')}</button>
-      </div>
-    </div>
-  )
 }
 
 function VentanaEntrar({ onCerrar }) {

@@ -1,4 +1,4 @@
-import { FORMA } from '../data/formas.js'
+import { CANDADO, FORMA } from '../data/formas.js'
 import { ICONO } from '../data/semaforo.js'
 
 // Ícono de un estado del semáforo: forma + color + símbolo. Es decorativo (aria-hidden):
@@ -8,7 +8,9 @@ function IconoEstado({ color, className = '' }) {
   return (
     <svg className={`forma ${color} ${className}`} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
       <path d={f.d} />
-      <text x="20" y={f.y}>{ICONO[color]}</text>
+      {f.candado
+        ? <><path className="glifo-trazo" d={CANDADO.arco} /><path className="glifo-relleno" d={CANDADO.cuerpo} /></>
+        : <text x="20" y={f.y}>{ICONO[color]}</text>}
     </svg>
   )
 }

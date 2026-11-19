@@ -107,41 +107,39 @@ function Recomendacion({ puntoId, sesionId, origenId, catalogo, intereses, onVol
       <p className="secundario">{explicacion}</p>
       <BotonEscuchar partes={[t('rec.titulo', { lugar: corto(alternativa.nombre) }), explicacion, descripcion && ficha(alternativa.clave, descripcion, idioma)]} />
 
-      <div className="comparacion" style={{ marginTop: 14 }}>
-        {pedido && (
-          <div className="opcion con-foto">
-            <Foto id={pedido.clave} tamano="mini" />
-            <div>
-              <p className="suave">{t('rec.pediste')}</p>
-              <h3>{pedido.nombre}</h3>
+      {/* Una sola columna: lo que pediste en un renglón, la alternativa completa y "Vamos" siempre a la
+          vista en la barra fija (antes quedaba debajo del borde de la pantalla a 1280×800). */}
+      {pedido && (
+        <div className="rec-pedido">
+          <Foto id={pedido.clave} tamano="mini" />
+          <div>
+            <p className="suave">{t('rec.pediste')}</p>
+            <p className="rec-pedido-nombre">{pedido.nombre}</p>
+            <div className="rec-pedido-estado">
               <Semaforo color={pedido.color} />
-              {partesRazon(pedido.razon, idioma).slice(0, 2).map((r) => <p key={r} className="secundario" style={{ marginTop: 8 }}>{r}</p>)}
+              <span className="suave">{partesRazon(pedido.razon, idioma)[0]}</span>
             </div>
           </div>
-        )}
-        <div className="opcion recomendada">
-          <Foto id={alternativa.clave} nombre={alternativa.nombre} credito />
-          <p className="suave">{t('rec.recomendamos')}</p>
-          <h3>{alternativa.nombre}</h3>
-          <Semaforo color={alternativa.color} />
-          {descripcion && (
-            <>
-              <p className="etiqueta">{t('rec.encontrar')}</p>
-              <p className="descripcion" style={{ marginTop: 0 }}>{ficha(alternativa.clave, descripcion, idioma)}</p>
-            </>
-          )}
-          {comunes.length > 0 && (
-            <div className="coincide">
-              <span>{t('rec.coincide')}</span>
-              {comunes.map((c) => <span key={c} className="insignia">{t(`interes.${c}`)}</span>)}
-            </div>
-          )}
-          <p className="etiqueta">{t('rec.porQue')}</p>
-          <ul className="razones" style={{ marginTop: 0 }}>
-            {porque(alternativa, idioma, t).map((r) => <li key={r}>{r}</li>)}
-          </ul>
         </div>
-      </div>
+      )}
+
+      <article className="opcion recomendada">
+        <div className="ficha-portada"><Foto id={alternativa.clave} nombre={alternativa.nombre} credito /></div>
+        <p className="suave">{t('rec.recomendamos')}</p>
+        <h3>{alternativa.nombre}</h3>
+        <Semaforo color={alternativa.color} />
+        {descripcion && <p className="descripcion">{ficha(alternativa.clave, descripcion, idioma)}</p>}
+        {comunes.length > 0 && (
+          <div className="coincide">
+            <span>{t('rec.coincide')}</span>
+            {comunes.map((c) => <span key={c} className="insignia">{t(`interes.${c}`)}</span>)}
+          </div>
+        )}
+        <p className="etiqueta">{t('rec.porQue')}</p>
+        <ul className="razones" style={{ marginTop: 0 }}>
+          {porque(alternativa, idioma, t).map((r) => <li key={r}>{r}</li>)}
+        </ul>
+      </article>
 
       {otraHora && pedido && (
         <p className="tip">{t('rec.prefieres', { lugar: corto(pedido.nombre), hora: hora(otraHora.hora), color: colorOtraHora })}</p>
@@ -150,8 +148,8 @@ function Recomendacion({ puntoId, sesionId, origenId, catalogo, intereses, onVol
       {aceptada
         ? <p className="aviso exito" style={{ marginTop: 16 }}>{t('rec.buenViaje')}</p>
         : (
-          <div className="acciones dos">
-            <button type="button" className="boton primario" onClick={vamos}>{t('rec.vamos')}</button>
+          <div className="ficha-acciones rec-acciones">
+            <button type="button" className="boton primario" onClick={vamos}><Icono nombre="navegar" />{t('rec.vamos')}</button>
             <button type="button" className="boton" onClick={prefieroMiPlan}>{t('rec.miPlan')}</button>
           </div>
         )}
