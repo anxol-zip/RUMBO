@@ -1,0 +1,26 @@
+# Caddy delante de la API en la VM de Oracle Cloud: HTTPS automático (Let's Encrypt) y reverse proxy.
+# Instalar: sudo cp deploy/oracle/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+# Cambiar el hostname por el real (subdominio de DuckDNS o <ip-con-guiones>.sslip.io).
+
+rumbo-api.example.duckdns.org {
+	encode zstd gzip
+
+	# Solo se publica /api/*: Swagger (/docs) y lo demás quedan cerrados. Para ver /docs,
+	# túnel SSH: ssh -L 8000:127.0.0.1:8000 ubuntu@<ip> y abrir http://localhost:8000/docs
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8000
+	}
+	handle {
+		respond 404
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/rumbo-api.log
+	}
+}
