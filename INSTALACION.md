@@ -150,7 +150,7 @@ cd backend
 uv run python ../herramientas/bd_desarrollo.py
 ```
 
-Se niega a correr si tu `.env` dice `RUMBO_AMBIENTE=demo`, para no pisar la base de la demo.
+Antes de escribir te dice a qué base va y pide confirmación. Se niega a correr si tu `DATABASE_URL` no es la de `rumbo-dev` o si tu `.env` dice `RUMBO_AMBIENTE=demo`, para no pisar la base de la demo.
 
 ### 3.4 Pruebas
 

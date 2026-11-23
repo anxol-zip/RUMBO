@@ -4,17 +4,14 @@
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- .",
+  "ignoreCommand": "[ -n \"$VERCEL_GIT_PREVIOUS_SHA\" ] && git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" HEAD -- . || exit 1",
   "git": {
-    "deploymentEnabled": { "*": false, "main": true, "develop": true, "feature/deploy-vercel-oracle": true }
+    "deploymentEnabled": { "**": false, "main": true, "develop": true }
   },
+  "routes": [
+    { "src": "/api/(.*)", "dest": "${BACKEND_URL}/api/$1", "env": ["BACKEND_URL"] }
+  ],
   "rewrites": [
-    {
-      "source": "/api/:path*",
-      "has": [{ "type": "host", "value": { "inc": ["rumbo-production.vercel.app"] } }],
-      "destination": "https://rumbo-api.onrender.com/api/:path*"
-    },
-    { "source": "/api/:path*", "destination": "https://rumbo-api-dev.onrender.com/api/:path*" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [

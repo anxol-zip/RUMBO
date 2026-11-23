@@ -1,0 +1,38 @@
+# Blueprint de Render para producción (rama main → Supabase rumbo-demo).
+# El servicio de desarrollo (rumbo-api-dev, rama develop) se creó a mano y no se declara aquí:
+# si se agregara, Render intentaría crear un segundo servicio.
+# Los valores con sync: false se piden en el dashboard al crear el Blueprint; nunca van en el repo.
+services:
+  - type: web
+    name: rumbo-api
+    runtime: python
+    plan: free
+    region: virginia          # la de rumbo-demo (us-east-1); rumbo-dev está en Oregon
+    branch: main
+    rootDir: backend
+    buildCommand: pip install uv && uv sync --frozen
+    startCommand: .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/salud
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - backend/**
+    envVars:
+      - key: RUMBO_AMBIENTE
+        value: demo
+      - key: TZ                 # obligatoria: el backend usa datetime.now() sin zona
+        value: America/Mexico_City
+      - key: PYTHON_VERSION
+        value: 3.14.4
+      - key: PUEBLA_TAREAS
+        value: "1"
+      - key: PUEBLA_DEMO        # RN_11: decidir antes de abrirlo al público
+        value: "0"
+      - key: DATABASE_URL       # Session pooler (5432) de rumbo-demo
+        sync: false
+      - key: SUPABASE_URL       # https://<ref-de-rumbo-demo>.supabase.co
+        sync: false
+      - key: ORS_API_KEY
+        sync: false
+      - key: TOMTOM_API_KEY
+        sync: false
