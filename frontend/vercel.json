@@ -6,13 +6,13 @@
   "outputDirectory": "dist",
   "ignoreCommand": "git diff --quiet HEAD^ HEAD -- .",
   "git": {
-    "deploymentEnabled": { "*": false, "main": true, "develop": true, "feature/deploy-vercel-oracle": true }
+    "deploymentEnabled": { "*": false, "main": true, "develop": true }
   },
   "rewrites": [
     {
       "source": "/api/:path*",
       "has": [{ "type": "host", "value": { "inc": ["rumbo-production.vercel.app"] } }],
-      "destination": "https://rumbo-api.onrender.com/api/:path*"
+      "destination": "https://RUMBO-API-PENDIENTE.onrender.com/api/:path*"
     },
     { "source": "/api/:path*", "destination": "https://rumbo-api-dev.onrender.com/api/:path*" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
