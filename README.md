@@ -103,7 +103,7 @@ PUEBLA_TAREAS=0 uv run uvicorn app.main:app --reload --port 8000
 cd frontend && npm ci && npm run dev                # en otra terminal → http://localhost:5173
 ```
 
-Requisitos: Python ≥ 3.12 con [`uv`](https://docs.astral.sh/uv/), Node ≥ 22.12 y, para el asistente, [Ollama](https://ollama.com) con `bge-m3` y `qwen3:8b` (o `qwen3:4b` en una laptop con poca memoria de video).
+Requisitos: Python ≥ 3.12 con [`uv`](https://docs.astral.sh/uv/), Node ≥ 22.12 y, para el asistente, [Ollama](https://ollama.com) con `bge-m3` y `qwen3:4b-instruct` (cabe en una GPU de 4 GB).
 
 ## Qué aporta cada materia
 

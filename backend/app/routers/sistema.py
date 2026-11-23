@@ -48,7 +48,7 @@ def salud(con: Con, ahora: Ahora, demo: EsDemo, request: Request):
         },
         "datos": frescura(con, ahora),
         "claves": {"ORS_API_KEY": clave("ORS_API_KEY") is not None, "TOMTOM_API_KEY": clave("TOMTOM_API_KEY") is not None},
-        "ollama": _ollama() | {"modelo": llm.MODELO, "embeddings": llm.EMBED},
+        "ollama": _ollama() | {"modelo": llm.MODELO, "embeddings": llm.EMBED, "aviso": llm.AVISO},
         "chroma": _chroma(),
         "actualizacion": None if programador is None else programador.ultima,
         "trafico": {"corredores_vigentes": len(trafico.factores_vigentes(con, ahora).por_tramo),

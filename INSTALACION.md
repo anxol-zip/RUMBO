@@ -206,30 +206,42 @@ Se copian a mano (USB o OneDrive) desde la computadora que ya los tiene. Lo dem�
 
 ### 4.2 Modelos de Ollama
 
-Sin configurar nada, el backend usa **`qwen3:8b`**. En una laptop con poca memoria de video conviene **`qwen3:4b`**. Los embeddings son **`bge-m3`** en los dos casos:
+Sin configurar nada, el backend usa **`qwen3:4b-instruct`**, que cabe en una GPU de 4 GB. Los embeddings son **`bge-m3`**:
 
 ```bash
-ollama pull qwen3:4b      # o qwen3:8b si la laptop aguanta
+ollama pull qwen3:4b-instruct
 ollama pull bge-m3
 ollama list
 ```
 
-Si usas `qwen3:4b`, define `OLLAMA_MODELO` (sin editar el `.env`):
+> **No uses `qwen3:4b` (sin `-instruct`):** esa versión ignora la orden de no razonar, escribe miles de palabras de "pensamiento" y el chat termina en error después de 40 s. `/api/salud` lo avisa en `ollama.aviso`.
+
+**En una GPU de 4 GB, pon los embeddings en CPU.** Qwen y bge-m3 no caben juntos en la GPU y se turnan
+en cada pregunta (unos 3 s de más). Crea una copia de bge-m3 que corre en CPU; da los mismos vectores, así
+que no hay que reindexar ChromaDB:
+
+```bash
+printf 'FROM bge-m3\nPARAMETER num_gpu 0\n' > Modelfile.bge-cpu
+ollama create bge-m3-cpu -f Modelfile.bge-cpu
+export EMBED_MODEL=bge-m3-cpu      # y agrégala a ~/.bashrc (o con SetEnvironmentVariable en Windows)
+```
+
+Si ya tenías definida `OLLAMA_MODELO=qwen3:4b`, cámbiala (o bórrala para usar el valor por defecto):
 
 **Windows:**
 
 ```powershell
 # La primera línea es para las terminales nuevas, la segunda para la actual
-[Environment]::SetEnvironmentVariable('OLLAMA_MODELO', 'qwen3:4b', 'User')
-$env:OLLAMA_MODELO = 'qwen3:4b'
+[Environment]::SetEnvironmentVariable('OLLAMA_MODELO', 'qwen3:4b-instruct', 'User')
+$env:OLLAMA_MODELO = 'qwen3:4b-instruct'
 ```
 
 **Linux (Ubuntu):**
 
 ```bash
-# Cambia ~/.bashrc por ~/.zshrc si usas zsh
-echo "export OLLAMA_MODELO=qwen3:4b" >> ~/.bashrc
-export OLLAMA_MODELO=qwen3:4b
+# Cambia ~/.bashrc por ~/.zshrc si usas zsh; borra antes la línea vieja con qwen3:4b
+echo "export OLLAMA_MODELO=qwen3:4b-instruct" >> ~/.bashrc
+export OLLAMA_MODELO=qwen3:4b-instruct
 ```
 
 Si la variable apunta a un modelo que Ollama no tiene, el chat responde **503**. La terminal del backend lo dice: `Ollama no tiene el modelo 'X'`.

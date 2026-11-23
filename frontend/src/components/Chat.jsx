@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { api } from '../api/cliente.js'
+import { api, codigoDe } from '../api/cliente.js'
 import { useIdioma } from '../i18n/contexto.js'
 import { useDialogo } from '../hooks/useDialogo.js'
 import Semaforo from './Semaforo.jsx'
@@ -11,6 +11,18 @@ function numerarCitas(texto, fuentes) {
   return texto.replace(/\s?\[([\w.-]+)\]/g, (cita, id) => (numero[id] ? ` [${numero[id]}]` : ''))
 }
 
+// Memoria de la conversación (specs/003): las 2 últimas preguntas con la respuesta que tuvieron.
+// Vive solo aquí; al cerrar el chat el componente se desmonta y se olvida. Un turno rechazado no entra:
+// si entrara, la guardia rechazaría también las 2 preguntas siguientes.
+function historialDe(mensajes) {
+  const turnos = []
+  mensajes.forEach((m, i) => {
+    const r = mensajes[i + 1]
+    if (m.de === 'usuario' && r?.de === 'asistente' && !r.error && r.crudo) turnos.push({ pregunta: m.texto, respuesta: r.crudo.slice(0, 1200) })
+  })
+  return turnos.slice(-2)
+}
+
 // T6 — Asistente (CU_06). Solo responde con los datos que le pasa el backend y cita sus fuentes (RN_10).
 function Chat({ sesionId, origenId, onCerrar }) {
   const { t } = useIdioma()
@@ -18,23 +30,29 @@ function Chat({ sesionId, origenId, onCerrar }) {
   const [texto, setTexto] = useState('')
   const [pensando, setPensando] = useState(false)
   const caja = useRef(null)
+  const entrada = useRef(null)
+  const yaPregunto = mensajes.some((m) => m.de === 'usuario')
   // Al abrir, el foco va al campo de la pregunta; Escape cierra (D6). No es modal: el mapa sigue usable.
   useDialogo(caja, onCerrar, { inicial: 'input' })
 
   async function preguntar(pregunta) {
     if (pregunta.trim().length < 3 || pensando) return
+    const historial = historialDe(mensajes)
     setMensajes((m) => [...m, { de: 'usuario', texto: pregunta }])
     setTexto('')
     setPensando(true)
+    // Las sugerencias desaparecen al enviar la primera pregunta; el foco se queda en el campo (FR-031).
+    entrada.current?.focus()
     try {
-      const r = await api.preguntarAsistente({ sesionId, pregunta, origenId })
-      setMensajes((m) => [...m, { de: 'asistente', texto: numerarCitas(r.respuesta, r.fuentes), fuentes: r.fuentes, estado: r.estado_usado }])
+      const r = await api.preguntarAsistente({ sesionId, pregunta, origenId, historial })
+      setMensajes((m) => [...m, { de: 'asistente', texto: numerarCitas(r.respuesta, r.fuentes), crudo: r.rechazo ? null : r.respuesta, fuentes: r.fuentes, estado: r.estado_usado }])
     } catch (e) {
       // 503: Ollama apagado o sin el modelo. El error se queda en la conversación, con su mensaje asignado.
       const codigo = codigoDe(e)
       setMensajes((m) => [...m, { de: 'asistente', clave: codigo === 'no_disponible' ? 'chat.noDisponible' : `error.${codigo}`, error: true }])
+    } finally {
+      setPensando(false)
     }
-    setPensando(false)
   }
 
   function enviar(evento) {
@@ -83,12 +101,14 @@ function Chat({ sesionId, origenId, onCerrar }) {
         {pensando && <div className="mensaje asistente suave">{t('chat.pensando')}</div>}
       </div>
 
-      <div className="sugerencias">
-        {t('chat.sugerencias').map((s) => <button key={s} type="button" disabled={pensando} onClick={() => preguntar(s)}>{s}</button>)}
-      </div>
+      {!yaPregunto && (
+        <div className="sugerencias">
+          {t('chat.sugerencias').map((s) => <button key={s} type="button" disabled={pensando} onClick={() => preguntar(s)}>{s}</button>)}
+        </div>
+      )}
       <form className="chat-entrada" onSubmit={enviar}>
         <label htmlFor="pregunta" className="oculto-accesible">{t('chat.pregunta')}</label>
-        <input id="pregunta" value={texto} maxLength={500} onChange={(e) => setTexto(e.target.value)} placeholder={t('chat.placeholder')} />
+        <input id="pregunta" ref={entrada} value={texto} maxLength={500} onChange={(e) => setTexto(e.target.value)} placeholder={t('chat.placeholder')} />
         <button type="submit" aria-label={t('chat.enviar')} disabled={pensando}>↑</button>
       </form>
     </aside>

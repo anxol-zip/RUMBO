@@ -268,10 +268,17 @@ class ReporteOut(BaseModel):
     punto: PuntoEstado = Field(description="Estado del punto ya con el reporte")
 
 
+class Turno(BaseModel):
+    pregunta: str = Field(min_length=1, max_length=500)
+    respuesta: str = Field(default="", max_length=1200)
+
+
 class ChatIn(BaseModel):
     sesion_id: str | None = Field(default=None, description="Si viene, se usan el origen y los intereses de la sesión")
     pregunta: str = Field(min_length=3, max_length=500)
     origen_id: int | None = Field(default=None, description="Dónde está el turista (si no, el de la sesión)")
+    historial: list[Turno] = Field(default_factory=list, max_length=2,
+                                   description="Las 2 preguntas anteriores y sus respuestas, de la más antigua a la más reciente")
 
 
 class FuenteCitada(BaseModel):
@@ -298,3 +305,4 @@ class ChatOut(BaseModel):
     intereses: list[str]
     modelo: str
     segundos: dict
+    rechazo: str | None = Field(default=None, description="consulta, inyeccion o privado si la pregunta se rechazó sin llamar al modelo")
