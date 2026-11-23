@@ -1,8 +1,8 @@
 """Paso 8: evaluación del asistente (docs/05b §12) con 15 preguntas + 5 sin respuesta en la base.
 
-    uv run python -m scripts.evaluar_rag
+    uv run python -m scripts.evaluar_rag [--salida evaluacion_rag_antes.md]
 
-Mide, a la hora del stand (vie 2026-10-16 13:00) y con la BD real:
+Mide, a la hora del stand (vie 2026-11-27 13:00) y con la BD real:
 - Recuperación: ¿el documento correcto (anotado a mano) está entre los recuperados?   Meta ≥ 80 %
 - Fidelidad: ¿cada número de la respuesta aparece en lo que recibió el modelo?        Meta 100 %
 - "No sé": en las 5 preguntas sin dato, ¿responde "No tengo ese dato"?
@@ -14,6 +14,7 @@ Escribe el detalle en ``data/processed/evaluacion_rag.md`` (evidencia para la fi
 
 from __future__ import annotations
 
+import argparse
 import re
 import time
 from datetime import datetime
@@ -22,7 +23,8 @@ from turismo_core import llm, rag
 from turismo_core.bd import DATA, conectar
 from turismo_core.situacion import situacion
 
-MOMENTO = datetime(2026, 10, 16, 13, 0)
+# Viernes a la hora del stand. El 2026-10-16 original ya no tiene afluencia estimada (todo salía "cerrado").
+MOMENTO = datetime(2026, 11, 27, 13, 0)
 ZOCALO = 21
 
 # (pregunta, origen_id, ids correctos: basta con que aparezca uno)
@@ -54,7 +56,36 @@ PREGUNTAS = [
     ("Tengo 4 horas y va a llover, ¿qué hago?", ZOCALO, {"punto-*"}),
     ("¿Qué hay tranquilo cerca de mí?", ZOCALO, {"punto-*"}),
     ("¿Cuándo conviene ir a la pirámide?", None, {"punto-12"}),
+    # specs/003: la distancia se mide desde el lugar nombrado, no desde donde está el turista (Catedral = 1)
+    ("¿Dónde puedo comer cerca del Zócalo?", 1, {"denue-*"}),
 ]
+# specs/003 (US6): pregunta y seguimiento sin repetir el lugar; acierto si el seguimiento recupera el punto.
+SEGUIMIENTOS = [
+    ("¿Cómo está la Pirámide de Cholula?", "¿Y cuánto cuesta?", "punto-12"),
+    ("Háblame de la Biblioteca Palafoxiana", "¿Y a qué hora abre?", "punto-3"),
+    ("¿Qué tal Africam Safari?", "¿Es techado?", "punto-20"),
+    ("¿Cómo está el Museo Amparo?", "¿Y abre hoy?", "punto-4"),
+    ("¿Qué es el Callejón de los Sapos?", "¿Qué tan lleno está?", "punto-5"),
+]
+# Estilo (specs/003, US4): líneas de datos copiadas tal cual y respuestas largas.
+COPIADO = re.compile(r"\b(VERDE|AMARILLO|ROJO) \(|visita sugerida:|para ese lugar", re.I)
+
+
+def estilo(respuesta: str) -> list[str]:
+    """Problemas de estilo verificables: relleno al final, líneas copiadas y más de 4 oraciones."""
+    problemas = []
+    if rag.quitar_relleno(respuesta) != respuesta:
+        problemas.append("relleno")
+    if COPIADO.search(respuesta):
+        problemas.append("copiado")
+    # FR-017: máximo 4 oraciones fuera de la lista, y la lista con máximo 3 opciones.
+    lineas = [x.strip() for x in rag.CITA.sub("", respuesta).splitlines() if x.strip()]
+    opciones = [x for x in lineas if re.match(r"^([-•*]|\d+[).])\s", x)]
+    texto = " ".join(x for x in lineas if x not in opciones)
+    oraciones = [o for o in re.split(r"(?<=[.!?])\s+", texto) if len(o.strip()) > 3]
+    if len(oraciones) > 4 or len(opciones) > 3:
+        problemas.append(f"largo ({len(oraciones)} oraciones, {len(opciones)} opciones)")
+    return problemas
 SIN_DATO = [
     "¿Cuánto cuesta un taxi del Zócalo a Cholula?",
     "¿Cuál es el restaurante mejor calificado de Puebla?",
@@ -111,6 +142,9 @@ def atributos_incorrectos(respuesta: str, puntos: dict) -> list[str]:
 
 
 def main() -> None:
+    args = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    args.add_argument("--salida", default="evaluacion_rag.md", help="archivo dentro de data/processed/")
+    nombre = args.parse_args().salida
     print("Precarga:", llm.precargar(), "· modelo:", llm.MODELO)
     filas, lineas = [], [f"# Evaluación del asistente (RAG)\n\nModelo `{llm.MODELO}`, embeddings `{llm.EMBED}`, "
                          f"momento {MOMENTO:%Y-%m-%d %H:%M}, corrida {datetime.now():%Y-%m-%d %H:%M}.\n"]
@@ -127,8 +161,10 @@ def main() -> None:
             inventados = numeros_inventados(r["respuesta"], r["prompt"])
             atributos = atributos_incorrectos(r["respuesta"], puntos)
             dijo_no_se = any(x in r["respuesta"].lower() for x in NO_SE)
+            problemas = estilo(r["respuesta"])
             filas.append({"hit": hit, "fiel": not inventados, "no_se": dijo_no_se if sin_dato else None,
-                          "citas_ok": not r["citas_invalidas"], "atributos_ok": not atributos, "seg": seg})
+                          "citas_ok": not r["citas_invalidas"], "atributos_ok": not atributos, "seg": seg,
+                          "estilo_ok": not problemas})
             marca = ("✅" if hit else "❌") if hit is not None else ("✅" if dijo_no_se else "❌")
             print(f"{i:>2} {marca}{' ⚠️ ' + '; '.join(atributos) if atributos else ''} {seg:4.1f} s  {q}"
                   f"{'' if origen is None else ' (desde el Zócalo)'}")
@@ -137,7 +173,25 @@ def main() -> None:
                        f"- Números que no estaban en el contexto: {inventados or 'ninguno'}",
                        f"- Atributos incorrectos (techado, color, tranquilo): {atributos or 'ninguno'}",
                        f"- Citas inválidas: {r['citas_invalidas'] or 'ninguna'} · fuentes: {[f['id'] for f in r['fuentes']]}",
+                       f"- Estilo: {', '.join(problemas) or 'sin problemas'}",
                        f"- Tiempo: {seg:.1f} s · recuperados: {recuperados}", "", "> " + r["respuesta"].replace("\n", "\n> "), ""]
+
+        seguimientos = 0
+        lineas += ["## Seguimientos (memoria de 2 preguntas)", ""]
+        for primera, segunda, esperado in SEGUIMIENTOS:
+            r1 = rag.preguntar(con, MOMENTO, primera, None)
+            t = time.perf_counter()
+            r2 = rag.preguntar(con, MOMENTO, segunda, None,
+                               historial=[{"pregunta": primera, "respuesta": r1["respuesta"]}])
+            seg = time.perf_counter() - t
+            ok = esperado in [d["id"] for d in r2["documentos"]]
+            seguimientos += ok
+            print(f"   {'✅' if ok else '❌'} {seg:4.1f} s  {primera} → {segunda}")
+            lineas += [f"- {'acierto' if ok else '**falla**'} ({seg:.1f} s): {primera} → {segunda}", "",
+                       "> " + r2["respuesta"].replace("\n", "\n> "), ""]
+            filas.append({"hit": None, "fiel": not numeros_inventados(r2["respuesta"], r2["prompt"]), "no_se": None,
+                          "citas_ok": not r2["citas_invalidas"], "atributos_ok": True, "seg": seg,
+                          "estilo_ok": not estilo(r2["respuesta"])})
 
     con_dato = [f for f in filas if f["hit"] is not None]
     sin = [f for f in filas if f["no_se"] is not None]
@@ -147,10 +201,12 @@ def main() -> None:
         f"'No tengo ese dato' cuando no hay dato: {sum(f['no_se'] for f in sin)}/{len(sin)}",
         f"Citas válidas: {sum(f['citas_ok'] for f in filas)}/{len(filas)}",
         f"Atributos correctos (techado, color, tranquilo): {sum(f['atributos_ok'] for f in filas)}/{len(filas)}",
+        f"Estilo (sin relleno, sin líneas copiadas, ≤ 4 oraciones): {sum(f['estilo_ok'] for f in filas)}/{len(filas)}",
+        f"Seguimientos con el lugar correcto: {seguimientos}/{len(SEGUIMIENTOS)}",
         f"Tiempo: promedio {sum(f['seg'] for f in filas) / len(filas):.1f} s, máximo {max(f['seg'] for f in filas):.1f} s",
     ]
     print("\n" + "\n".join(resumen))
-    salida = DATA / "processed" / "evaluacion_rag.md"
+    salida = DATA / "processed" / nombre
     salida.write_text("\n".join(lineas[:1] + ["## Resumen", ""] + [f"- {x}" for x in resumen] + [""] + lineas[1:]),
                       encoding="utf-8")
     print(f"Detalle: {salida}")

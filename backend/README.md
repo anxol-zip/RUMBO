@@ -33,7 +33,7 @@ flowchart TD
 | FastAPI + Uvicorn  | API HTTP. Swagger en `http://localhost:8000/docs`                               |
 | PostgreSQL (Supabase) + `psycopg` | Catálogo, datos oficiales, estimaciones y lo que genera la app. Dos proyectos: `rumbo-dev` y `rumbo-demo` |
 | ChromaDB           | Textos que consulta el asistente, en 5 colecciones                              |
-| Ollama             | `qwen3:8b` por defecto para redactar y `bge-m3` para embeddings                 |
+| Ollama             | `qwen3:4b-instruct` por defecto para redactar y `bge-m3` para embeddings        |
 | `mcp` (FastMCP)    | Servidor MCP; fijado a `<2` porque en la 2.x cambió de nombre                   |
 | `pypdf`            | Rellena filas del PDF del Observatorio que la conversión a Markdown perdió      |
 | `uv` y `pytest`    | Dependencias y pruebas                                                          |
@@ -109,10 +109,11 @@ Todos llevan el prefijo `/api`.
 | `trafico.py`      | Factor de tráfico por corredor con TomTom                                                                |
 | `clima.py`        | Pronóstico de Open-Meteo y su efecto en la afluencia                                                     |
 | `panel.py`        | Vistas agregadas de la Secretaría; nunca reportes individuales                                           |
-| `rag.py`          | Asistente: recuperar, sumar el estado en vivo, redactar y citar                                          |
+| `rag.py`          | Asistente: recuperar, sumar el estado en vivo, redactar y citar; recuerda las 2 preguntas anteriores     |
+| `guardia.py`      | Rechaza consultas (SQL, comandos) e intentos de prompt injection antes del modelo y revisa su salida     |
 | `conocimiento.py` | Textos que se indexan en ChromaDB, armados con plantillas desde los datos                                |
 | `vector.py`       | Conexión a ChromaDB y colecciones `puntos`, `eventos`, `conocimiento`, `bitacora` y `establecimientos`   |
-| `llm.py`          | Cliente de Ollama: redacción y embeddings                                                                |
+| `llm.py`          | Cliente de Ollama: redacción y embeddings; quita el razonamiento y avisa si el modelo no sirve           |
 | `ingesta.py`      | Lectura y limpieza de las fuentes oficiales                                                              |
 | `bd.py`           | Conexión a PostgreSQL (pool de la API y conexiones sueltas) y creación del esquema                       |
 | `config.py`       | Lee `backend/.env`; las variables del entorno tienen prioridad                                           |
@@ -158,7 +159,7 @@ Fuera del pipeline, se corren a mano:
 | Script                   | Qué hace                                                                                                      |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------- |
 | `verificar_catalogo.py`  | Busca cada lugar en DENUE y OpenStreetMap, y escribe una propuesta sin modificar el catálogo                  |
-| `evaluar_rag.py`         | Evalúa al asistente con 20 preguntas y escribe `processed/evaluacion_rag.md`                                  |
+| `evaluar_rag.py`         | Evalúa al asistente (29 preguntas, 5 seguimientos y estilo) y escribe `processed/evaluacion_rag.md` (`--salida`) |
 | `probar_recomendador.py` | Casos de prueba del recomendador contra la base real                                                          |
 
 ### `sql/esquema.sql`: tablas
@@ -188,6 +189,7 @@ Fuera del pipeline, se corren a mano:
 | `test_traslados.py`      | Formato de OpenRouteService y lectura de `.env`                           |
 | `test_ingesta.py`        | Limpieza de las fuentes oficiales                                         |
 | `test_rag.py`            | Partes del asistente que no necesitan Ollama                              |
+| `test_guardia.py`        | Ataques conocidos, preguntas legítimas y rechazos sin llamar al modelo    |
 
 ### `data/`: datos
 
@@ -239,7 +241,8 @@ Se define en el entorno o en `backend/.env`, que nunca se sube a git. Excepción
 | `TOMTOM_API_KEY`               | Clave de TomTom                                                      | Sin valor                                         |
 | `TRAFICO_MIN`, `TRAFICO_HORAS` | Frecuencia y horario de las consultas de tráfico                     | `30` y `8-20`                                     |
 | `OLLAMA_URL`                   | Servidor de Ollama                                                   | `http://127.0.0.1:11434`                          |
-| `OLLAMA_MODELO`                | Modelo que redacta                                                   | `qwen3:8b`                                        |
+| `OLLAMA_MODELO`                | Modelo que redacta (no `qwen3:4b`: escribe su razonamiento)          | `qwen3:4b-instruct`                               |
+| `OLLAMA_MAX_TOKENS`            | Tope de la respuesta; acota el tiempo en la laptop                   | `320`                                             |
 | `EMBED_MODEL`                  | Modelo de embeddings; si cambia, hay que reindexar ChromaDB          | `bge-m3`                                          |
 | `OLLAMA_KEEP_ALIVE`, `OLLAMA_CTX` | Tiempo en memoria y contexto del modelo                           | Definidos en `turismo_core/llm.py`                |
 | `CHROMA_HOST`, `CHROMA_PORT`   | Usa un servidor de ChromaDB en lugar de `data/chroma/`               | Sin servidor                                      |

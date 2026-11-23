@@ -71,7 +71,7 @@ export const api = {
     enviar('/reportes', { sesion_id: sesionId, punto_id: puntoId, nivel, distancia_m: distanciaM ?? null }),
 
   // CU_06: asistente (Ollama en la laptop; si no está, el backend responde 503 con el motivo)
-  preguntarAsistente: ({ sesionId, pregunta, origenId }) => enviar('/chat', { sesion_id: sesionId, pregunta, origen_id: origenId }),
+  preguntarAsistente: ({ sesionId, pregunta, origenId, historial = [] }) => enviar('/chat', { sesion_id: sesionId, pregunta, origen_id: origenId, historial }),
 
   // CU_07: panel de gobierno. incluirDemo suma la actividad de la demo del stand (RN_11).
   obtenerPanel: async ({ incluirDemo }) => {

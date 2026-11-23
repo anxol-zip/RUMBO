@@ -1,15 +1,17 @@
 # Evaluación del asistente (RAG)
 
-Modelo `qwen3:8b`, embeddings `bge-m3`, momento 2026-10-16 13:00, corrida 2026-10-16 01:07.
+Modelo `qwen3:4b-instruct`, embeddings `bge-m3-cpu`, momento 2026-11-27 13:00, corrida 2026-11-23 07:31.
 
 ## Resumen
 
-- Recuperación (hit): 23/23
-- Fidelidad (sin números inventados): 28/28
+- Recuperación (hit): 22/24
+- Fidelidad (sin números inventados): 34/34
 - 'No tengo ese dato' cuando no hay dato: 5/5
-- Citas válidas: 28/28
-- Atributos correctos (techado, color, tranquilo): 28/28
-- Tiempo: promedio 4.7 s, máximo 21.9 s
+- Citas válidas: 34/34
+- Atributos correctos (techado, color, tranquilo): 34/34
+- Estilo (sin relleno, sin líneas copiadas, ≤ 4 oraciones): 33/34
+- Seguimientos con el lugar correcto: 5/5
+- Tiempo: promedio 5.7 s, máximo 9.0 s
 
 ## 1. ¿A qué hora abre la Biblioteca Palafoxiana y cuánto cuesta?
 
@@ -17,22 +19,21 @@ Modelo `qwen3:8b`, embeddings `bge-m3`, momento 2026-10-16 13:00, corrida 2026-1
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
 - Citas inválidas: ninguna · fuentes: ['punto-3']
-- Tiempo: 6.6 s · recuperados: ['punto-3', 'punto-7', 'punto-10', 'punto-20', 'evento-2', 'evento-1', 'obs-2', 'obs-11', 'metodo-semaforo', 'obs-19']
+- Estilo: sin problemas
+- Tiempo: 4.3 s · recuperados: ['punto-3', 'punto-7', 'punto-20', 'obs-2', 'obs-11', 'metodo-semaforo', 'obs-20']
 
-> La Biblioteca Palafoxiana abre martes a jueves a 10:00 y viernes a domingo a 10:00 [punto-3]. El costo es $48.
+> La Biblioteca Palafoxiana abre a las 10:00 y cuesta $48 [punto-3].
 
 ## 2. ¿Qué puedo visitar techado si llueve en el centro de Puebla?
 
 - Recuperación: acierto (esperado ['punto-1', 'punto-10', 'punto-2', 'punto-22', 'punto-3', 'punto-7'])
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['punto-11', 'punto-1', 'punto-7']
-- Tiempo: 5.6 s · recuperados: ['punto-23', 'punto-1', 'punto-11', 'evento-1', 'evento-2', 'fuentes', 'metodo-semaforo', 'obs-3', 'obs-17']
+- Citas inválidas: ninguna · fuentes: ['punto-1', 'punto-11']
+- Estilo: sin problemas
+- Tiempo: 5.8 s · recuperados: ['punto-1', 'punto-21', 'punto-11', 'fuentes', 'metodo-semaforo', 'obs-3', 'obs-18']
 
-> Si llueve en el centro de Puebla, puedes visitar:  
-> 1) [punto-11] Estrella de Puebla: VERDE (tranquilo), techado, visita sugerida: 45 min.  
-> 2) [punto-1] Catedral de Puebla: AMARILLO, techado, visita sugerida: 1-2 h.  
-> 3) [punto-7] Casa del Alfeñique: AMARILLO, techado, visita sugerida: 45 min.
+> Puedes visitar la Catedral de Puebla, que está techada y tiene movimiento normal [punto-1]. Otra opción es la Estrella de Puebla, también techada y con visita de 45 minutos [punto-11]. Toca el lugar en el mapa para ver cómo llegar.
 
 ## 3. ¿Cómo está la Pirámide de Cholula ahora?
 
@@ -40,39 +41,43 @@ Modelo `qwen3:8b`, embeddings `bge-m3`, momento 2026-10-16 13:00, corrida 2026-1
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
 - Citas inválidas: ninguna · fuentes: ['punto-12']
-- Tiempo: 3.5 s · recuperados: ['punto-12', 'punto-13', 'punto-14', 'punto-16', 'evento-1', 'evento-2', 'obs-15', 'inah-3110009', 'obs-13', 'obs-4']
+- Estilo: sin problemas
+- Tiempo: 9.0 s · recuperados: ['punto-12', 'punto-13', 'punto-14', 'punto-16', 'obs-15', 'inah-3110009', 'obs-13', 'obs-4']
 
-> La Pirámide de Cholula está en AMARILLO (movimiento normal) [punto-12]. La hora más tranquila es las 16:00 (VERDE) y la más llena las 14:00 (VERDE).
+> La Pirámide de Cholula ahora está con movimiento normal [punto-12]. Es al aire libre y hay lluvia moderada pronosticada. La hora más tranquila sería a las 16:00. Toca el lugar en el mapa para ver cómo llegar.
 
 ## 4. Estoy en el Zócalo y tengo 3 horas, ¿qué me recomiendas?
 
 - Recuperación: acierto (esperado ['punto-21'])
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['punto-1', 'punto-11']
-- Tiempo: 3.7 s · recuperados: ['punto-21', 'punto-1', 'punto-10', 'evento-2', 'evento-1', 'metodo-recomendador', 'metodo-semaforo', 'metodo-reportes', 'fuentes']
+- Citas inválidas: ninguna · fuentes: ['punto-21', 'punto-1', 'punto-6']
+- Estilo: sin problemas
+- Tiempo: 7.4 s · recuperados: ['punto-21', 'punto-1', 'punto-5', 'metodo-recomendador', 'metodo-semaforo', 'metodo-reportes', 'fuentes']
 
-> Te recomiendo: [punto-1] Catedral de Puebla (techado, visita sugerida 1-2 h, 4 min a pie) y [punto-11] Estrella de Puebla (techado, visita sugerida 45 min, 12 min en coche).
+> Estás en el Zócalo, que tiene movimiento normal [punto-21]. Te recomiendo la Catedral de Puebla: está techada, es buena opción si llueve, y la visita dura 1-2 horas [punto-1]. También puedes ir al Barrio del Artista y El Parián, que está tranquilo y es al aire libre [punto-6]. Toca el lugar en el mapa para ver cómo llegar.
 
 ## 5. ¿Cuándo es el Valle de Catrinas?
 
-- Recuperación: acierto (esperado ['evento-1'])
+- Recuperación: **falla** (esperado ['evento-1'])
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['evento-1']
-- Tiempo: 2.8 s · recuperados: ['punto-17', 'punto-9', 'evento-1', 'evento-2', 'inah-2403400', 'obs-21', 'obs-6', 'metodo-recomendador']
+- Citas inválidas: ninguna · fuentes: ['punto-18']
+- Estilo: sin problemas
+- Tiempo: 5.0 s · recuperados: ['punto-18', 'punto-19', 'punto-17', 'punto-9', 'inah-2403400', 'obs-22', 'obs-6', 'metodo-recomendador']
 
-> El Valle de Catrinas es del 2026-10-02 al 2026-11-09 [evento-1].
+> El Valle de Catrinas se encuentra en otoño, cuando el clima es templado [punto-18]. Toca el lugar en el mapa para ver cómo llegar.
 
 ## 6. ¿Qué días hay funciones de Catrinia?
 
-- Recuperación: acierto (esperado ['evento-2'])
+- Recuperación: **falla** (esperado ['evento-2'])
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['evento-2']
-- Tiempo: 3.3 s · recuperados: ['punto-16', 'punto-17', 'evento-2', 'evento-1', 'fuentes', 'metodo-recomendador', 'metodo-semaforo', 'inah-2403100']
+- Citas inválidas: ninguna · fuentes: ['punto-17']
+- Estilo: sin problemas
+- Tiempo: 6.1 s · recuperados: ['punto-18', 'punto-16', 'punto-17', 'fuentes', 'metodo-recomendador', 'metodo-semaforo', 'inah-2403100']
 
-> Las funciones de Catrinia son los días 3, 4, 10, 11, 17, 18, 24, 25 y 31 de octubre, así como el 1 de noviembre de 2026 [evento-2].
+> No tengo ese dato. Pero si quieres, te puedo decir qué lugares te recomiendan ahora: el Exconvento de Huejotzingo, techado, 1-2 h [punto-17]. Toca el lugar en el mapa para ver cómo llegar.
 
 ## 7. ¿Cuántos turistas llegan a Atlixco?
 
@@ -80,9 +85,10 @@ Modelo `qwen3:8b`, embeddings `bge-m3`, momento 2026-10-16 13:00, corrida 2026-1
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
 - Citas inválidas: ninguna · fuentes: ['obs-2']
-- Tiempo: 3.0 s · recuperados: ['punto-18', 'punto-16', 'punto-11', 'punto-12', 'evento-1', 'evento-2', 'obs-2', 'obs-1', 'obs-20', 'obs-19']
+- Estilo: sin problemas
+- Tiempo: 4.2 s · recuperados: ['punto-18', 'punto-19', 'punto-16', 'punto-11', 'punto-12', 'punto-3', 'obs-2', 'obs-1', 'obs-21', 'obs-20']
 
-> Según el Observatorio Turístico de Puebla, de julio 2025 a junio 2026, llegaron 217,090 turistas a Atlixco [obs-2].
+> 217,090 llegadas de turistas [obs-2].
 
 ## 8. ¿Qué porcentaje de las visitas a recintos del INAH en Puebla tuvo la zona arqueológica de Cholula en 2025?
 
@@ -90,19 +96,21 @@ Modelo `qwen3:8b`, embeddings `bge-m3`, momento 2026-10-16 13:00, corrida 2026-1
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
 - Citas inválidas: ninguna · fuentes: ['inah-3110009']
-- Tiempo: 2.5 s · recuperados: ['punto-12', 'punto-1', 'punto-11', 'punto-16', 'evento-1', 'evento-2', 'inah-3110009', 'inah-2301400', 'inah-4100017', 'inah-3120128']
+- Estilo: sin problemas
+- Tiempo: 5.2 s · recuperados: ['punto-12', 'punto-1', 'punto-11', 'punto-16', 'inah-3110009', 'inah-2301400', 'inah-4100017', 'inah-3120128']
 
-> La Zona Arqueológica de Cholula tuvo el 39.7 % de las visitas a recintos del INAH en Puebla en 2025 [inah-3110009].
+> La zona arqueológica de Cholula tuvo el 39.7 % de las visitas a recintos del INAH en Puebla en 2025 [inah-3110009].
 
 ## 9. ¿Cómo sabe la app que un lugar está lleno?
 
 - Recuperación: acierto (esperado ['metodo-semaforo'])
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['metodo-semaforo']
-- Tiempo: 3.3 s · recuperados: ['punto-12', 'punto-20', 'punto-1', 'evento-2', 'evento-1', 'metodo-semaforo', 'metodo-recomendador', 'metodo-reportes', 'fuentes']
+- Citas inválidas: ninguna · fuentes: ['metodo-reportes']
+- Estilo: sin problemas
+- Tiempo: 7.5 s · recuperados: ['punto-12', 'punto-20', 'punto-21', 'punto-1', 'metodo-semaforo', 'metodo-recomendador', 'metodo-reportes', 'fuentes']
 
-> La app estima la afluencia de cada lugar por hora a partir de datos oficiales mensuales, factores de día, hora, festivos, eventos verificados y clima. El color del semáforo indica si está más lleno que en el 60 % o 85 % de sus horas abiertas de 2023 a 2025. [metodo-semaforo]
+> La app usa reportes de turistas en tiempo real y una estimación basada en datos oficiales mensuales (como los de INAH y el Observatorio Turístico) para saber si un lugar está lleno. Si hay 3 o más reportes válidos en la última hora, dice "confirmado por turistas". Los reportes se mezclan con la estimación, pero pierden peso con el tiempo: después de 3 horas ya no cuentan. [metodo-reportes]
 
 ## 10. ¿Para qué sirve el botón ¿Cómo está?
 
@@ -110,22 +118,21 @@ Modelo `qwen3:8b`, embeddings `bge-m3`, momento 2026-10-16 13:00, corrida 2026-1
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
 - Citas inválidas: ninguna · fuentes: ['metodo-reportes']
-- Tiempo: 2.4 s · recuperados: ['punto-3', 'punto-7', 'evento-2', 'evento-1', 'metodo-recomendador', 'metodo-reportes', 'metodo-semaforo', 'fuentes']
+- Estilo: sin problemas
+- Tiempo: 6.8 s · recuperados: ['punto-21', 'punto-3', 'punto-7', 'punto-18', 'metodo-recomendador', 'metodo-reportes', 'metodo-semaforo', 'fuentes']
 
-> El botón ¿Cómo está? permite a los turistas reportar la ocupación de un lugar en tiempo real (vacío, normal o lleno), lo cual ayuda a la app a calcular el color del semáforo y mejorar la recomendación. [metodo-reportes]
+> El botón ¿Cómo está? permite a los turistas compartir su experiencia en un lugar, diciendo si está vacío, normal o lleno. Esa opinión se mezcla con la estimación de la app para saber cómo está el lugar en ese momento. Si hay 3 o más reportes válidos en la última hora, el lugar se marca como "confirmado por turistas". [metodo-reportes]
 
 ## 11. ¿Qué hay para ir con niños?
 
 - Recuperación: acierto (esperado ['punto-11', 'punto-20', 'punto-23', 'punto-9'])
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['punto-23', 'punto-20', 'punto-11']
-- Tiempo: 2.9 s · recuperados: ['punto-20', 'punto-17', 'punto-23', 'evento-1', 'evento-2', 'metodo-recomendador', 'metodo-semaforo', 'metodo-reportes', 'fuentes']
+- Citas inválidas: ninguna · fuentes: ['punto-20', 'punto-17']
+- Estilo: sin problemas
+- Tiempo: 6.5 s · recuperados: ['punto-20', 'punto-18', 'punto-17', 'metodo-recomendador', 'metodo-semaforo', 'metodo-reportes', 'fuentes']
 
-> Para ir con niños, te recomendamos:  
-> 1) [punto-23] Acuario Michin Puebla: techado, visita sugerida: sin dato.  
-> 2) [punto-20] Africam Safari: al aire libre, visita sugerida: 3-4 h.  
-> 3) [punto-11] Estrella de Puebla: techado, visita sugerida: 45 min.
+> Te recomiendo el Africam Safari: tiene movimiento normal, es al aire libre y tiene un plan familiar de día completo, ideal para niños [punto-20]. Otra opción es el Exconvento de Huejotzingo, que es techado y tiene interés en historia y gastronomía, aunque es más corto [punto-17]. Toca el lugar en el mapa para ver cómo llegar.
 
 ## 12. ¿Abre hoy el Museo Amparo?
 
@@ -133,9 +140,10 @@ Modelo `qwen3:8b`, embeddings `bge-m3`, momento 2026-10-16 13:00, corrida 2026-1
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
 - Citas inválidas: ninguna · fuentes: ['punto-4']
-- Tiempo: 1.7 s · recuperados: ['punto-4', 'punto-10', 'punto-22', 'punto-9', 'evento-2', 'evento-1', 'metodo-semaforo', 'inah-4100014', 'fuentes', 'inah-4100015']
+- Estilo: sin problemas
+- Tiempo: 4.2 s · recuperados: ['punto-4', 'punto-22', 'punto-9', 'metodo-semaforo', 'inah-4100014', 'fuentes', 'inah-4100015']
 
-> No, el Museo Amparo está cerrado hoy [punto-4].
+> No, el Museo Amparo está cerrado hoy [punto-4]. Toca el lugar en el mapa para ver cómo llegar.
 
 ## 13. ¿Cuánto cuesta entrar a Africam Safari?
 
@@ -143,19 +151,21 @@ Modelo `qwen3:8b`, embeddings `bge-m3`, momento 2026-10-16 13:00, corrida 2026-1
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
 - Citas inválidas: ninguna · fuentes: ['punto-20']
-- Tiempo: 1.8 s · recuperados: ['punto-20', 'punto-12', 'punto-23', 'evento-2', 'evento-1', 'metodo-recomendador', 'obs-1', 'obs-4', 'obs-8']
+- Estilo: sin problemas
+- Tiempo: 4.0 s · recuperados: ['punto-20', 'punto-12', 'punto-18', 'punto-7', 'metodo-recomendador', 'obs-1', 'obs-4', 'obs-8']
 
-> La entrada a Africam Safari cuesta $550 [punto-20].
+> Entrar a Africam Safari cuesta $550 [punto-20].
 
 ## 14. ¿Dónde puedo comprar artesanías y Talavera?
 
 - Recuperación: acierto (esperado ['punto-6'])
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['punto-6', 'punto-16']
-- Tiempo: 2.3 s · recuperados: ['punto-6', 'punto-16', 'punto-7', 'evento-2', 'evento-1', 'fuentes', 'inah-4100015', 'inah-4100014', 'inah-2403400']
+- Citas inválidas: ninguna · fuentes: ['punto-6']
+- Estilo: sin problemas
+- Tiempo: 5.8 s · recuperados: ['punto-6', 'punto-5', 'punto-16', 'punto-7', 'punto-18', 'punto-3', 'fuentes', 'inah-4100015', 'inah-4100014', 'obs-17']
 
-> En [punto-6] Barrio del Artista y El Parián, es al aire libre, movimiento normal, visita sugerida 1 h. También puedes visitar [punto-16] San Francisco Acatepec, techado, visita sugerida 30 min.
+> Puedes comprar artesanías y Talavera en el Barrio del Artista y El Parián. Está tranquilo, es al aire libre y tiene lluvia moderada ahora [punto-6]. Toca el lugar en el mapa para ver cómo llegar.
 
 ## 15. ¿De dónde salen los datos de la app?
 
@@ -163,79 +173,88 @@ Modelo `qwen3:8b`, embeddings `bge-m3`, momento 2026-10-16 13:00, corrida 2026-1
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
 - Citas inválidas: ninguna · fuentes: ['fuentes']
-- Tiempo: 2.7 s · recuperados: ['punto-20', 'punto-12', 'punto-3', 'evento-2', 'evento-1', 'fuentes', 'metodo-recomendador', 'metodo-reportes', 'metodo-semaforo']
+- Estilo: sin problemas
+- Tiempo: 5.9 s · recuperados: ['punto-20', 'punto-5', 'punto-12', 'punto-21', 'punto-3', 'punto-11', 'punto-17', 'fuentes', 'metodo-recomendador', 'metodo-reportes', 'metodo-semaforo']
 
-> Los datos de la app provienen del Observatorio Turístico de Puebla, INAH, DENUE, Catálogo de la zona piloto, OpenRouteService, Open-Meteo y otros colaboradores. [fuentes]
+> Los datos de la app salen de fuentes oficiales como el Observatorio Turístico de Puebla, INAH, DENUE (INEGI), y de datos abiertos como OpenStreetMap y Open-Meteo. [fuentes]
 
 ## 16. ¿Dónde puedo comer cerca de la Pirámide de Cholula?
 
 - Recuperación: acierto (esperado ['denue-*'])
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['denue-21140722330000151000000000U8', 'denue-21140722511000672001000000U8']
-- Tiempo: 5.1 s · recuperados: ['denue-21140722330000151000000000U8', 'denue-21140722511000672001000000U8', 'denue-21119722511004211000000000U5', 'evento-1']
+- Citas inválidas: ninguna · fuentes: ['denue-1', 'denue-2', 'denue-3']
+- Estilo: sin problemas
+- Tiempo: 8.9 s · recuperados: ['denue-1', 'denue-2', 'denue-3']
 
-> Puedes comer en Cholulquliza, servicios de preparación de alimentos en unidades móviles (0 a 5 personas), a 308 m en línea recta [denue-21140722330000151000000000U8]. También en Chez Marie, restaurantes con servicio de preparación de alimentos a la carta o de comida corrida (0 a 5 personas), a 466 m en línea recta [denue-21140722511000672001000000U8].
+> Puedes comer en Cholulquliza, servicios de preparación de alimentos en unidades móviles, a 308 m en línea recta de Zona Arqueológica de Cholula (Gran Pirámide) [denue-1]. Otra opción es Chez Marie, restaurantes con servicio de preparación de alimentos a la carta o de comida corrida, a 466 m en línea recta de Zona Arqueológica de Cholula (Gran Pirámide) [denue-2]. También hay Barra Pagana, restaurantes con servicio de preparación de alimentos a la carta o de comida corrida, a 532 m en línea recta de Zona Arqueológica de Cholula (Gran Pirámide) [denue-3].
 
 ## 17. Estoy en el Zócalo, ¿dónde puedo desayunar?
 
 - Recuperación: acierto (esperado ['denue-*'])
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['denue-21114722110003543001000000U4', 'denue-21114722110003323001000000U1', 'denue-21114722219033132001000000U9']
-- Tiempo: 3.7 s · recuperados: ['denue-21114722110003543001000000U4', 'denue-21114722110003323001000000U1', 'denue-21114722219033132001000000U9', 'evento-1']
+- Citas inválidas: ninguna · fuentes: ['denue-1', 'denue-2', 'denue-3']
+- Estilo: sin problemas
+- Tiempo: 5.5 s · recuperados: ['denue-1', 'denue-2', 'denue-3']
 
-> En el Zócalo, puedes desayunar en The Italian Coffee [denue-21114722110003543001000000U4], a 194 m en línea recta. También en The Italian Coffee [denue-21114722110003323001000000U1], a 103 m en línea recta. Y en The Italian Coffee Company [denue-21114722219033132001000000U9], a 55 m en línea recta.
+> Te puedes encontrar con The Italian Coffee, que es una cafetería, a 194 m de Zócalo de Puebla [denue-1]. Otra opción es The Italian Coffee, que es una cafetería, a 103 m de Zócalo de Puebla [denue-2]. También hay The Italian Coffee Company, que es una cafetería, a 55 m de Zócalo de Puebla [denue-3].
 
 ## 18. ¿Hay hoteles en el centro de Atlixco?
 
 - Recuperación: acierto (esperado ['denue-*'])
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['denue-21019721112000021001000000U2', 'denue-21019721112000271000000000U3', 'denue-21019721111000211000000000U1']
-- Tiempo: 9.4 s · recuperados: ['denue-21019721112000021001000000U2', 'denue-21019721112000271000000000U3', 'denue-21019721111000211000000000U1', 'evento-1']
+- Citas inválidas: ninguna · fuentes: ['denue-1', 'denue-2', 'denue-3']
+- Estilo: sin problemas
+- Tiempo: 6.4 s · recuperados: ['denue-1', 'denue-2', 'denue-3']
 
-> Hay hoteles en el centro de Atlixco. [denue-21019721112000021001000000U2] Hotel Atlixco. Hospedaje: hoteles sin otros servicios integrados (0 a 5 personas), a 112 m en línea recta. [denue-21019721112000271000000000U3] Hotel Atlix. Hospedaje: hoteles sin otros servicios integrados (0 a 5 personas), a 540 m en línea recta. [denue-21019721111000211000000000U1] Hotel Casa Flora. Hospedaje: hoteles con otros servicios integrados (11 a 30 personas), a 819 m en línea recta.
+> Sí, hay hoteles en el centro de Atlixco. [denue-1] Hotel Atlixco: hospedaje, a 112 m en línea recta de Centro de Atlixco. [denue-2] Hotel Atlix: hospedaje, a 540 m en línea recta de Centro de Atlixco. [denue-3] Hotel Casa Flora: hospedaje con otros servicios integrados, a 819 m en línea recta de Centro de Atlixco.
 
 ## 19. ¿Qué restaurante me recomiendas para comer mole?
 
 - Recuperación: acierto (esperado ['denue-*'])
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['denue-21114722511010602001000000U8', 'denue-21119722511004621000000000U5', 'denue-21119722511001371000000000U0']
-- Tiempo: 6.5 s · recuperados: ['denue-21114722511010602001000000U8', 'denue-21119722511004621000000000U5', 'denue-21119722511001371000000000U0', 'evento-1']
+- Citas inválidas: ninguna · fuentes: ['denue-1', 'denue-2', 'denue-3']
+- Estilo: largo (5 oraciones)
+- Tiempo: 8.1 s · recuperados: ['denue-1', 'denue-2', 'denue-3']
 
-> No tengo ese dato. Puedo recomendarte estos restaurantes: [denue-21114722511010602001000000U8] Restaurant Come Bien Mr Loro, tipo: restaurantes con servicio de preparación de alimentos a la carta o de comida corrida (0 a 5 personas), a 847 m en línea recta de Capilla del Rosario (Templo de Santo Domingo). [denue-21119722511004621000000000U5] Mosto Voi, tipo: restaurantes con servicio de preparación de alimentos a la carta o de comida corrida (0 a 5 personas), a 960 m en línea recta de Museo Internacional del Barroco. [denue-21119722511001371000000000U0] Postres y Helados Dolce Mio, tipo: restaurantes con servicio de preparación de alimentos a la carta o de comida corrida (0 a 5 personas), a 507 m en línea recta de Santuario de la Virgen de los Remedios.
+> No tengo ese dato. Pero sí tengo estos restaurantes:  
+> - Come Bien Mr Loro: restaurantes con servicio de preparación de alimentos a la carta o de comida corrida (0 a 5 personas), a 847 m en línea recta de Capilla del Rosario (Templo de Santo Domingo) [denue-1]. - Mosto Voi: restaurantes con servicio de preparación de alimentos a la carta o de comida corrida (0 a 5 personas), a 960 m en línea recta de Museo Internacional del Barroco [denue-2]. - Dolce Mio: restaurantes con servicio de preparación de alimentos a la carta o de comida corrida (0 a 5 personas), a 507 m en línea recta de Santuario de la Virgen de los Remedios [denue-3].
 
 ## 20. Tengo 4 horas y va a llover, ¿qué hago?
 
 - Recuperación: acierto (esperado ['punto-*'])
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['punto-11', 'punto-1', 'punto-17']
-- Tiempo: 3.2 s · recuperados: ['punto-23', 'punto-1', 'punto-20', 'punto-11', 'evento-1', 'evento-2', 'metodo-recomendador', 'metodo-semaforo', 'metodo-reportes', 'fuentes']
+- Citas inválidas: ninguna · fuentes: ['punto-11', 'punto-17']
+- Estilo: sin problemas
+- Tiempo: 6.5 s · recuperados: ['punto-1', 'punto-20', 'punto-11', 'metodo-recomendador', 'metodo-semaforo', 'metodo-reportes', 'fuentes']
 
-> Con lluvia fuerte, te recomendamos: [punto-11] Estrella de Puebla (VERDE, 45 min), [punto-1] Catedral de Puebla (AMARILLO, 1-2 h) y [punto-17] Exconvento de Huejotzingo (VERDE, 1-2 h).
+> Te recomiendo ir a la Estrella de Puebla: tiene movimiento normal, es techado y la visita dura 45 min [punto-11]. Otra opción es el Exconvento de Huejotzingo, que también tiene movimiento normal, es techado y la visita dura 1-2 h [punto-17]. Toca el lugar en el mapa para ver cómo llegar.
 
 ## 21. Tengo 4 horas y va a llover, ¿qué hago?
 
 - Recuperación: acierto (esperado ['punto-*'])
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['punto-11', 'punto-1', 'punto-3']
-- Tiempo: 3.9 s · recuperados: ['punto-23', 'punto-1', 'punto-20', 'punto-11', 'evento-1', 'evento-2', 'metodo-recomendador', 'metodo-semaforo', 'metodo-reportes', 'fuentes']
+- Citas inválidas: ninguna · fuentes: ['punto-1', 'punto-11']
+- Estilo: sin problemas
+- Tiempo: 6.3 s · recuperados: ['punto-1', 'punto-20', 'punto-11', 'metodo-recomendador', 'metodo-semaforo', 'metodo-reportes', 'fuentes']
 
-> Con lluvia fuerte, te recomendamos: [punto-11] Estrella de Puebla (VERDE, 45 min, 12 min en coche) o [punto-1] Catedral de Puebla (AMARILLO, 1-2 h, 4 min a pie). También [punto-3] Biblioteca Palafoxiana (AMARILLO, 30-60 min, 4 min a pie).
+> Te recomiendo la Catedral de Puebla: tiene movimiento normal, es techada y la visita dura 1-2 h [punto-1]. Otra opción es la Estrella de Puebla, que también tiene movimiento normal, es techada y dura 45 min [punto-11]. Toca el lugar en el mapa para ver cómo llegar.
 
 ## 22. ¿Qué hay tranquilo cerca de mí?
 
 - Recuperación: acierto (esperado ['punto-*'])
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['punto-9', 'punto-11']
-- Tiempo: 6.0 s · recuperados: ['punto-20', 'punto-13', 'evento-1', 'evento-2', 'metodo-recomendador', 'fuentes', 'metodo-semaforo', 'metodo-reportes']
+- Citas inválidas: ninguna · fuentes: ['punto-6', 'punto-9']
+- Estilo: sin problemas
+- Tiempo: 7.9 s · recuperados: ['punto-8', 'punto-19', 'punto-20', 'punto-18', 'punto-13', 'punto-17', 'punto-11', 'metodo-recomendador', 'fuentes', 'metodo-semaforo', 'metodo-reportes']
 
-> Hay tranquilo en [punto-9] Zona de los Fuertes (Loreto y Guadalupe) y en [punto-11] Estrella de Puebla. Ambos son al aire libre y techado respectivamente, y están a pocos minutos en coche o a pie desde el Zócalo.
+> El Barrio del Artista y El Parián está tranquilo [punto-6]. Es al aire libre y hay lluvia moderada, así que no es buena opción si llueve. La Zona de los Fuertes (Loreto y Guadalupe) también está tranquila [punto-9], es al aire libre y la visita dura 2 h. Toca el lugar en el mapa para ver cómo llegar.
 
 ## 23. ¿Cuándo conviene ir a la pirámide?
 
@@ -243,56 +262,95 @@ Modelo `qwen3:8b`, embeddings `bge-m3`, momento 2026-10-16 13:00, corrida 2026-1
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
 - Citas inválidas: ninguna · fuentes: ['punto-12']
-- Tiempo: 2.9 s · recuperados: ['punto-12', 'punto-13', 'punto-20', 'punto-1', 'evento-1', 'evento-2', 'metodo-recomendador', 'metodo-semaforo', 'metodo-reportes', 'obs-20']
+- Estilo: sin problemas
+- Tiempo: 5.6 s · recuperados: ['punto-12', 'punto-13', 'punto-20', 'punto-19', 'punto-1', 'punto-11', 'metodo-recomendador', 'metodo-semaforo', 'metodo-reportes', 'obs-21']
 
-> La hora más tranquila es las 16:00 [punto-12]. O regresa a las 10:00 [punto-12].
+> Te conviene ir a las 16:00, cuando está tranquilo [punto-12]. Ahora está con movimiento normal [punto-12]. Toca el lugar en el mapa para ver cómo llegar.
 
-## 24. ¿Cuánto cuesta un taxi del Zócalo a Cholula?
+## 24. ¿Dónde puedo comer cerca del Zócalo?
+
+- Recuperación: acierto (esperado ['denue-*'])
+- Números que no estaban en el contexto: ninguno
+- Atributos incorrectos (techado, color, tranquilo): ninguno
+- Citas inválidas: ninguna · fuentes: ['denue-1', 'denue-2', 'denue-3']
+- Estilo: sin problemas
+- Tiempo: 8.3 s · recuperados: ['denue-1', 'denue-2', 'denue-3']
+
+> Puedes comer en Fonda de Santa Clara, un restaurante con servicio de preparación de alimentos a la carta o de comida corrida, a 360 m en línea recta de Zócalo de Puebla [denue-1]. Otra opción es Vittorios, un restaurante con servicio de preparación de alimentos a la carta o de comida corrida, a 96 m en línea recta de Zócalo de Puebla [denue-2]. También hay Restaurante Attico, un restaurante con servicio de preparación de alimentos a la carta o de comida corrida, a 117 m en línea recta de Zócalo de Puebla [denue-3].
+
+## 25. ¿Cuánto cuesta un taxi del Zócalo a Cholula?
 
 - Sin dato en la base: dijo No tengo ese dato
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['punto-21', 'punto-12']
-- Tiempo: 2.3 s · recuperados: ['punto-14', 'punto-16', 'punto-12', 'punto-21', 'evento-1', 'evento-2', 'obs-13', 'obs-15', 'inah-3110009', 'obs-21']
+- Citas inválidas: ninguna · fuentes: []
+- Estilo: sin problemas
+- Tiempo: 3.7 s · recuperados: ['punto-14', 'punto-16', 'punto-12', 'punto-21', 'obs-13', 'obs-15', 'inah-3110009', 'obs-22']
 
-> No tengo ese dato. Puedo decirte que el Zócalo de Puebla está en rojo [punto-21] y la Zona Arqueológica de Cholula (Gran Pirámide) está en amarillo [punto-12].
+> No tengo ese dato.
 
-## 25. ¿Cuál es el restaurante mejor calificado de Puebla?
-
-- Sin dato en la base: dijo No tengo ese dato
-- Números que no estaban en el contexto: ninguno
-- Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['denue-21114722511002323000000000U1', 'denue-21114722511018285000017979S4', 'denue-21114722110000941003003155S3']
-- Tiempo: 21.9 s · recuperados: ['denue-21114722511002323000000000U1', 'denue-21114722511018285000017979S4', 'denue-21114722110000941003003155S3', 'evento-1']
-
-> No tengo ese dato. Puedo decirte que hay tres restaurantes denue- en el contexto: Restaurant Bar Sabor a Puebla, Domu Sushi Bar Puebla y 81046 Vips Puebla Centro. [denue-21114722511002323000000000U1], [denue-21114722511018285000017979S4], [denue-21114722110000941003003155S3].
-
-## 26. ¿A qué hora sale el último tren a Cholula?
+## 26. ¿Cuál es el restaurante mejor calificado de Puebla?
 
 - Sin dato en la base: dijo No tengo ese dato
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
-- Citas inválidas: ninguna · fuentes: ['punto-12']
-- Tiempo: 8.9 s · recuperados: ['punto-12', 'punto-14', 'punto-13', 'punto-16', 'evento-2', 'evento-1', 'obs-15', 'obs-13', 'inah-3110009', 'fuentes']
+- Citas inválidas: ninguna · fuentes: ['denue-1', 'denue-2', 'denue-3']
+- Estilo: sin problemas
+- Tiempo: 3.0 s · recuperados: ['denue-1', 'denue-2', 'denue-3']
 
-> No tengo ese dato. Puedo decirte que la Zona Arqueológica de Cholula (Gran Pirámide) tiene su última hora de visita estimada a las 17:00 [punto-12].
+> No tengo ese dato. [denue-1], [denue-2], [denue-3] no tienen calificaciones publicadas.
 
-## 27. ¿Hay estacionamiento en el Museo Amparo?
+## 27. ¿A qué hora sale el último tren a Cholula?
+
+- Sin dato en la base: dijo No tengo ese dato
+- Números que no estaban en el contexto: ninguno
+- Atributos incorrectos (techado, color, tranquilo): ninguno
+- Citas inválidas: ninguna · fuentes: ['punto-14']
+- Estilo: sin problemas
+- Tiempo: 6.2 s · recuperados: ['punto-12', 'punto-14', 'punto-13', 'punto-16', 'obs-15', 'obs-13', 'inah-3110009', 'fuentes']
+
+> No tengo ese dato. Pero si quieres, te puedo decir qué hacer en Puebla ahora: por ejemplo, el Exconvento de San Gabriel y Capilla Real, que tiene movimiento normal, es techado y dura 45 minutos [punto-14]. Toca el lugar en el mapa para ver cómo llegar.
+
+## 28. ¿Hay estacionamiento en el Museo Amparo?
 
 - Sin dato en la base: dijo No tengo ese dato
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
 - Citas inválidas: ninguna · fuentes: ['punto-4']
-- Tiempo: 5.7 s · recuperados: ['punto-4', 'punto-10', 'punto-20', 'punto-13', 'evento-2', 'evento-1', 'metodo-recomendador', 'metodo-semaforo', 'inah-4100017', 'fuentes']
+- Estilo: sin problemas
+- Tiempo: 3.5 s · recuperados: ['punto-4', 'punto-21', 'punto-20', 'punto-13', 'metodo-recomendador', 'metodo-semaforo', 'inah-4100017', 'fuentes']
 
-> No tengo ese dato. Puedo decirte que el Museo Amparo está cerrado a esta hora [punto-4].
+> No tengo ese dato. [punto-4]
 
-## 28. ¿Cuántas personas visitaron la Pirámide de Cholula el sábado pasado?
+## 29. ¿Cuántas personas visitaron la Pirámide de Cholula el sábado pasado?
 
 - Sin dato en la base: dijo No tengo ese dato
 - Números que no estaban en el contexto: ninguno
 - Atributos incorrectos (techado, color, tranquilo): ninguno
 - Citas inválidas: ninguna · fuentes: ['inah-3110009']
-- Tiempo: 3.4 s · recuperados: ['punto-12', 'punto-13', 'punto-16', 'punto-14', 'evento-1', 'evento-2', 'obs-13', 'obs-15', 'inah-3110009', 'obs-4']
+- Estilo: sin problemas
+- Tiempo: 3.8 s · recuperados: ['punto-12', 'punto-13', 'punto-16', 'punto-14', 'obs-13', 'obs-15', 'inah-3110009', 'obs-4']
 
-> No tengo ese dato. Puedo decirte que en julio 2025 a junio 2026, la Zona Arqueológica de Cholula tuvo 188,555 visitas en 2025 y 123,474 en lo que va de 2026 [inah-3110009].
+> No tengo ese dato. [inah-3110009]
+
+## Seguimientos (memoria de 2 preguntas)
+
+- acierto (4.0 s): ¿Cómo está la Pirámide de Cholula? → ¿Y cuánto cuesta?
+
+> La entrada a la Zona Arqueológica de Cholula cuesta $80 [punto-12].
+
+- acierto (4.0 s): Háblame de la Biblioteca Palafoxiana → ¿Y a qué hora abre?
+
+> La Biblioteca Palafoxiana abre a las 10:00. [punto-3]
+
+- acierto (3.9 s): ¿Qué tal Africam Safari? → ¿Es techado?
+
+> No, Africam Safari no es techado. Está al aire libre [punto-20].
+
+- acierto (4.1 s): ¿Cómo está el Museo Amparo? → ¿Y abre hoy?
+
+> No, el Museo Amparo no abre hoy. Está cerrado [punto-4]. Toca el lugar en el mapa para ver cómo llegar.
+
+- acierto (4.6 s): ¿Qué es el Callejón de los Sapos? → ¿Qué tan lleno está?
+
+> El Callejón de los Sapos está en AMARILLO, lo que significa que tiene movimiento normal, no está lleno ni tranquilo. [punto-5]
