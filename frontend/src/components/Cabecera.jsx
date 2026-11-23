@@ -6,6 +6,7 @@ import OpcionesLectura from './OpcionesLectura.jsx'
 import { NOMBRE } from '../data/marca.js'
 import { useIdioma } from '../i18n/contexto.js'
 import { useCuenta } from '../cuenta/contexto.js'
+import Icono from './Icono.jsx'
 
 function Cabecera({ catalogo, cargandoCatalogo, errorCatalogo, onReintentarCatalogo }) {
   const { idioma, setIdioma, t } = useIdioma()
@@ -67,12 +68,16 @@ function Cabecera({ catalogo, cargandoCatalogo, errorCatalogo, onReintentarCatal
         <nav className="navegacion" aria-label={t('nav.secciones')} onClick={(evento) => { if (evento.target.closest('a')) navegar() }}>
           <NavLink to="/" end>{t('nav.explorar')}</NavLink>
           {administrador && <NavLink to="/panel">{t('nav.panel')}</NavLink>}
-          <NavLink to="/acerca"><span className="largo">{t('nav.acerca')}</span><span className="corto">{t('nav.info')}</span></NavLink>
         </nav>
 
         <div className="cabecera-derecha">
           <EnVivo />
           <OpcionesLectura />
+          {/* "Acerca de" (privacidad y créditos) fuera del menú principal: botón ⓘ junto al Aa.
+              En celular va dentro del Menú, con su nombre escrito. */}
+          <NavLink to="/acerca" className="boton-acerca" aria-label={t('nav.acerca')} title={t('nav.acerca')} onClick={navegar}>
+            <Icono nombre="info" /><span className="boton-acerca-texto">{t('nav.acerca')}</span>
+          </NavLink>
           <BotonCuenta catalogo={catalogo} cargandoCatalogo={cargandoCatalogo} errorCatalogo={errorCatalogo} onReintentarCatalogo={onReintentarCatalogo} onNavegar={navegar} />
           <div className="idioma" role="group" aria-label={t('idioma.grupo')}>
             <button type="button" lang="es" aria-pressed={idioma === 'es'} onClick={() => setIdioma('es')} aria-label="Español">ES</button>
