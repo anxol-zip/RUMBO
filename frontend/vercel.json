@@ -6,7 +6,7 @@
   "outputDirectory": "dist",
   "ignoreCommand": "[ -n \"$VERCEL_GIT_PREVIOUS_SHA\" ] && git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" HEAD -- . || exit 1",
   "git": {
-    "deploymentEnabled": { "*": false, "main": true, "develop": true }
+    "deploymentEnabled": { "**": false, "main": true, "develop": true }
   },
   "routes": [
     { "src": "/api/(.*)", "dest": "${BACKEND_URL}/api/$1", "env": ["BACKEND_URL"] }
