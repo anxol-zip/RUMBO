@@ -83,11 +83,16 @@ REGLAS_INYECCION = _reglas(
     ("cambiar-rol", r"\b(actua|actuar|actue|actuen) como\b|\bfinge\w*\b|\bhaz de cuenta\b|\bpretend\b|\bact as\b|"
                     r"\byou are now\b|\b(a partir de ahora|desde ahora|ahora) (eres|seras|vas a ser)\b|"
                     r"\bdeveloper mode\b|\bmodo (desarrollador|dios|sin restricciones|admin\w*)\b|\bjailbreak\b|"
-                    r"\bdan\b|\bdo anything now\b"),
+                    # "dan" suelto es el verbo dar ("¿qué museos dan descuento?"); solo cuenta como rol.
+                    r"\b(eres|seras|modo) dan\b|\bdo anything now\b"),
     ("rol-falso", r"^\s*(system|assistant|sistema|asistente|developer)\s*:|\[/?inst\]|<\|im_(start|end)\|>|"
                   r"</?(system|instructions?)>|###\s*(system|instruction)"),
-    ("secretos", r"\b(contrasenas?|passwords?|api ?keys?|claves? (secreta|de api|privada)s?|tokens?|service.?role|"
-                 r"variables? de entorno|environment variables?|\.env\b|supabase|jwt|credenciales|credentials)\b"),
+    ("secretos", r"\b(passwords?|api ?keys?|claves? (secreta|de api|privada)s?|service.?role|"
+                 r"variables? de entorno|environment variables?|\.env\b|supabase|jwt)\b|"
+                 # Ambiguas en turismo (credencial de estudiante, wifi, tokens del teleférico): solo con contexto.
+                 r"\b(tu|tus|your)\b.{0,15}\b(contrasenas?|tokens?|credenciales|credentials)\b|"
+                 r"\b(contrasenas?|tokens?|credenciales|credentials)\b.{0,20}"
+                 r"\b(de la app|de rumbo|del sistema|del admin\w*|de admin\w*|de la base|de la bd|del servidor|internas?)\b"),
     ("estructura-interna", r"\b(tablas?|esquema|base de datos|bd|database|schema|columnas?|servidor|backend)\b.{0,30}"
                            r"\b(tu|tus|de la app|de rumbo|del sistema|internas?|your)\b|"
                            r"\b(tu|tus|your)\b.{0,15}\b(tablas?|base de datos|database|esquema|schema|servidor|backend)\b"),
