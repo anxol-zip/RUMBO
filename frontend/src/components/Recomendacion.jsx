@@ -1,0 +1,179 @@
+import { useCallback, useEffect, useState } from 'react'
+import { api, codigoDe } from '../api/cliente.js'
+import { hora, partesRazon, textoTraslado } from '../data/formato.js'
+import { explicacionRec, ficha } from '../i18n/backend.js'
+import { useIdioma } from '../i18n/contexto.js'
+import BotonEscuchar from './BotonEscuchar.jsx'
+import Foto from './Foto.jsx'
+import Icono from './Icono.jsx'
+import Semaforo from './Semaforo.jsx'
+import Esqueleto from './Esqueleto.jsx'
+import VistaSemana from './VistaSemana.jsx'
+
+const corto = (nombre) => nombre.split(' (')[0]
+
+// En qué se parece la alternativa a lo que el turista busca: sus intereses y el lugar que pidió.
+function coincidencias(alt, pedido, intereses) {
+  const buscadas = new Set([...intereses, ...(pedido?.categorias ?? [])])
+  return alt.categorias.filter((c) => buscadas.has(c))
+}
+
+// Por qué la alternativa conviene: su propio estado, el traslado y si es techado.
+function porque(alt, idioma, t) {
+  const lista = partesRazon(alt.razon, idioma)
+  const traslado = textoTraslado(alt.traslado, t)
+  if (traslado) lista.push(t('rec.desde', { traslado }))
+  if (alt.interior) lista.push(t('rec.techado'))
+  if (alt.destino !== 'Cd. Puebla') lista.push(t('rec.comunidad'))
+  return lista
+}
+
+// T4 — "Mejor ve a…" (CU_04). El backend nunca propone un lugar en rojo (RN_02), siempre da la razón
+// (RN_03) y, si conviene, otra hora para el lugar pedido. En inglés, la explicación se arma aquí
+// con los mismos datos (el backend la redacta en español).
+function Recomendacion({ puntoId, sesionId, origenId, catalogo, intereses, onVolver, onElegir, onPropuesta, onError }) {
+  const { idioma, t } = useIdioma()
+  const [rec, setRec] = useState(null)
+  const [fallo, setFallo] = useState(false)
+  const [aceptada, setAceptada] = useState(false)
+  const [verSemana, setVerSemana] = useState(false)   // sin alternativa: la semana del lugar pedido
+  const cerrarSemana = useCallback(() => setVerSemana(false), [])
+
+  useEffect(() => {
+    let vigente = true
+    api.pedirRecomendacion({ sesionId, puntoId, origenId })
+      .then((datos) => {
+        if (!vigente) return
+        setRec(datos)
+        if (datos.alternativa) onPropuesta?.(datos.alternativa.id)
+      })
+      .catch((e) => { if (vigente) { setFallo(true); onError(codigoDe(e)) } })
+    return () => { vigente = false }
+  }, [puntoId, sesionId, origenId, onPropuesta, onError])
+
+  async function vamos() {
+    // Se abre antes de esperar al servidor: Safari bloquea ventanas abiertas después de un await.
+    window.open(rec.alternativa.como_llegar_url, '_blank', 'noopener')
+    setAceptada(true)
+    await api.responderBusqueda(rec.busqueda_id, true).catch(() => {})
+  }
+
+  async function prefieroMiPlan() {
+    await api.responderBusqueda(rec.busqueda_id, false).catch(() => {})
+    onVolver()
+  }
+
+  if (fallo) return <button type="button" className="boton-texto" onClick={onVolver}>{t('rec.volver')}</button>
+  if (!rec) return <Esqueleto tipo="recomendacion" />
+
+  const { pedido, alternativa, otra_hora: otraHora } = rec
+  const explicacion = idioma === 'en' ? explicacionRec(rec, t) : rec.razon
+  const colorOtraHora = otraHora && t(`sem.${otraHora.color}`).toLowerCase()
+  const volver = (
+    <button type="button" className="boton-texto" onClick={onVolver}>
+      {pedido ? t('rec.volverA', { lugar: corto(pedido.nombre) }) : t('rec.volver')}
+    </button>
+  )
+
+  if (!alternativa) {
+    if (verSemana && pedido) {
+      return <VistaSemana puntoId={pedido.id} nombre={pedido.nombre} onCerrar={cerrarSemana} onError={onError} />
+    }
+    const titulo = !rec.motivo ? t('rec.estaBien', { lugar: corto(pedido.nombre) })
+      : rec.motivo === 'precaucion' ? t('rec.sinMejores') : t('rec.sinAlternativa')
+    return (
+      <div>
+        {volver}
+        <h2 className="titulo-rec">{titulo}</h2>
+        <p className="aviso info">{explicacion}</p>
+        <BotonEscuchar partes={[titulo, explicacion]} />
+        {otraHora && <p className="tip">{t('rec.otraHora', { hora: hora(otraHora.hora), color: colorOtraHora })}</p>}
+        {rec.motivo && pedido && (
+          <button type="button" className="boton primario" style={{ marginTop: 16 }} onClick={() => setVerSemana(true)}>
+            <Icono nombre="calendario" />{t('rec.verSemana', { lugar: corto(pedido.nombre) })}
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  const descripcion = catalogo.find((p) => p.id === alternativa.id)?.ficha
+  const comunes = coincidencias(alternativa, pedido, intereses)
+
+  return (
+    <div>
+      {volver}
+      <h2 className="titulo-rec">{t('rec.titulo', { lugar: corto(alternativa.nombre) })}</h2>
+      <p className="secundario">{explicacion}</p>
+      <BotonEscuchar partes={[t('rec.titulo', { lugar: corto(alternativa.nombre) }), explicacion, descripcion && ficha(alternativa.clave, descripcion, idioma)]} />
+
+      {/* Una sola columna: lo que pediste en un renglón, la alternativa completa y "Vamos" siempre a la
+          vista en la barra fija (antes quedaba debajo del borde de la pantalla a 1280×800). */}
+      {pedido && (
+        <div className="rec-pedido">
+          <Foto id={pedido.clave} tamano="mini" />
+          <div>
+            <p className="suave">{t('rec.pediste')}</p>
+            <p className="rec-pedido-nombre">{pedido.nombre}</p>
+            <div className="rec-pedido-estado">
+              <Semaforo color={pedido.color} />
+              <span className="suave">{partesRazon(pedido.razon, idioma)[0]}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <article className="opcion recomendada">
+        <div className="ficha-portada"><Foto id={alternativa.clave} nombre={alternativa.nombre} credito /></div>
+        <p className="suave">{t('rec.recomendamos')}</p>
+        <h3>{alternativa.nombre}</h3>
+        <Semaforo color={alternativa.color} />
+        {descripcion && <p className="descripcion">{ficha(alternativa.clave, descripcion, idioma)}</p>}
+        {comunes.length > 0 && (
+          <div className="coincide">
+            <span>{t('rec.coincide')}</span>
+            {comunes.map((c) => <span key={c} className="insignia">{t(`interes.${c}`)}</span>)}
+          </div>
+        )}
+        <p className="etiqueta">{t('rec.porQue')}</p>
+        <ul className="razones" style={{ marginTop: 0 }}>
+          {porque(alternativa, idioma, t).map((r) => <li key={r}>{r}</li>)}
+        </ul>
+      </article>
+
+      {otraHora && pedido && (
+        <p className="tip">{t('rec.prefieres', { lugar: corto(pedido.nombre), hora: hora(otraHora.hora), color: colorOtraHora })}</p>
+      )}
+
+      {aceptada
+        ? <p className="aviso exito" style={{ marginTop: 16 }}>{t('rec.buenViaje')}</p>
+        : (
+          <div className="ficha-acciones rec-acciones">
+            <button type="button" className="boton primario" onClick={vamos}><Icono nombre="navegar" />{t('rec.vamos')}</button>
+            <button type="button" className="boton" onClick={prefieroMiPlan}>{t('rec.miPlan')}</button>
+          </div>
+        )}
+
+      {rec.otras.length > 0 && (
+        <>
+          <p className="etiqueta">{t('rec.otras')}</p>
+          {rec.otras.map((o) => (
+            <button key={o.id} type="button" className="tarjeta-lugar con-foto" onClick={() => onElegir(o.id)}>
+              <Foto id={o.clave} tamano="mini" />
+              <div className="tarjeta-texto">
+                <h3>{o.nombre}</h3>
+                <div className="meta">
+                  <Semaforo color={o.color} />
+                  {o.traslado && <span className="meta-fuerte numero">{textoTraslado(o.traslado, t)}</span>}
+                </div>
+                <p className="detalle">{t(o.interior ? 'rec.techadoEn' : 'rec.aireLibreEn', { destino: o.destino })}</p>
+              </div>
+            </button>
+          ))}
+        </>
+      )}
+    </div>
+  )
+}
+
+export default Recomendacion

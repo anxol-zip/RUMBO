@@ -1,0 +1,53 @@
+import { detalleLista } from '../data/detalleLista.js'
+import { textoTraslado } from '../data/formato.js'
+import { useIdioma } from '../i18n/contexto.js'
+import BotonFavorito from './BotonFavorito.jsx'
+import Foto from './Foto.jsx'
+import Semaforo from './Semaforo.jsx'
+
+// Lista ordenada por conveniencia (T2): primero lo que está en buen momento,
+// luego lo que coincide con tus intereses; lo cerrado, al final.
+// Es una lista real (<ul>): el lector de pantalla anuncia cuántos lugares hay (D6).
+// El renglón de abajo dice lo que distingue a cada lugar (data/detalleLista.js), no lo que ya dice el chip.
+function ListaPuntos({ puntos, intereses = [], seleccionadoId, onSeleccionar }) {
+  const { idioma, t } = useIdioma()
+  return (
+    <ul className="lista-lugares">
+      {puntos.map((p) => {
+        const detalle = detalleLista(p, intereses, idioma, t)
+        return (
+        <li key={p.id} className="con-favorito">
+          <button
+            type="button"
+            className={`tarjeta-lugar con-foto${p.color === 'cerrado' ? ' apagada' : ''}`}
+            data-punto={p.id}
+            aria-current={p.id === seleccionadoId}
+            onClick={() => onSeleccionar(p.id)}
+          >
+            <Foto id={p.clave} tamano="mini" />
+            <div className="tarjeta-texto">
+              <h3>{p.nombre}</h3>
+              <div className="meta">
+                <Semaforo color={p.color} />
+                {p.traslado && <span className="meta-fuerte numero">{textoTraslado(p.traslado, t)}</span>}
+                <span>{p.destino}</span>
+              </div>
+              {detalle && <p className="detalle">{detalle}</p>}
+              {(p.confianza === 'confirmado por turistas' || p.ajuste_manual) && (
+                <div className="meta">
+                  {p.confianza === 'confirmado por turistas' && <span className="insignia">{t('lista.confirmado')}</span>}
+                  {p.ajuste_manual && <span className="ajuste-etiqueta">{t('lista.ajustado')}</span>}
+                </div>
+              )}
+            </div>
+          </button>
+          {/* Botón aparte, no dentro de la tarjeta: un botón no puede ir dentro de otro. */}
+          <BotonFavorito puntoId={p.id} nombre={p.nombre} compacto />
+        </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+export default ListaPuntos

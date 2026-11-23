@@ -1,0 +1,307 @@
+"""Endpoints de la API contra una BD sintética (no depende de puebla.db, que no está en git)."""
+
+import threading
+from datetime import datetime, timedelta
+
+import psycopg
+import pytest
+from fastapi.testclient import TestClient
+
+from app import deps
+from app.main import app
+from turismo_core import servicio
+from turismo_core.bd import conectar
+from turismo_core.reportes import Filtro
+
+T = datetime(2026, 10, 16, 13, 0)
+HORA = T.strftime("%Y-%m-%d %H:00")
+
+
+@pytest.fixture
+def cliente(esquema_prueba, monkeypatch):
+    monkeypatch.setenv("PUEBLA_TAREAS", "0")
+    con = conectar()
+    con.execute("INSERT INTO destino (id, nombre) VALUES (1, 'Cd. Puebla')")
+    # 1 museo tranquilo · 2 museo lleno · 3 mirador cerrado
+    for pid, clave, interior in ((1, "museo_a", 1), (2, "museo_b", 1), (3, "mirador", 0)):
+        con.execute("INSERT INTO punto (id, clave, nombre, destino_id, tipo, categorias, interior, lat, lon, verificado) "
+                    "VALUES (%s, %s, %s, 1, 'museo', 'historia,arte', %s, 19.04, -98.2, 1)",
+                    (pid, clave, f"Punto {pid}", interior))
+        con.execute("INSERT INTO umbral_punto VALUES (%s, 1.0, 1.4, 'percentil', 100, %s)", (pid, T.isoformat()))
+    con.cursor().executemany("INSERT INTO afluencia_estimada (punto_id, para_hora, estimacion, valor_final, semaforo, confianza) "
+                    "VALUES (%s, %s, %s, %s, %s, 'estimado')",
+                    [(1, HORA, 0.8, 0.8, "verde"), (2, HORA, 2.0, 2.0, "rojo"), (3, HORA, None, None, "cerrado")])
+    con.cursor().executemany("INSERT INTO matriz_traslado (origen_id, destino_id, minutos_base, km, minutos_pie, km_pie) "
+                    "VALUES (%s, %s, %s, %s, %s, %s)",
+                    [(a, b, 20.0, 9.0, 120.0, 8.0) for a in (1, 2, 3) for b in (1, 2, 3) if a != b])
+    con.close()
+
+    def conexion():
+        with conectar() as c:
+            yield c
+
+    reloj = {"t": T, "demo": False}
+    app.dependency_overrides[deps.conexion] = conexion
+    app.dependency_overrides[deps.ahora] = lambda: reloj["t"]
+    app.dependency_overrides[deps.es_demo] = lambda: reloj["demo"]
+    app.dependency_overrides[deps.solo_admin] = lambda: "admin-de-prueba"   # el acceso se prueba abajo y en test_panel_admin
+    yield TestClient(app), reloj
+    app.dependency_overrides.clear()
+
+
+def sesion(c, **perfil):
+    return c.post("/api/sesiones", json=perfil).json()["sesion_id"]
+
+
+def test_semaforo_ordenado_y_cerrados_al_final(cliente):
+    c, _ = cliente
+    r = c.get("/api/semaforo?origen_id=1").json()
+    assert [p["color"] for p in r["puntos"]] == ["verde", "rojo", "cerrado"]
+    assert r["puntos"][0]["traslado"] == {"minutos": 0, "modo": "a pie"}
+    assert r["datos"]["afluencia_cubre_esta_hora"] is True
+    assert c.get("/api/puntos/99/estado").status_code == 404
+
+
+def test_estado_punto_trae_ficha_y_enlace(cliente):
+    c, _ = cliente
+    e = c.get("/api/puntos/2/estado?origen_id=1").json()
+    assert e["color"] == "rojo" and e["verificado"] is True
+    assert e["traslado"] == {"desde": 1, "minutos": 20, "modo": "en coche"}
+    assert e["como_llegar_url"].endswith("destination=19.04,-98.2")
+
+
+def test_recomendar_guarda_la_busqueda_y_se_acepta(cliente):
+    c, _ = cliente
+    sid = sesion(c, intereses=["historia"], origen_id=2)
+    r = c.post("/api/recomendar", json={"sesion_id": sid, "punto_id": 2}).json()
+    assert r["motivo"] == "afluencia" and r["alternativa"]["id"] == 1
+    assert "Mejor ve a Punto 1" in r["razon"]
+    assert c.post(f"/api/busquedas/{r['busqueda_id']}/aceptar", json={"aceptada": True}).json()["aceptada"] is True
+    assert c.post("/api/recomendar", json={"sesion_id": "no-existe"}).status_code == 404
+
+
+def test_tres_reportes_llenos_confirman_y_cambian_el_color(cliente):
+    c, reloj = cliente
+    for i in range(3):
+        reloj["t"] = T + timedelta(minutes=i)
+        r = c.post("/api/reportes", json={"sesion_id": sesion(c), "punto_id": 1, "nivel": 3, "distancia_m": 50}).json()
+    assert r["reporte"]["estado"] == "valido"
+    assert (r["punto"]["color"], r["punto"]["confianza"]) == ("rojo", "confirmado por turistas")
+    assert r["punto"]["normalmente"] == "verde"
+
+
+def _guardar_reporte(con, sid, punto_id, creado_en, estado=None):
+    columnas = "sesion_id, punto_id, creado_en, nivel" + (", estado" if estado else "")
+    valores = (sid, punto_id, creado_en, 2) + ((estado,) if estado else ())
+    con.execute(f"INSERT INTO reporte ({columnas}) VALUES ({', '.join(['%s'] * len(valores))})", valores)
+
+
+def test_la_base_rechaza_el_reporte_repetido_sin_pasar_por_la_app(cliente):
+    c, reloj = cliente
+    sid, otra = sesion(c), sesion(c)
+    con = conectar()
+    _guardar_reporte(con, sid, 1, "2026-11-04T13:00:00")
+    with pytest.raises(psycopg.errors.RaiseException, match="RN_05"):
+        _guardar_reporte(con, sid, 1, "2026-11-04T13:29:59")
+    with pytest.raises(psycopg.errors.RaiseException, match="RN_05"):
+        _guardar_reporte(con, sid, 1, "2026-11-04T13:10:00", "dudoso")
+    # Sí pasan: el descartado (se guarda como evidencia), otro punto, otra sesión y a los 30 min exactos.
+    _guardar_reporte(con, sid, 1, "2026-11-04T13:10:00", "descartado")
+    _guardar_reporte(con, sid, 2, "2026-11-04T13:10:00")
+    _guardar_reporte(con, otra, 1, "2026-11-04T13:10:00")
+    _guardar_reporte(con, sid, 1, "2026-11-04T13:30:00")
+    con.close()
+
+
+def test_rn05_con_dos_reportes_al_mismo_tiempo_solo_guarda_uno(cliente):
+    c, _ = cliente
+    sid = sesion(c)
+    inicio, errores = threading.Barrier(2), []
+
+    def guardar():
+        with conectar() as con:
+            inicio.wait()
+            try:
+                _guardar_reporte(con, sid, 1, "2026-11-04T13:00:00")
+            except psycopg.errors.RaiseException as e:
+                errores.append(str(e))
+
+    hilos = [threading.Thread(target=guardar) for _ in range(2)]
+    for h in hilos:
+        h.start()
+    for h in hilos:
+        h.join()
+    assert len(errores) == 1 and "RN_05" in errores[0]
+    with conectar() as con:
+        assert con.execute("SELECT COUNT(*) AS n FROM reporte WHERE sesion_id = %s", (sid,)).fetchone()["n"] == 1
+
+
+def test_sin_base_responde_503(cliente):
+    c, _ = cliente
+
+    def caida():
+        raise psycopg.OperationalError("sin red")
+        yield
+
+    app.dependency_overrides[deps.conexion] = caida
+    r = c.get("/api/semaforo")
+    assert r.status_code == 503
+    assert r.json() == {"detail": "La base de datos no está disponible. Intenta de nuevo en unos minutos."}
+
+
+def test_si_la_base_rechaza_un_reporte_simultaneo_la_api_avisa_que_es_repetido(cliente, monkeypatch):
+    c, _ = cliente
+    sid = sesion(c)
+    c.post("/api/reportes", json={"sesion_id": sid, "punto_id": 1, "nivel": 2})
+    # Simula la carrera: la primera pasada del filtro no alcanzó a ver el reporte anterior.
+    real = servicio.filtrar
+    pasadas = []
+
+    def filtro_ciego(*args, **kwargs):
+        pasadas.append(1)
+        return Filtro("valido", 1.0, None) if len(pasadas) == 1 else real(*args, **kwargs)
+
+    monkeypatch.setattr(servicio, "filtrar", filtro_ciego)
+    r = c.post("/api/reportes", json={"sesion_id": sid, "punto_id": 1, "nivel": 2})
+    assert r.status_code == 200
+    assert r.json()["reporte"]["estado"] == "descartado" and "13:30" in r.json()["reporte"]["mensaje"]
+
+
+def test_reporte_repetido_y_punto_cerrado(cliente):
+    c, _ = cliente
+    sid = sesion(c)
+    assert c.post("/api/reportes", json={"sesion_id": sid, "punto_id": 1, "nivel": 2}).json()["reporte"]["peso"] == 0.5
+    rep = c.post("/api/reportes", json={"sesion_id": sid, "punto_id": 1, "nivel": 2}).json()["reporte"]
+    assert rep["estado"] == "descartado" and "13:30" in rep["mensaje"]
+    assert c.post("/api/reportes", json={"sesion_id": sid, "punto_id": 3, "nivel": 1}).json()["reporte"]["estado"] == "descartado"
+    assert c.post("/api/reportes", json={"sesion_id": sid, "punto_id": 1, "nivel": 5}).status_code == 422
+
+
+def test_velocidad_imposible_descarta_la_sesion_salvo_en_demo(cliente):
+    c, reloj = cliente
+    sid = sesion(c)
+    c.post("/api/reportes", json={"sesion_id": sid, "punto_id": 1, "nivel": 2})
+    reloj["t"] = T + timedelta(minutes=2)            # 2 min para un traslado de 20 min en coche
+    r = c.post("/api/reportes", json={"sesion_id": sid, "punto_id": 2, "nivel": 3}).json()
+    assert r["reporte"]["motivo"].startswith("velocidad imposible")
+    assert c.get("/api/panel/afluencia").json()["hoy"]["reportes_por_estado"]["descartado"] == 2
+
+    reloj["demo"] = True
+    demo = sesion(c)
+    reloj["t"] = T + timedelta(minutes=3)
+    c.post("/api/reportes", json={"sesion_id": demo, "punto_id": 1, "nivel": 2})
+    reloj["t"] = T + timedelta(minutes=4)
+    assert c.post("/api/reportes", json={"sesion_id": demo, "punto_id": 2, "nivel": 3}).json()["reporte"]["estado"] == "valido"
+
+
+def test_panel_separa_la_demo(cliente):
+    c, reloj = cliente
+    reloj["demo"] = True
+    sid = sesion(c, origen_id=2)
+    b = c.post("/api/recomendar", json={"sesion_id": sid, "punto_id": 2}).json()["busqueda_id"]
+    c.post(f"/api/busquedas/{b}/aceptar")
+    assert c.get("/api/panel/redirecciones").json()["total_aceptadas"] == 0
+    con_demo = c.get("/api/panel/redirecciones?incluir_demo=true").json()
+    assert con_demo["total_aceptadas"] == 1 and con_demo["filas"][0]["hacia_id"] == 1
+
+
+def test_ajuste_manual_gana_y_se_quita(cliente):
+    c, _ = cliente
+    a = c.post("/api/panel/ajustes", json={"punto_id": 1, "color": "rojo", "motivo": "Obra en la entrada", "horas": 2}).json()
+    assert a["punto"]["color"] == "rojo" and a["punto"]["ajuste_manual"] == "Obra en la entrada"
+    assert len(c.get("/api/panel/ajustes").json()) == 1
+    assert c.delete(f"/api/panel/ajustes/{a['ajuste_id']}").json()["punto"]["color"] == "verde"
+
+
+def _observatorio(valores: dict[str, float], derrama_por_visitante: float = 1000.0):
+    con = conectar()
+    for p, v in valores.items():
+        con.execute("INSERT INTO hecho_observatorio (destino_id, periodo, indicador, valor) VALUES (1, %s, 'afluencia', %s)", (p, v))
+        con.execute("INSERT INTO hecho_observatorio (destino_id, periodo, indicador, valor) VALUES (1, %s, 'derrama_mxn', %s)",
+                    (p, v * derrama_por_visitante))
+    con.close()
+
+
+def _meses(desde: str, hasta: str) -> list[str]:
+    a, m = map(int, desde.split("-"))
+    salida = []
+    while f"{a}-{m:02d}" <= hasta:
+        salida.append(f"{a}-{m:02d}")
+        a, m = (a + 1, 1) if m == 12 else (a, m + 1)
+    return salida
+
+
+def test_derrama_redistribuida_y_nueva_sin_contar_dos_veces(cliente):
+    c, reloj = cliente
+    _observatorio({p: 100.0 for p in _meses("2025-07", "2026-06")})     # $1,000 por visitante
+    for volvio in (False, True):
+        sid = sesion(c, origen_id=2)
+        b = c.post("/api/recomendar", json={"sesion_id": sid, "punto_id": 2}).json()["busqueda_id"]
+        c.post(f"/api/busquedas/{b}/aceptar")
+        if volvio:          # después reporta desde el lugar que había pedido: la parada se sumó a su plan
+            reloj["t"] = T + timedelta(minutes=40)
+            c.post("/api/reportes", json={"sesion_id": sid, "punto_id": 2, "nivel": 3})
+    d = c.get("/api/panel/derrama").json()
+    assert d["redirecciones_aceptadas"] == 2
+    assert (d["redistribuida_mxn"], d["nueva_estimada_mxn"]) == (1000.0, 1000.0)
+    assert d["redistribuida_entre_destinos_mxn"] == 0       # mismo destino: no sale dinero de Cd. Puebla
+    assert "1 visitante" in d["supuesto"]
+
+
+def test_semaforo_estatal_dato_y_estimado(cliente):
+    c, reloj = cliente
+    valores = {p: 100.0 for p in _meses("2022-01", "2026-06")}
+    valores["2025-10"] = 200.0
+    _observatorio(valores)
+    publicado = c.get("/api/panel/semaforo-estatal?mes=10&anio=2025").json()["destinos"][0]
+    assert (publicado["tipo"], publicado["color"], publicado["nivel"]) == ("dato", "rojo", 2.0)
+    estimado = c.get("/api/panel/semaforo-estatal?mes=10&anio=2026").json()["destinos"][0]
+    assert estimado["tipo"] == "estimado" and estimado["periodos_usados"] == ["2023-10", "2024-10", "2025-10"]
+    assert estimado["visitantes"] == 133 and estimado["color"] == "rojo"
+    assert c.get("/api/panel/semaforo-estatal?mes=13").status_code == 422
+
+
+def _h(hora, nivel, color="amarillo"):
+    return {"hora": hora, "nivel": nivel, "color": color}
+
+
+def test_extremos_con_una_sola_hora_no_la_presenta_como_dos():
+    r = servicio._extremos([_h("20:00", 1.2)])                       # la Estrella a las 20:37, cierra a las 21
+    assert r["parejo"] and r["ultima_hora"] == "20:00" and r["cierra_pronto"]
+    r = servicio._extremos([_h("21:00", 1.2), _h("22:00", 1.0)])      # abre más tarde que el horario de visita
+    assert r["ultima_hora"] == "21:00" and not r["cierra_pronto"]
+
+
+def test_extremos_parejo_y_con_contraste():
+    r = servicio._extremos([_h("14:00", 1.1), _h("15:00", 1.1)])
+    assert r["parejo"] and r["ultima_hora"] is None
+    r = servicio._extremos([_h("14:00", 0.8, "verde"), _h("15:00", 1.5, "rojo")])
+    assert not r["parejo"] and (r["mas_tranquila"]["hora"], r["mas_llena"]["hora"]) == ("14:00", "15:00")
+    assert servicio._extremos([]) is None
+
+
+def test_semana_hoy_espera_y_vs_normal(cliente):
+    c, reloj = cliente
+    s = c.get("/api/puntos/1/semana").json()
+    assert s["dias"][0]["fecha"] == "2026-10-16" and s["dias"][0]["horas"][0]["color"] == "verde"
+    assert c.get("/api/puntos/3/semana").json()["dias"][0]["abierto"] is False       # el mirador está cerrado
+    assert c.get("/api/puntos/99/semana").status_code == 404
+    e = c.get("/api/puntos/1/estado").json()
+    assert e["espera_reportada"] is None and e["vs_normal"] == "igual"
+    for i, espera in enumerate((10, 30, 20)):                                        # 3 turistas, mediana 20
+        reloj["t"] = T + timedelta(minutes=i)
+        c.post("/api/reportes", json={"sesion_id": sesion(c), "punto_id": 1, "nivel": 3, "espera_min": espera, "distancia_m": 50})
+    e = c.get("/api/puntos/1/estado").json()
+    assert e["espera_reportada"] == {"minutos": 20, "n_reportes": 3, "ultima_hace_min": 0}
+    assert (e["color"], e["normalmente"], e["vs_normal"]) == ("rojo", "verde", "mas_lleno")
+
+
+def test_panel_sin_sesion_responde_401(cliente):
+    """Contrato del panel desde la feature 002: sin token de Supabase no se lee ni se cambia nada."""
+    c, _ = cliente
+    del app.dependency_overrides[deps.solo_admin]
+    assert c.get("/api/panel/umbrales").status_code == 401
+    r = c.post("/api/panel/ajustes", json={"punto_id": 1, "color": "rojo", "motivo": "Obra", "horas": 2})
+    assert r.status_code == 401 and r.json()["detail"] == "Inicia sesión para entrar al panel."
+    with conectar() as con:
+        assert con.execute("SELECT count(*) AS n FROM ajuste_manual").fetchone()["n"] == 0
