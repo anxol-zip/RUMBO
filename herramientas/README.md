@@ -56,9 +56,10 @@ Se corre desde `backend/`, porque usa su entorno de Python:
 cd backend
 uv run python ../herramientas/bd_desarrollo.py            # 14 días de afluencia
 uv run python ../herramientas/bd_desarrollo.py --dias 7   # otro número de días
+uv run python ../herramientas/bd_desarrollo.py --si       # sin pedir confirmación
 ```
 
-Escribe en la base de `DATABASE_URL` de `backend/.env`. Después, se levanta el backend como siempre:
+Escribe en la base de `DATABASE_URL` de `backend/.env`, después de mostrar a cuál va y pedir confirmación. Después, se levanta el backend como siempre:
 
 ```bash
 PUEBLA_TAREAS=0 uv run uvicorn app.main:app --reload --port 8000
@@ -71,7 +72,14 @@ PUEBLA_TAREAS=0 uv run uvicorn app.main:app --reload --port 8000
 
 ### A tomar en cuenta
 
-- **Protege la base de la demo:** si `backend/.env` dice `RUMBO_AMBIENTE=demo`, el script se detiene.
+- **Solo escribe en `rumbo-dev`:** lee el proyecto de Supabase de `DATABASE_URL` y se detiene si no es el de
+  `rumbo-dev` (`PROYECTOS_DESARROLLO`, en el script). No depende de que `RUMBO_AMBIENTE` esté bien puesto,
+  aunque también se detiene con `RUMBO_AMBIENTE=demo`.
+- **Las dos URLs del mismo proyecto:** si `SUPABASE_URL` es de un proyecto y `DATABASE_URL` de otro, se
+  detiene: es la señal de un `.env` armado a medias.
+- **Pide confirmación:** muestra el nombre y el host de la base antes de escribir. Sin terminal (por ejemplo,
+  en un script) solo corre con `--si`.
+- **Si `rumbo-dev` se recrea**, su identificador cambia: actualizar `PROYECTOS_DESARROLLO`.
 - **Conserva lo generado por la app:** al recargar, las sesiones y los reportes existentes se quedan en la base.
 - **Todo o nada:** la carga va en una sola transacción; si falla a la mitad, la base queda como estaba.
 - **Base compartida:** recargarla afecta a todo el equipo; no borra sesiones ni reportes.
