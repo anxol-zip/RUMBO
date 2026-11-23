@@ -8,13 +8,10 @@
   "git": {
     "deploymentEnabled": { "*": false, "main": true, "develop": true }
   },
+  "routes": [
+    { "src": "/api/(.*)", "dest": "${BACKEND_URL}/api/$1", "env": ["BACKEND_URL"] }
+  ],
   "rewrites": [
-    {
-      "source": "/api/:path*",
-      "has": [{ "type": "host", "value": { "inc": ["rumbo-production.vercel.app"] } }],
-      "destination": "https://RUMBO-API-PENDIENTE.onrender.com/api/:path*"
-    },
-    { "source": "/api/:path*", "destination": "https://rumbo-api-dev.onrender.com/api/:path*" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [

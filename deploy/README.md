@@ -23,8 +23,11 @@ Turista ─> Vercel (frontend/) ── rewrite /api/* ──> API (backend/, Fas
 
 - **Frontend:** Vercel, Root Directory `frontend`. La configuración vive en `frontend/vercel.json`.
   El navegador solo habla con el dominio de Vercel; Vercel reenvía `/api/*` a la API, así que no hay
-  CORS y la URL del backend no queda en el bundle. El rewrite elige el backend por dominio: los
-  dominios de producción van a `rumbo-api`; cualquier otro (previews) va a `rumbo-api-dev`.
+  CORS y la URL del backend no queda en el bundle. La ruta de `/api/*` lee el destino de la variable
+  `BACKEND_URL` de Vercel (servidor, no `VITE_`), que tiene un valor por ambiente: Production va a
+  `rumbo-api` y Preview a `rumbo-api-dev`. Es el mismo criterio que elige `VITE_SUPABASE_URL`, así que
+  un deploy no puede mezclar el Supabase de un ambiente con el backend del otro. Si la variable falta,
+  `/api` falla en vez de caer en el backend equivocado.
 - **Backend:** necesita un proceso que siga vivo (tareas cada hora en `app/tareas.py`), así que no va
   en funciones serverless (ni Vercel ni Supabase Edge Functions).
   - Render (Free Web Service), un servicio por ambiente. Producción se crea desde el Blueprint
@@ -42,6 +45,7 @@ Turista ─> Vercel (frontend/) ── rewrite /api/* ──> API (backend/, Fas
 | Dónde | Variable | Valor |
 | --- | --- | --- |
 | Vercel | `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` | `rumbo-demo` en Production, `rumbo-dev` en Preview |
+| Vercel | `BACKEND_URL` | URL del backend sin `/` al final: `rumbo-api` en Production, `https://rumbo-api-dev.onrender.com` en Preview |
 | Backend | `DATABASE_URL`, `SUPABASE_URL`, `RUMBO_AMBIENTE` | los del ambiente del servicio (tabla de arriba) |
 | Backend | `ORS_API_KEY`, `TOMTOM_API_KEY` | las mismas en los dos servicios |
 | Backend | `TZ=America/Mexico_City` | obligatoria: el backend usa la hora local del servidor |
@@ -49,8 +53,12 @@ Turista ─> Vercel (frontend/) ── rewrite /api/* ──> API (backend/, Fas
 
 > **El subdominio de Render no es el nombre del servicio.** `rumbo-api.onrender.com` ya es de otra
 > persona, así que Render le asigna otro (p. ej. `rumbo-api-xxxx.onrender.com`). Al crear el servicio,
-> copiar su URL real al primer rewrite de `frontend/vercel.json` (hoy `RUMBO-API-PENDIENTE`), y poner
-> en su lista `inc` todos los dominios de producción de Vercel (Settings → Domains).
+> copiar su URL real a `BACKEND_URL` (Production) en Vercel y redesplegar.
+
+Vercel lee las variables al crear cada deploy: después de cambiar `BACKEND_URL` hay que redesplegar
+(Deployments → ⋯ → Redeploy, **desmarcando** "Use project's Ignore Build Step"; si no, el
+`ignoreCommand` ve que el código no cambió y cancela el build). Al migrar a Oracle solo cambia el valor
+de `BACKEND_URL`.
 
 Lo que empieza con `VITE_` termina en el bundle público: nunca poner ahí `DATABASE_URL` ni claves de
 APIs.
