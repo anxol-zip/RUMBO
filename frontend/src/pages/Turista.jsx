@@ -2,6 +2,7 @@ import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } fro
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { api, codigoDe } from '../api/cliente.js'
 import { distanciaM, masCercano } from '../data/geo.js'
+import { grupoDe } from '../data/intereses.js'
 import { ORDEN } from '../data/semaforo.js'
 import { useUbicacion } from '../hooks/useUbicacion.js'
 import { useCuenta } from '../cuenta/contexto.js'
@@ -54,10 +55,11 @@ function ordenar(puntos, intereses) {
   return [...puntos].sort((a, b) => ORDEN[a.color] - ORDEN[b.color] || coincide(a) - coincide(b))
 }
 
-// Filtros de la barra (D4): por destino y "solo lo que me gusta" (los intereses del inicio).
-const SIN_FILTRO = { destino: null, gustos: false, favoritos: false }
+// Filtros de la barra (D4): por destino, por grupo (atractivos / comida) y "solo lo que me gusta".
+const SIN_FILTRO = { destino: null, grupo: null, gustos: false, favoritos: false }
 function filtrar(puntos, filtro, intereses, favoritos) {
   return puntos.filter((p) => (filtro.destino === null || p.destino === filtro.destino)
+    && (!filtro.grupo || grupoDe(p.tipo) === filtro.grupo)
     && (!filtro.gustos || p.categorias.some((c) => intereses.includes(c)))
     && (!filtro.favoritos || (favoritos?.has(p.id) ?? false)))
 }
@@ -257,7 +259,7 @@ function Turista({ catalogo, cargandoCatalogo, errorCatalogo, onReintentar, sesi
   const visibles = filtrar(puntos, filtro, intereses, favoritos)
   const ordenados = ordenar(visibles, intereses)
   const destinos = [...new Set(catalogo.map((p) => p.destino))]
-  const filtroActivo = [filtro.destino, filtro.gustos && t('filtros.gustos'), filtro.favoritos && t('filtros.favoritos')].filter(Boolean).join(' · ')
+  const filtroActivo = [filtro.destino, filtro.grupo && t(`filtros.${filtro.grupo}`), filtro.gustos && t('filtros.gustos'), filtro.favoritos && t('filtros.favoritos')].filter(Boolean).join(' · ')
   const seleccionado = puntos.find((p) => p.id === seleccionadoId)
   // "Ver todos" y la ficha de un lugar ocupan media pantalla; la lista, un tercio.
   const mitad = ampliada || vista !== 'lista'

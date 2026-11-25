@@ -8,10 +8,13 @@ conservan su id (orden del catálogo) para no romper los reportes ya guardados.
 from __future__ import annotations
 
 import csv
+import sys
 from datetime import date
 from pathlib import Path
 
-from scripts import CATALOGO, EQUIVALENCIAS_INAH, EVENTOS, MANIFIESTO, PROCESSED
+import psycopg
+
+from scripts import CATALOGO, CATALOGO_AMPLIADO, EQUIVALENCIAS_INAH, EVENTOS, MANIFIESTO, PROCESSED
 from turismo_core.bd import conectar, crear_esquema
 from turismo_core.config import clave
 from turismo_core.ingesta import AGREGADOS, calendario
@@ -85,18 +88,30 @@ def cargar_destinos(con, observatorio: list[dict], catalogo: list[dict]) -> dict
     return {r["nombre"]: r["id"] for r in con.execute("SELECT id, nombre FROM destino")}
 
 
-def cargar_puntos(con, catalogo: list[dict], destinos: dict[str, int], fuente_id: int) -> dict[str, int]:
-    faltan = {p["destino"] for p in catalogo} - destinos.keys()
+def cargar_puntos(con, catalogo: list[dict], destinos: dict[str, int], fuente_id: int,
+                  ampliados: list[dict] = ()) -> dict[str, int]:
+    """Los 23 curados con su id de siempre (posición en el CSV); los ampliados con el contador de la tabla,
+    para que su id no cambie al regenerar ``puntos_ampliados.csv`` (lo usan favoritos y reportes)."""
+    faltan = {p["destino"] for p in [*catalogo, *ampliados]} - destinos.keys()
     if faltan:
         raise SystemExit(f"Destinos del catálogo que no están en el Observatorio: {sorted(faltan)}")
-    for i, p in enumerate(catalogo, start=1):
+    _insertar_puntos(con, enumerate(catalogo, start=1), destinos, fuente_id)
+    con.execute("SELECT setval(pg_get_serial_sequence('punto', 'id'), COALESCE((SELECT MAX(id) FROM punto), 1))")
+    _insertar_puntos(con, ((None, p) for p in ampliados), destinos, fuente_id)
+    quitar_ampliados(con, {p["id"] for p in ampliados})
+    return {r["clave"]: r["id"] for r in con.execute("SELECT id, clave FROM punto")}
+
+
+def _insertar_puntos(con, filas, destinos: dict[str, int], fuente_id: int) -> None:
+    for i, p in filas:
         horario = _vacio(p["horario"])
         costo = _vacio(p["costo_mxn"])
         con.execute(
             """INSERT INTO punto (id, clave, nombre, destino_id, municipio, tipo, categorias, interior,
                  lat, lon, horario, costo_mxn, duracion_sugerida, ficha, es_inah, clee_denue, osm_id,
-                 fuente_texto, fuente_id, verificado)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 fuente_texto, fuente_id, verificado, google_place_id)
+               VALUES (COALESCE(%s, nextval(pg_get_serial_sequence('punto', 'id'))),
+                       %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                ON CONFLICT(clave) DO UPDATE SET nombre=excluded.nombre, destino_id=excluded.destino_id,
                  municipio=excluded.municipio, tipo=excluded.tipo, categorias=excluded.categorias,
                  interior=excluded.interior, lat=excluded.lat, lon=excluded.lon,
@@ -104,15 +119,57 @@ def cargar_puntos(con, catalogo: list[dict], destinos: dict[str, int], fuente_id
                  duracion_sugerida=excluded.duracion_sugerida, ficha=excluded.ficha,
                  es_inah=excluded.es_inah, clee_denue=excluded.clee_denue, osm_id=excluded.osm_id,
                  fuente_texto=excluded.fuente_texto,
-                 fuente_id=excluded.fuente_id, verificado=excluded.verificado""",
+                 fuente_id=excluded.fuente_id, verificado=excluded.verificado,
+                 google_place_id=excluded.google_place_id""",
             (i, p["id"], p["nombre"], destinos[p["destino"]], p["municipio"], p["tipo"],
              p["categorias"], int(p["interior"] or 0), float(p["lat"]), float(p["lon"]),
              None if horario == "verificar" else horario, float(costo) if costo else None,
              _vacio(p["duracion_sugerida"]), _vacio(p["ficha"]), int(p["inah"] or 0),
              _vacio(p.get("clee_denue", "")), _vacio(p.get("osm_id", "")),
-             _vacio(p["fuente"]), fuente_id, int(p["verificado"] or 0)),
+             _vacio(p["fuente"]), fuente_id, int(p["verificado"] or 0), _place_id(p.get("google_place_id", ""))),
         )
-    return {r["clave"]: r["id"] for r in con.execute("SELECT id, clave FROM punto")}
+
+
+# Tablas que se recalculan solas (traslados, clima, afluencia): se pueden borrar con el punto.
+DERIVADAS = (("matriz_traslado", "origen_id"), ("matriz_traslado", "destino_id"), ("obs_clima", "punto_id"),
+             ("afluencia_estimada", "punto_id"), ("umbral_punto", "punto_id"))
+
+
+def quitar_ampliados(con, vigentes: set[str]) -> None:
+    """Borra los ampliados (``verificado = 0``) que se ocultaron o ya no están en el CSV. Si un turista ya los
+    usó (reportes, favoritos, reseñas, búsquedas), se quedan y se avisa: esa actividad no se pierde."""
+    for r in con.execute("SELECT id, clave FROM punto WHERE verificado = 0").fetchall():
+        if r["clave"] in vigentes:
+            continue
+        try:
+            with con.transaction():           # savepoint: si falla, solo se deshace este punto
+                for tabla, columna in DERIVADAS:
+                    con.execute(f"DELETE FROM {tabla} WHERE {columna} = %s", (r["id"],))
+                con.execute("DELETE FROM punto WHERE id = %s", (r["id"],))
+            print(f"  quitado {r['clave']} (oculto o fuera del catálogo ampliado)")
+        except psycopg.errors.ForeignKeyViolation:
+            print(f"  AVISO {r['clave']} está oculto pero tiene actividad de turistas: se queda en la base")
+
+
+def _place_id(valor: str) -> str | None:
+    """Vacío o ``-`` (búsqueda sin coincidencia) -> NULL."""
+    valor = (valor or "").strip()
+    return None if valor in ("", "-") else valor
+
+
+def ampliados() -> list[dict]:
+    """``catalogo/puntos_ampliados.csv`` sin los ocultos a mano; vacío si todavía no se generó."""
+    if not CATALOGO_AMPLIADO.exists():
+        return []
+    return [p for p in _csv(CATALOGO_AMPLIADO) if (p.get("oculto") or "0").strip() != "1"]
+
+
+def confirmar_produccion(argv: list[str]) -> None:
+    """Con ``RUMBO_AMBIENTE=demo`` (producción) pide escribir ``rumbo-demo``; ``--si`` se lo salta."""
+    if clave("RUMBO_AMBIENTE") != "demo" or "--si" in argv:
+        return
+    if input("Vas a escribir en PRODUCCIÓN. Escribe rumbo-demo para seguir: ").strip() != "rumbo-demo":
+        raise SystemExit("Cancelado: no se tocó la base")
 
 
 def cargar_hechos(con, observatorio, destinos, puntos, fuentes) -> None:
@@ -171,14 +228,15 @@ def cargar_calendario(con) -> None:
     )
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    confirmar_produccion(sys.argv[1:] if argv is None else argv)
     observatorio = _csv(PROCESSED / "observatorio.csv")
     catalogo = _csv(CATALOGO)
     with conectar() as con, con.transaction():     # todo o nada: nunca queda una carga a medias
         crear_esquema(con)
         fuentes = cargar_fuentes(con)
         destinos = cargar_destinos(con, observatorio, catalogo)
-        puntos = cargar_puntos(con, catalogo, destinos, fuentes["Catálogo de la zona piloto (equipo)"])
+        puntos = cargar_puntos(con, catalogo, destinos, fuentes["Catálogo de la zona piloto (equipo)"], ampliados())
         cargar_hechos(con, observatorio, destinos, puntos, fuentes)
         cargar_eventos(con, destinos, puntos)
         cargar_calendario(con)

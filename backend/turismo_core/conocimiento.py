@@ -288,10 +288,14 @@ def nombre_legible(nombre: str) -> str:
 def docs_establecimientos(con: psycopg.Connection) -> list[Doc]:
     """Comida a ≤ 1 km y hospedaje a ≤ 2 km de algún punto. El DENUE solo da nombre, actividad, tamaño y
     ubicación: no hay horario, precio, menú ni calificación, y el texto lo dice para que nadie lo invente."""
-    puntos = [(r["id"], r["nombre"], r["lat"], r["lon"]) for r in con.execute("SELECT id, nombre, lat, lon FROM punto")]
+    # Anclas: solo los 23 curados (como antes de la feature 004). Los establecimientos que ya son punto
+    # (catálogo ampliado) no se repiten aquí: el asistente los conoce por la colección "puntos".
+    puntos = [(r["id"], r["nombre"], r["lat"], r["lon"])
+              for r in con.execute("SELECT id, nombre, lat, lon FROM punto WHERE verificado = 1")]
+    ya_son_punto = {r["clee_denue"] for r in con.execute("SELECT clee_denue FROM punto WHERE clee_denue IS NOT NULL")}
     salida = []
     for e in con.execute("SELECT * FROM establecimiento WHERE giro IN ('alimentos', 'hospedaje') AND lat IS NOT NULL"):
-        if e["codigo_act"] in EXCLUIR_ACTIVIDADES or not (e["nombre"] or "").strip():   # 9 sin nombre en el DENUE
+        if e["codigo_act"] in EXCLUIR_ACTIVIDADES or not (e["nombre"] or "").strip() or e["clee"] in ya_son_punto:
             continue
         radio = RADIO_ALIMENTOS_M if e["giro"] == "alimentos" else RADIO_HOSPEDAJE_M
         cerca = sorted((distancia_m(e["lat"], e["lon"], la, lo), pid, nom) for pid, nom, la, lo in puntos)

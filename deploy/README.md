@@ -48,6 +48,7 @@ Turista ─> Vercel (frontend/) ── rewrite /api/* ──> API (backend/, Fas
 | Vercel | `BACKEND_URL` | URL del backend sin `/` al final: `rumbo-api` en Production, `https://rumbo-api-dev.onrender.com` en Preview |
 | Backend | `DATABASE_URL`, `SUPABASE_URL`, `RUMBO_AMBIENTE` | los del ambiente del servicio (tabla de arriba) |
 | Backend | `ORS_API_KEY`, `TOMTOM_API_KEY` | las mismas en los dos servicios |
+| Backend | `GOOGLE_MAPS_API_KEY` | Places API (New), restringida a esa API y con tope diario. Solo backend (nunca `VITE_`); sin ella la ficha va sin horario ni precio de Google |
 | Backend | `TZ=America/Mexico_City` | obligatoria: el backend usa la hora local del servidor |
 | Backend | `PYTHON_VERSION` | la del equipo (3.14.4) |
 

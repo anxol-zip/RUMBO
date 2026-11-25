@@ -16,7 +16,7 @@ import psycopg
 from collections.abc import Iterable
 from datetime import datetime, timedelta
 
-from turismo_core import clima, trafico
+from turismo_core import clima, google, trafico
 from turismo_core import recomendador as rec
 from turismo_core.conveniencia import conveniencia
 from turismo_core.reportes import ReportePrevio, VIDA_MAX, filtrar
@@ -136,6 +136,13 @@ def frescura(con: psycopg.Connection, ahora: datetime) -> dict:
 def _existe_punto(con: psycopg.Connection, punto_id: int) -> None:
     if con.execute("SELECT 1 FROM punto WHERE id = %s", (punto_id,)).fetchone() is None:
         raise NoEncontrado(f"No existe el punto {punto_id}")
+
+
+def datos_google(con: psycopg.Connection, punto_id: int, idioma: str) -> dict:
+    """Ficha → Google Places en vivo (feature 004). Solo se lee el place_id; lo que responde Google no se guarda."""
+    _existe_punto(con, punto_id)
+    fila = con.execute("SELECT google_place_id FROM punto WHERE id = %s", (punto_id,)).fetchone()
+    return google.datos(fila["google_place_id"], idioma)
 
 
 def _sesion(con: psycopg.Connection, sesion_id: str) -> dict:

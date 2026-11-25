@@ -62,6 +62,8 @@ export const api = {
   obtenerSemaforo: (origenId) => pedir(`/semaforo${consulta({ origen_id: origenId })}`),
   obtenerEstadoPunto: (puntoId, origenId) => pedir(`/puntos/${puntoId}/estado${consulta({ origen_id: origenId })}`),
   obtenerSemana: (puntoId) => pedir(`/puntos/${puntoId}/semana`),
+  // Horario y precio de Google al abrir la ficha (feature 004); el backend nunca falla por Google (disponible: false).
+  obtenerDatosGoogle: (puntoId, idioma) => pedir(`/puntos/${puntoId}/google${consulta({ idioma })}`),
   crearSesion: ({ intereses, horas, origenId }) => enviar('/sesiones', { intereses, horas, origen_id: origenId }),
   // origenId va en cada llamada: si el GPS cambió el punto de partida, la sesión del backend no lo sabe.
   pedirRecomendacion: ({ sesionId, puntoId, origenId }) => enviar('/recomendar', { sesion_id: sesionId, punto_id: puntoId, origen_id: origenId }),

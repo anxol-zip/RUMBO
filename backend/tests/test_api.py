@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app import deps
 from app.main import app
-from turismo_core import servicio
+from turismo_core import google, servicio
 from turismo_core.bd import conectar
 from turismo_core.reportes import Filtro
 
@@ -305,3 +305,33 @@ def test_panel_sin_sesion_responde_401(cliente):
     assert r.status_code == 401 and r.json()["detail"] == "Inicia sesión para entrar al panel."
     with conectar() as con:
         assert con.execute("SELECT count(*) AS n FROM ajuste_manual").fetchone()["n"] == 0
+
+
+def test_datos_google_solo_para_lugares_con_place_id(cliente, monkeypatch):
+    """Feature 004: los curados no llaman a Google; uno con place_id trae horario y precio sin guardarlos."""
+    c, _ = cliente
+    llamadas = []
+
+    def pedir(url, campos, llave, cuerpo=None, timeout=None):
+        llamadas.append(url)
+        return {"currentOpeningHours": {"openNow": False}, "priceLevel": "PRICE_LEVEL_INEXPENSIVE",
+                "regularOpeningHours": {"weekdayDescriptions": ["Monday: 9:00 AM – 6:00 PM"]}}
+
+    monkeypatch.setattr(google, "_pedir", pedir)
+    monkeypatch.setenv("GOOGLE_MAPS_API_KEY", "k")
+    assert c.get("/api/puntos/99/google").status_code == 404
+
+    curado = c.get("/api/puntos/1/google").json()
+    assert (curado["disponible"], curado["motivo"]) == (False, "sin_place_id") and llamadas == []
+
+    with conectar() as con:
+        con.execute("UPDATE punto SET google_place_id = 'ChIJx', verificado = 0 WHERE id = 3")
+    d = c.get("/api/puntos/3/google?idioma=en").json()
+    assert d["disponible"] and d["nivel_precio"] == "economico" and d["abierto_ahora"] is False
+    assert d["horario_semana"] == ["Monday: 9:00 AM – 6:00 PM"] and d["fuente"] == "Google Maps"
+    assert llamadas == ["https://places.googleapis.com/v1/places/ChIJx?languageCode=en"]
+    assert c.get("/api/puntos/3/google?idioma=fr").status_code == 422
+    # Nada de Google quedó en la base: el punto solo tiene su place_id.
+    with conectar() as con:
+        fila = con.execute("SELECT ficha, fuente_texto FROM punto WHERE id = 3").fetchone()
+    assert "Monday" not in str(dict(fila))

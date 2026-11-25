@@ -10,6 +10,7 @@ import sys
 
 from psycopg.rows import tuple_row
 
+from turismo_core.afluencia import HORARIO_SUPUESTO
 from turismo_core.bd import conectar
 
 # Zona piloto Puebla–Cholula–Atlixco, con margen.
@@ -33,9 +34,12 @@ REVISIONES = [
      f"OR lon NOT BETWEEN {LON[0]} AND {LON[1]}"),
     ("Cada punto pertenece a un destino piloto",
      "SELECT p.clave FROM punto p JOIN destino d ON d.id = p.destino_id WHERE d.es_piloto = 0"),
-    ("No hay dos puntos del mismo tipo a menos de ~50 m",
+    # Entre dos lugares del catálogo ampliado no aplica: dos museos o dos restaurantes pueden ser vecinos;
+    # sus duplicados los quitan scripts.ampliar_catalogo y la revisión de nombres repetidos.
+    ("No hay dos puntos del mismo tipo a menos de ~50 m (si uno es curado)",
      "SELECT a.clave, b.clave FROM punto a JOIN punto b ON a.id < b.id AND a.tipo = b.tipo "
-     "WHERE abs(a.lat - b.lat) < 0.00045 AND abs(a.lon - b.lon) < 0.00045"),
+     "WHERE abs(a.lat - b.lat) < 0.00045 AND abs(a.lon - b.lon) < 0.00045 "
+     "AND (a.verificado = 1 OR b.verificado = 1)"),
     ("Los puntos marcados como INAH tienen su recinto en las estadísticas",
      "SELECT clave FROM punto WHERE es_inah = 1 "
      "AND id NOT IN (SELECT punto_id FROM recinto_inah WHERE punto_id IS NOT NULL)"),
@@ -73,9 +77,21 @@ REVISIONES = [
      "ON m.origen_id = a.id AND m.destino_id = b.id "
      "WHERE m.origen_id IS NULL OR m.minutos_base IS NULL OR m.minutos_pie IS NULL"),
     ("Traslados con sentido: 0 en la diagonal, > 0 fuera, a pie más lento que en coche si a pie son > 2 km",
-     "SELECT origen_id, destino_id FROM matriz_traslado WHERE (origen_id = destino_id AND minutos_base <> 0) "
-     "OR (origen_id <> destino_id AND (minutos_base <= 0 OR minutos_pie <= 0)) "
-     "OR (km_pie > 2 AND minutos_pie < minutos_base)"),
+     "SELECT m.origen_id, m.destino_id FROM matriz_traslado m JOIN punto a ON a.id = m.origen_id "
+     "JOIN punto b ON b.id = m.destino_id WHERE (m.origen_id = m.destino_id AND m.minutos_base <> 0) "
+     "OR (m.origen_id <> m.destino_id AND (m.minutos_base <= 0 OR m.minutos_pie <= 0) "
+     # ORS lleva a la misma calle dos lugares de la misma cuadra (~300 m): ahí 0 min es correcto.
+     "AND (abs(a.lat - b.lat) > 0.003 OR abs(a.lon - b.lon) > 0.003)) "
+     "OR (m.km_pie > 2 AND m.minutos_pie < m.minutos_base)"),
+    ("Sin puntos repetidos: mismo nombre a menos de ~200 m (catálogo ampliado, feature 004)",
+     "SELECT a.clave, b.clave FROM punto a JOIN punto b ON a.id < b.id "
+     "AND lower(a.nombre) = lower(b.nombre) AND abs(a.lat - b.lat) < 0.0018 AND abs(a.lon - b.lon) < 0.0019"),
+    ("Todo punto sin horario propio tiene horario supuesto para su tipo",
+     "SELECT clave, tipo FROM punto WHERE horario IS NULL AND (tipo IS NULL OR tipo NOT IN ("
+     + ", ".join(f"'{t}'" for t in HORARIO_SUPUESTO) + "))"),
+    ("De Google solo se guarda el place_id (nada parecido a horario o precio de Places en la tabla punto)",
+     "SELECT clave FROM punto WHERE ficha ILIKE '%weekdayDescriptions%' OR ficha ILIKE '%priceLevel%' "
+     "OR (verificado = 0 AND fuente_texto ILIKE '%google%')"),
     ("Cada fuente oficial tiene huella del archivo raw",
      "SELECT nombre FROM fuente WHERE archivo IS NOT NULL AND url NOT LIKE 'catalogo/%' AND hash_archivo IS NULL"),
 ]
@@ -83,6 +99,8 @@ REVISIONES = [
 INFORMATIVAS = [
     ("Puntos verificados a mano",
      "SELECT SUM(verificado) || ' de ' || COUNT(*) FROM punto"),
+    ("Puntos nuevos con place_id de Google (meta SC-002: ≥ 70 %)",
+     "SELECT COUNT(google_place_id) || ' de ' || COUNT(*) FROM punto WHERE verificado = 0"),
     ("Afluencia 2025: 'Estado' vs. destinos + 'Resto del Estado'",
      "SELECT CASE WHEN d.nombre = 'Estado' THEN 'Estado' ELSE 'Suma' END, CAST(SUM(h.valor) AS INTEGER) "
      "FROM hecho_observatorio h JOIN destino d ON d.id = h.destino_id "

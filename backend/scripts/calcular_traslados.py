@@ -2,8 +2,8 @@
 
     uv run python -m scripts.calcular_traslados [--forzar]
 
-Dos consultas (coche y a pie). La respuesta se guarda en ``data/raw/ors_matriz_<modo>.json`` y se
-reutiliza mientras el catálogo no cambie; ``--forzar`` vuelve a consultar. Necesita
+Una matriz en coche y otra a pie, cada una en bloques de 50 × 50 (ORS: 3,500 pares por consulta).
+La respuesta unida se guarda en ``data/raw/ors_matriz_<modo>.json`` y se reutiliza mientras el catálogo no cambie; ``--forzar`` vuelve a consultar. Necesita
 ``ORS_API_KEY`` en ``backend/.env``.
 """
 
@@ -39,7 +39,7 @@ def matriz(puntos, modo: str, forzar: bool) -> dict:
     if not api_key:
         raise SystemExit("Falta ORS_API_KEY en backend/.env")
     try:
-        respuesta = traslados.consultar([(lat, lon) for _, lat, lon in puntos], modo, api_key)
+        respuesta = traslados.consultar_por_bloques([(lat, lon) for _, lat, lon in puntos], modo, api_key)
     except (urllib.error.URLError, TimeoutError) as e:
         raise SinConexion(f"OpenRouteService no respondió ({e})") from e
     cache.write_text(json.dumps({"fecha": date.today().isoformat(), "huella_catalogo": h, "punto_ids": [p for p, _, _ in puntos],

@@ -272,7 +272,8 @@ uv run python -m scripts.pipeline data/raw
 ```
 
 - El argumento `data/raw` hace que el paso 1 tome los archivos que ya copiaste.
-- Los traslados salen de los `ors_matriz_*.json` sin volver a consultar ORS.
+- Los traslados salen de los `ors_matriz_*.json` sin volver a consultar ORS, mientras los puntos no cambien.
+- Carga también `catalogo/puntos_ampliados.csv` (~100 lugares más). Para regenerarlo o buscar sus `place_id` de Google, ver `catalogo/README.md`.
 - Escribe en la base de `DATABASE_URL` del `.env`: revisa que sea `rumbo-demo` antes de correrlo.
 - El paso 8 (`validar_bd`) debe terminar sin fallas e imprime las filas de cada tabla, y el paso 9 indexa ChromaDB. Sin Ollama, el paso 9 se salta con un aviso y el resto de la app funciona.
 - El pipeline reescribe la fecha en `backend/data/manifiesto_raw.csv`. Ese cambio no se commitea: `git checkout -- data/manifiesto_raw.csv`.

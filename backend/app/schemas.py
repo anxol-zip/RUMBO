@@ -213,6 +213,25 @@ class PuntoDetalle(PuntoEstado):
     datos: Datos
 
 
+class RangoPrecio(BaseModel):
+    desde: int
+    hasta: int | None
+    moneda: str
+
+
+class DatosGoogle(BaseModel):
+    """Horario y precio de Google Places al abrir la ficha (feature 004). No se guarda en ningún lado."""
+    disponible: bool
+    motivo: Literal["sin_llave", "sin_place_id", "cuota", "error"] | None = Field(
+        description="Por qué no hay datos; None si los hay")
+    abierto_ahora: bool | None
+    horario_semana: list[str] = Field(description="Un texto por día, ya en el idioma pedido")
+    nivel_precio: Literal["gratis", "economico", "moderado", "caro", "muy_caro"] | None
+    rango_precio: RangoPrecio | None
+    atribuciones: list[str]
+    fuente: str = "Google Maps"
+
+
 class SesionOut(BaseModel):
     sesion_id: str
     es_demo: bool

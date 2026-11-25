@@ -25,3 +25,20 @@ def test_leer_env(tmp_path):
     env.write_text("# comentario\nORS_API_KEY=abc=\nTOMTOM_API_KEY = xyz  # nota\n\nVACIA\n", encoding="utf-8")
     assert leer_env(env) == {"ORS_API_KEY": "abc=", "TOMTOM_API_KEY": "xyz"}
     assert leer_env(tmp_path / "no_existe") == {}
+
+
+def test_matriz_por_bloques_une_en_orden():
+    """7 puntos en bloques de 3: 9 consultas, cada una de ≤ 3 × 3 pares, unidas como una sola matriz."""
+    coords = [(19.0 + i / 100, -98.2) for i in range(7)]
+    llamadas = []
+
+    def falso(coordenadas, origenes, destinos, modo, api_key):
+        llamadas.append((origenes, destinos))
+        assert len(origenes) <= 3 and len(destinos) <= 3
+        return {"durations": [[i * 10 + j for j in destinos] for i in origenes],
+                "distances": [[float(i + j) for j in destinos] for i in origenes]}
+
+    m = traslados.consultar_por_bloques(coords, "pie", "k", bloque=3, consultar_bloque=falso)
+    assert len(llamadas) == 9
+    assert m["durations"][6][2] == 62 and m["distances"][1][5] == 6.0
+    assert all(len(fila) == 7 for fila in m["durations"])

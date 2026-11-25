@@ -1,6 +1,8 @@
+import { GRUPOS } from '../data/intereses.js'
 import { useIdioma } from '../i18n/contexto.js'
 
 // Filtros a la vista (D4): botones, no menús escondidos. El filtro se aplica a la lista y al mapa.
+// Los de grupo (Atractivos / Comida) se apagan con un segundo clic.
 function FiltrosLugares({ destinos, filtro, onFiltro, hayGustos, hayCuenta = false }) {
   const { t } = useIdioma()
   return (
@@ -11,6 +13,12 @@ function FiltrosLugares({ destinos, filtro, onFiltro, hayGustos, hayCuenta = fal
       {destinos.map((d) => (
         <button key={d} type="button" className="chip" aria-pressed={filtro.destino === d} onClick={() => onFiltro({ ...filtro, destino: d })}>
           {d}
+        </button>
+      ))}
+      {GRUPOS.map((g) => (
+        <button key={g} type="button" className="chip" aria-pressed={filtro.grupo === g}
+          onClick={() => onFiltro({ ...filtro, grupo: filtro.grupo === g ? null : g })}>
+          {t(`filtros.${g}`)}
         </button>
       ))}
       {hayGustos && (
