@@ -111,3 +111,42 @@ Lo que falta para cerrar el proyecto en las dos materias, repartido por integran
 
 - [ ] Póster impreso (`docs/DdS/Expo Ibero/poster_RUMBO.pptx`) y un QR a producción.
 - [ ] Laptop con el asistente (Axel) y producción despierta (Angel) antes de las 9:00.
+
+---
+
+## Retroalimentación del profesor (2026-11-23) — cambios a futuro
+
+Sin responsable ni fecha todavía: se reparten después de la defensa, o antes si alguien tiene tiempo.
+
+### Investigar
+
+- [ ] **Datos de lugares con la API de Google Maps (Places API New).** Investigado el 2026-11-23:
+  - **Sí trae lo que se pidió:** restaurantes y puntos turísticos (*Nearby Search* / *Text Search* por tipo y zona), su **horario** (`regularOpeningHours`, `currentOpeningHours`) y su **precio** (`priceLevel`, un nivel de `$` a `$$$$`, y `priceRange`, un rango aproximado). No hay precio exacto de entrada ni de platillos.
+  - **Costo:** horario y precio son campos del SKU *Place Details Enterprise*: 1,000 llamadas gratis al mes; después se cobra cada una. La llamada se cobra al SKU más caro de los campos que pidas (`X-Goog-FieldMask`), así que hay que pedir solo lo necesario.
+  - **Pide cuenta de facturación con tarjeta.** Es lo mismo que nos hizo descartar Google para el login el 2026-11-11.
+  - ⚠️ **Lo que los términos no dejan hacer** (nos pega directo):
+    - **No se puede guardar** lo que devuelve en Supabase ni en el índice del asistente; solo el `place_id` se puede guardar sin límite. Lo demás se pide en el momento en que el turista abre la ficha. O sea: no se puede cargar con `cargar_bd.py` ni meter al RAG.
+    - **No se puede mostrar en un mapa que no sea de Google.** Nuestro mapa es Leaflet con OpenStreetMap: los datos de Google podrían ir en la ficha (sin mapa, con el logo de Google y sus atribuciones), pero no como marcadores.
+  - **Propuesta mínima, si se hace:** guardar `place_id` por punto y, al abrir la ficha, pedir al backend `regularOpeningHours` y `priceLevel` (con la llave solo en el backend, nunca `VITE_`). Mostrarlo con el logo de Google. El horario que ya tenemos (`leer_horario`) se queda como respaldo.
+  - *Listo cuando:* se decide en equipo si vale la pena (tarjeta + términos), y si sí, la ficha de un punto muestra el horario y el precio de Google.
+- [ ] **Deploy en Hugging Face Spaces para habilitar el asistente.** Investigado el 2026-11-23:
+  - Un Space **Docker** (FastAPI + Ollama) **ya no es gratis de crear**: Hugging Face pide plan **PRO (US$9 al mes)** para Spaces Docker o Gradio en CPU. Gratis solo quedan los Spaces estáticos y hasta 2 Gradio en ZeroGPU (cuenta con más de 30 días y correo verificado).
+  - El CPU básico es de 2 vCPU y 16 GB de RAM: `qwen3:4b-instruct` y `bge-m3` caben, pero en CPU van lentos.
+  - El disco gratis es **efímero**: en cada reinicio se vuelven a bajar los modelos y se pierde el índice de ChromaDB. El disco persistente cuesta desde US$5 al mes (20 GB, en `/data`).
+  - En CPU básico el Space se duerme tras 48 h sin visitas, y mientras duerme no corren las tareas de cada hora.
+  - **No reemplaza a Vercel:** el frontend se puede quedar en Vercel y solo cambiar `BACKEND_URL` al Space (`deploy/README.md`).
+  - *Listo cuando:* se decide si se paga PRO o se busca otra opción (Oracle o Azure for Students, que ya están en el plan), y el chat de producción responde sin 503 (`SinOllama`).
+
+### Corregir
+
+- [ ] **Al ampliar la foto se ve recortada.** El visor (`components/Foto.jsx`) sí usa `object-fit: contain`, pero el archivo ya viene recortado: todas las fotos de `frontend/public/fotos/` son de 900×600 (3:2). Hay que guardar una versión completa de cada foto (p. ej. `<id>-completa.jpg`, 1600 px el lado largo, desde la página de la fuente en `data/fotos.js`) y usarla solo en el `<dialog>`; además quitar el `aspect-ratio: 3 / 2` fijo de `.foto-ampliada` en `index.css`.
+  - *Listo cuando:* una foto vertical o panorámica se ve entera al ampliarla, sin recorte.
+- [ ] **El panel lateral debe crecer con el tamaño de letra.** Hoy el mínimo (`ANCHO_MINIMO = 400` en `components/BordePanel.jsx`) y el ancho elegido (`rumbo.anchoPanel` en `pages/Turista.jsx`) están en píxeles fijos, así que con letra 125 % o 150 % el texto se aprieta. Multiplicarlos por `ESCALA_TEXTO[letra]` (o guardarlos en `rem`).
+  - *Listo cuando:* al pasar de letra normal a muy grande, el panel se ensancha en la misma proporción (sin pasar de `window.innerWidth - 160`).
+
+### Agregar
+
+- [ ] **Ubicación en tiempo real.** Hoy `hooks/useUbicacion.js` lee una sola vez (`getCurrentPosition`). Cambiar a `watchPosition` mientras la app esté abierta (y `clearWatch` al salir), para que el punto del turista se mueva en el mapa y los traslados se recalculen.
+- [ ] **Botón "Usar mi ubicación" desde el inicio**, visible al abrir la app, antes de elegir un lugar. Sin permiso o sin HTTPS se avisa el motivo (los de `onError`) y la app sigue sin ubicación.
+- [ ] **Elegir destino y ver la ubicación actual a la vez:** origen = "Mi ubicación" (o un punto elegido a mano), destino = cualquier lugar. Mostrar los dos en el mapa y abrir la ruta con el `url_como_llegar` que ya existe.
+  - *Listo cuando:* en celular, con la ubicación activada, el punto se mueve al caminar y "Cómo llegar" sale desde donde estás hasta el destino elegido.
