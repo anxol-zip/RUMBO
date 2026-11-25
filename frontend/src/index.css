@@ -423,6 +423,8 @@ body.cambiando-ancho .panel-flotante { transition: none; }
    debajo de la barra de acciones. */
 .ficha-portada .foto.grande img { aspect-ratio: 16 / 9; max-height: min(15rem, 26vh); object-fit: cover; }
 .ficha-portada .foto.grande.sin-foto { aspect-ratio: 16 / 9; max-height: min(15rem, 26vh); }
+/* Los lugares del catálogo ampliado no tienen foto: sin portada, la ficha empieza por lo que sirve. */
+.ficha-portada:has(.sin-foto) { display: none; }
 /* "Gente ahora": la escala son los tres tramos del semáforo de ese lugar; el tramo actual va con su color. */
 .gente-ahora { margin-top: var(--e-4); padding: var(--e-3) var(--e-4) var(--e-2); border-radius: var(--r-m); background: var(--gris-claro); }
 .gente-cabeza { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--e-1) var(--e-3); }
@@ -455,6 +457,14 @@ body.cambiando-ancho .panel-flotante { transition: none; }
 .ficha-hechos { list-style: none; display: flex; flex-wrap: wrap; gap: var(--e-2) var(--e-4); margin: var(--e-4) 0 0; padding: 0; }
 .ficha-hechos li { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-meta); font-weight: 600; }
 .ficha-hechos .icono { color: var(--rosa); }
+/* Horario y precio de Google (feature 004): solo en la ficha, con su atribución; en rem para crecer con la letra. */
+.datos-google { margin: var(--e-4) 0 0; }
+.datos-google p { display: flex; align-items: center; gap: 6px; margin: var(--e-2) 0 0; font-size: var(--t-meta); font-weight: 600; }
+.datos-google .icono { color: var(--rosa); flex: none; }
+.google-semana { margin-top: var(--e-2); font-size: var(--t-meta); }
+.google-semana summary { cursor: pointer; padding: 0.75rem 0; font-weight: 600; }   /* sin flex: conserva la flecha de <details> */
+.google-semana ul { margin: 0; padding-left: 1.25rem; }
+.datos-google .google-fuente { font-weight: 400; color: var(--tinta-2); font-size: 0.8125rem; }
 
 .ficha-mas { display: grid; gap: var(--e-2); margin-top: var(--e-5); }
 .ficha-mas .boton.semana-ver { margin-top: 0; }

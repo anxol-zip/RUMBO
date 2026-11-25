@@ -9,6 +9,7 @@ import IconoEstado from './IconoEstado.jsx'
 import { textosConclusion } from '../data/conclusion.js'
 import { ficha } from '../i18n/backend.js'
 import { useIdioma } from '../i18n/contexto.js'
+import DatosGoogle from './DatosGoogle.jsx'
 import Foto from './Foto.jsx'
 import GenteAhora from './GenteAhora.jsx'
 import Semaforo from './Semaforo.jsx'
@@ -170,6 +171,7 @@ function TarjetaPunto({ puntoId, origenId, revision = 0, onVolver, onAlternativa
           {hechos.map((h) => <li key={h.clave}><Icono nombre={h.icono} />{h.texto}</li>)}
         </ul>
       )}
+      <DatosGoogle puntoId={estado.id} verificado={estado.verificado} />
       {descripcion && <p className="descripcion">{descripcion}</p>}
 
       <div className="ficha-acciones">

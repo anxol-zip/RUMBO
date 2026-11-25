@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter
 
 from app.deps import Ahora, Con
-from app.schemas import PuntoCatalogo, PuntoDetalle, SemaforoOut, SemanaOut
+from app.schemas import DatosGoogle, PuntoCatalogo, PuntoDetalle, SemaforoOut, SemanaOut
 from turismo_core import servicio
 
 router = APIRouter(tags=["puntos"])
@@ -34,3 +36,11 @@ def semana(punto_id: int, con: Con, ahora: Ahora):
     """"¿Cuándo me conviene ir?": tabla día × hora de hoy y los días siguientes (estimado, sin reportes), con
     la hora más tranquila y la más llena de cada día."""
     return servicio.semana_punto(con, punto_id, ahora)
+
+
+@router.get("/puntos/{punto_id}/google", response_model=DatosGoogle)
+def datos_google(punto_id: int, con: Con, idioma: Literal["es", "en"] = "es"):
+    """Horario y precio de Google Places, pedidos en este momento y sin guardarse (términos de Google). Solo los
+    lugares del catálogo ampliado tienen ``place_id``; los 23 curados responden ``sin_place_id`` sin llamar a Google.
+    Siempre 200 (salvo 404 del punto): si Google falla, ``disponible = false`` y la ficha sigue igual."""
+    return servicio.datos_google(con, punto_id, idioma)

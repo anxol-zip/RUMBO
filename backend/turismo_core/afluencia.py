@@ -13,7 +13,7 @@ Qué sale de datos oficiales y qué es supuesto (ficha del modelo):
 | Domingo en recintos INAH | Visitas "Entrada dominical" del INAH ÷ domingos del mes, contra el resto ÷ días abiertos | **Dato** |
 | Días que abre | Horario oficial del catálogo (INAH, cholula.gob.mx) | **Dato** si ``horario_confirmado`` |
 | Sábado, viernes, festivo y puente | ``PESOS_DIA``, ``F_PUENTE`` | Supuesto |
-| Hora del día | ``CURVAS_HORA``: pico entre 12:00 y 15:00 en museos y zonas, y de nuevo al atardecer en calles y plazas | Supuesto (ver nota) |
+| Hora del día | ``CURVAS_HORA``: pico entre 12:00 y 15:00 en museos y zonas, y de nuevo al atardecer en calles y plazas; comida y cena en restaurantes, mañana y tarde en cafés | Supuesto (ver nota) |
 | Eventos | Tabla ``evento``; solo los ``verificado = 1`` | Dato del calendario curado |
 | Clima | Paso 3 (``f_clima``) | — |
 
@@ -64,6 +64,11 @@ _CURVA_VISITA = {8: 0.3, 9: 0.5, 10: 0.7, 11: 1.0, 12: 1.3, 13: 1.4, 14: 1.3, 15
                  16: 0.8, 17: 0.5, 18: 0.3, 19: 0.2}
 _CURVA_PASEO = {8: 0.3, 9: 0.4, 10: 0.6, 11: 0.8, 12: 1.0, 13: 1.2, 14: 1.2, 15: 1.1, 16: 1.1,
                 17: 1.2, 18: 1.3, 19: 1.2, 20: 0.9, 21: 0.6}
+# Restaurantes: comida (14–16 h) y cena (20–22 h). Cafés: mañana y media tarde. Mismo supuesto que las demás.
+_CURVA_COMIDA = {8: 0.3, 9: 0.4, 10: 0.4, 11: 0.5, 12: 0.7, 13: 1.0, 14: 1.5, 15: 1.6, 16: 1.2, 17: 0.8,
+                 18: 0.8, 19: 1.0, 20: 1.3, 21: 1.2, 22: 0.7}
+_CURVA_CAFE = {7: 0.6, 8: 1.0, 9: 1.2, 10: 1.1, 11: 1.0, 12: 0.9, 13: 0.9, 14: 0.8, 15: 0.9, 16: 1.1,
+               17: 1.2, 18: 1.1, 19: 0.9, 20: 0.6}
 _CURVA_TEMPLO = {7: 0.5, 8: 0.7, 9: 0.8, 10: 0.9, 11: 1.0, 12: 1.2, 13: 1.2, 14: 1.0, 15: 0.9,
                  16: 0.9, 17: 1.0, 18: 1.1, 19: 0.8, 20: 0.5}
 CURVAS_HORA = {
@@ -71,6 +76,7 @@ CURVAS_HORA = {
     "templo": _CURVA_TEMPLO,
     "calle": _CURVA_PASEO, "barrio": _CURVA_PASEO, "mercado": _CURVA_PASEO,
     "pueblo_magico": _CURVA_PASEO, "mirador": _CURVA_PASEO, "plaza": _CURVA_PASEO,
+    "atractivo": _CURVA_VISITA, "restaurante": _CURVA_COMIDA, "cafe": _CURVA_CAFE,
 }
 
 # Horario que se supone cuando el catálogo no tiene el oficial (``horario_confirmado = False``).
@@ -82,6 +88,7 @@ HORARIO_SUPUESTO = {
     "templo": (_TODOS, (8, 20)),
     "calle": (_TODOS, (9, 22)), "barrio": (_TODOS, (9, 22)), "mercado": (_TODOS, (9, 21)),
     "pueblo_magico": (_TODOS, (9, 22)), "mirador": (_TODOS, (10, 22)), "plaza": (_TODOS, (0, 24)),
+    "atractivo": (_TODOS, (10, 18)), "restaurante": (_TODOS, (9, 22)), "cafe": (_TODOS, (8, 21)),
 }
 
 F_EVENTO = {"bajo": 1.1, "medio": 1.2, "alto": 1.4}

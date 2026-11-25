@@ -36,3 +36,5 @@ services:
         sync: false
       - key: TOMTOM_API_KEY
         sync: false
+      - key: GOOGLE_MAPS_API_KEY  # Places API (New); solo backend
+        sync: false

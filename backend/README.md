@@ -159,6 +159,8 @@ Fuera del pipeline, se corren a mano:
 | Script                   | Qué hace                                                                                                      |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------- |
 | `verificar_catalogo.py`  | Busca cada lugar en DENUE y OpenStreetMap, y escribe una propuesta sin modificar el catálogo                  |
+| `ampliar_catalogo.py`    | Genera `catalogo/puntos_ampliados.csv` (~100 lugares de DENUE y OpenStreetMap); ver `catalogo/README.md`       |
+| `buscar_place_id.py`     | Busca en Google el `place_id` de los lugares ampliados (lo único de Google que se guarda); gasta cuota          |
 | `evaluar_rag.py`         | Evalúa al asistente (29 preguntas, 5 seguimientos y estilo) y escribe `processed/evaluacion_rag.md` (`--salida`) |
 | `probar_recomendador.py` | Casos de prueba del recomendador contra la base real                                                          |
 
@@ -239,6 +241,7 @@ Se define en el entorno o en `backend/.env`, que nunca se sube a git. Excepción
 | `CORS_ORIGINS`                 | Orígenes permitidos, separados por coma                              | `localhost` y `127.0.0.1` en el puerto 5173       |
 | `ORS_API_KEY`                  | Clave de OpenRouteService                                            | Sin valor                                         |
 | `TOMTOM_API_KEY`               | Clave de TomTom                                                      | Sin valor                                         |
+| `GOOGLE_MAPS_API_KEY`          | Places API (New): horario y precio en la ficha de los lugares ampliados. Solo backend | Sin valor: la ficha va sin esos datos |
 | `TRAFICO_MIN`, `TRAFICO_HORAS` | Frecuencia y horario de las consultas de tráfico                     | `30` y `8-20`                                     |
 | `OLLAMA_URL`                   | Servidor de Ollama                                                   | `http://127.0.0.1:11434`                          |
 | `OLLAMA_MODELO`                | Modelo que redacta (no `qwen3:4b`: escribe su razonamiento)          | `qwen3:4b-instruct`                               |

@@ -86,6 +86,35 @@ Revisado sobre el CSV el 8 de noviembre de 2026.
 | El orden de los renglones | No lo cambies: `cargar_bd.py` asigna el id de cada lugar por su posición, y los reportes guardados dependen de él |
 | Un recinto del INAH      | `backend/data/equivalencias_inah.csv`                                                                 |
 
+## Catálogo ampliado (`puntos_ampliados.csv`)
+
+Unos **100 lugares más** (restaurantes, cafés, museos, parques y atractivos) a ≤ 1.5 km de los 23 curados, para que el turista tenga más opciones (feature 004). **No se edita a mano**, salvo las columnas `oculto` y `google_place_id`: lo genera `backend/scripts/ampliar_catalogo.py` a partir del DENUE y de OpenStreetMap.
+
+- Entran a la base como los curados: tienen semáforo (perfil del Observatorio de su destino y, si no traen horario de OpenStreetMap, el horario supuesto de su tipo), reportes, recomendador y asistente.
+- `verificado = 0` es lo que los distingue de los 23 curados. Su `ficha` es un texto generado con datos propios.
+- Columnas extra:
+
+  | Columna           | Qué es                                                                                       |
+  | ----------------- | -------------------------------------------------------------------------------------------- |
+  | `google_place_id` | Identificador de Google Places (`scripts/buscar_place_id.py`); `-` = sin coincidencia confiable |
+  | `oculto`          | `1` = se dejó fuera a mano (no es turístico, cerró o está repetido). El generador pone otro en su lugar y el cargador lo borra de la base si ningún turista lo usó |
+
+- **De Google solo se guarda el `place_id`.** El horario y el precio de Google los pide la ficha en el momento (`GET /api/puntos/{id}/google`) y no se guardan en ningún lado, como piden los términos de Google Maps Platform. Tampoco se muestran en el mapa, que no es de Google.
+- Para quitar un lugar: pon `oculto` en `1` y vuelve a correr el generador y `cargar_bd`.
+
+Orden, desde `backend/`:
+
+```bash
+uv run python -m scripts.ampliar_catalogo --ver       # revisar el resumen
+uv run python -m scripts.ampliar_catalogo             # escribe el CSV (reutiliza data/raw/osm_ampliado.json)
+uv run python -m scripts.buscar_place_id --limite 25  # gasta cuota de Google: repetir otros días hasta terminar
+uv run python -m scripts.cargar_bd                    # con RUMBO_AMBIENTE=demo pide confirmación
+uv run python -m scripts.calcular_traslados
+uv run python -m scripts.calcular_afluencia
+uv run python -m scripts.validar_bd
+uv run python -m scripts.indexar_chroma
+```
+
 ## Atribución
 
-Las coordenadas de OpenStreetMap son datos **© colaboradores de OpenStreetMap, licencia ODbL**, y se atribuyen en la pantalla "Acerca de", según la regla RN_13 de [`docs/hackathon/10 - Análisis FIS.md`](../docs/hackathon/10%20-%20An%C3%A1lisis%20FIS.md).
+Las coordenadas y horarios de OpenStreetMap (los de los dos CSV) son datos **© colaboradores de OpenStreetMap, licencia ODbL**, y se atribuyen en la pantalla "Acerca de", según la regla RN_13 de [`docs/hackathon/10 - Análisis FIS.md`](../docs/hackathon/10%20-%20An%C3%A1lisis%20FIS.md).

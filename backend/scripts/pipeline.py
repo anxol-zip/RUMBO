@@ -31,7 +31,7 @@ def main() -> int:
         ("2. Observatorio", extraer_observatorio.main),
         ("3. INAH", limpiar_inah.main),
         ("4. DENUE", filtrar_denue.main),
-        ("7. Cargar BD", cargar_bd.main),
+        ("7. Cargar BD", lambda: cargar_bd.main([])),   # con RUMBO_AMBIENTE=demo pregunta
         ("6. Traslados (OpenRouteService)", calcular_traslados.main),
         ("6b. Tráfico (TomTom)", actualizar_trafico.main),
         ("7a. Clima (Open-Meteo)", actualizar_clima.main),

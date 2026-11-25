@@ -50,6 +50,8 @@ CREATE TABLE IF NOT EXISTS punto (
     fuente_id         BIGINT REFERENCES fuente(id),
     verificado        INTEGER DEFAULT 0
 );
+-- Único dato de Google que se guarda (términos de Places API): nunca horario, precio ni nada más.
+ALTER TABLE punto ADD COLUMN IF NOT EXISTS google_place_id TEXT COLLATE "C";
 
 CREATE TABLE IF NOT EXISTS recinto_inah (
     clave_siinah  TEXT COLLATE "C" PRIMARY KEY,
